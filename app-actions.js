@@ -543,7 +543,37 @@
     }
   }
 
+  // The sidebar (nav + Dark Mode + Sign out) is off-canvas on small screens;
+  // this injects the hamburger toggle + backdrop once per page and wires
+  // them up, so nothing on mobile requires editing every page's HTML.
+  function initMobileNav() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar || document.querySelector('.mobile-nav-toggle')) return;
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'mobile-nav-toggle';
+    toggle.setAttribute('aria-label', 'Open menu');
+    toggle.innerHTML = '<i data-lucide="menu" class="svg-icon"></i>';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'sidebar-backdrop';
+
+    document.body.appendChild(toggle);
+    document.body.appendChild(backdrop);
+
+    const open = () => { sidebar.classList.add('mobile-open'); backdrop.classList.add('mobile-open'); };
+    const close = () => { sidebar.classList.remove('mobile-open'); backdrop.classList.remove('mobile-open'); };
+
+    toggle.addEventListener('click', open);
+    backdrop.addEventListener('click', close);
+    sidebar.querySelectorAll('a, [data-action]').forEach((el) => el.addEventListener('click', close));
+
+    if (window.lucide) lucide.createIcons();
+  }
+
   function ensureHandlers() {
+    initMobileNav();
     // Notifications
     document.querySelectorAll('[data-action="notifications"]').forEach((el) => {
       el.addEventListener('click', (e) => {
