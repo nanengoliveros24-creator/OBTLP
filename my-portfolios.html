@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Portfolios · OBTLP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav">
+        <a href="dashboard.html" class="nav-link"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
+        <a href="my-portfolios.html" class="nav-link active"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
+        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
+        <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar" id="user-avatar">–</div>
+          <div><p class="user-name" id="user-name">–</p><p class="user-role">Faculty</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">My Portfolios</h1>
+          <p class="page-subtitle">Every course portfolio you've created, in every stage.</p>
+        </div>
+        <div class="header-actions">
+          <a href="portfolio-new.html" class="btn btn-primary"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+        </div>
+      </header>
+
+      <section class="card mb-8" style="overflow:hidden;">
+        <div class="section-head">
+          <div class="filter-tabs" id="filter-tabs">
+            <button data-filter="all" class="active">All</button>
+            <button data-filter="draft">Draft</button>
+            <button data-filter="submitted">Submitted</button>
+            <button data-filter="review">Under Review</button>
+            <button data-filter="approved">Approved</button>
+            <button data-filter="revision">Returned for Revision</button>
+          </div>
+          <input class="input input-search" id="portfolio-search" placeholder="Search portfolios…" />
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Course</th><th>Faculty</th><th>Created</th><th>Updated</th><th>Status</th><th class="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="portfolio-rows">
+              <tr><td colspan="6" class="t-muted" style="padding:1.5rem;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    const api = window.__OBTLP_API__;
+    const ui = window.__OBTLP_UI__;
+    const session = api.getSession();
+
+    if (!session) {
+      window.location.href = 'index.html';
+    } else if (session.role !== 'faculty') {
+      window.location.href = session.role === 'admin' ? 'admin.html' : 'it-admin.html';
+    }
+
+    const badgeClassFor = {
+      'Approved': 'badge-approved',
+      'Pending Review': 'badge-pending',
+      'In Review': 'badge-review',
+      'Revision Required': 'badge-revision',
+      'Draft': 'badge-draft'
+    };
+    const EDITABLE_STATUSES = ['Draft', 'Revision Required'];
+
+    const FILTER_DEFS = {
+      all: (s) => true,
+      draft: (s) => s === 'Draft',
+      submitted: (s) => s !== 'Draft',
+      review: (s) => s === 'In Review',
+      approved: (s) => s === 'Approved',
+      revision: (s) => s === 'Revision Required'
+    };
+
+    let allPortfolios = [];
+    let activeFilter = 'all';
+
+    function initials(name) {
+      return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+    }
+
+    function fmtWhen(iso) {
+      if (!iso) return '';
+      const diffMs = Date.now() - new Date(iso).getTime();
+      const mins = Math.round(diffMs / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.round(hrs / 24);
+      if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+      return new Date(iso).toLocaleDateString();
+    }
+
+    function actionsCellFor(p) {
+      const canEdit = EDITABLE_STATUSES.includes(p.status);
+      const editLink = canEdit
+        ? `<a href="portfolio-new.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="${p.status === 'Draft' ? 'Continue Editing' : 'Edit'}"><i data-lucide="pencil" class="svg-icon"></i></a>`
+        : '';
+      const deleteBtn = canEdit
+        ? `<button type="button" class="icon-btn" data-delete="${p.id}" data-label="${p.courseCode || 'this portfolio'}" title="Delete"><i data-lucide="trash-2" class="svg-icon"></i></button>`
+        : '';
+      return `
+        <div class="row-actions">
+          <a href="portfolio-preview.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="Preview"><i data-lucide="eye" class="svg-icon"></i></a>
+          ${editLink}
+          <a href="portfolio-preview.html?id=${encodeURIComponent(p.id)}&print=1" class="icon-btn" title="Download PDF"><i data-lucide="download" class="svg-icon"></i></a>
+          ${deleteBtn}
+        </div>
+      `;
+    }
+
+    function renderRows(filterText) {
+      const tbody = document.getElementById('portfolio-rows');
+      const term = (filterText || '').trim().toLowerCase();
+      const rows = allPortfolios
+        .filter((p) => FILTER_DEFS[activeFilter](p.status))
+        .filter((p) => !term || p.courseCode.toLowerCase().includes(term) || p.courseTitle.toLowerCase().includes(term));
+
+      if (!rows.length) {
+        const msg = allPortfolios.length
+          ? 'No portfolios match this filter.'
+          : 'No portfolios yet. Create your first portfolio to get started.';
+        tbody.innerHTML = `<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">${msg}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map((p) => `
+        <tr>
+          <td><p class="cell-strong">${p.courseCode || 'Untitled'}</p><p class="cell-sub">${p.courseTitle || ''}</p></td>
+          <td class="t-muted">${session.name || '—'}</td>
+          <td class="t-muted">${fmtWhen(p.createdAt)}</td>
+          <td class="t-muted">${fmtWhen(p.updatedAt)}</td>
+          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${p.status}</span></td>
+          <td>${actionsCellFor(p)}</td>
+        </tr>
+      `).join('');
+      if (window.lucide) lucide.createIcons();
+
+      tbody.querySelectorAll('[data-delete]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Delete the draft "${btn.dataset.label}"? This cannot be undone.`)) return;
+          try {
+            await api.deletePortfolio(btn.dataset.delete);
+            allPortfolios = allPortfolios.filter((p) => p.id !== btn.dataset.delete);
+            ui.notify('Portfolio Deleted', 'The draft has been removed.');
+            renderRows(searchInput ? searchInput.value : '');
+          } catch (err) {
+            ui.notifyError(err);
+          }
+        });
+      });
+    }
+
+    const searchInput = document.getElementById('portfolio-search');
+    if (searchInput) searchInput.addEventListener('input', (e) => renderRows(e.target.value));
+
+    const tabs = document.getElementById('filter-tabs');
+    tabs.querySelectorAll('button[data-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tabs.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.filter;
+        renderRows(searchInput.value);
+      });
+    });
+
+    async function load() {
+      try {
+        document.getElementById('user-name').textContent = session.name || '—';
+        document.getElementById('user-avatar').textContent = initials(session.name);
+
+        const params = new URLSearchParams(window.location.search);
+        const requestedFilter = params.get('filter');
+        if (requestedFilter && FILTER_DEFS[requestedFilter]) {
+          activeFilter = requestedFilter;
+          tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.filter === requestedFilter));
+        }
+
+        const state = await api.getState();
+        allPortfolios = state.portfolios || [];
+        renderRows('');
+      } catch (err) {
+        ui.notifyError(err);
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Portfolio · OBTLP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav">
+        <a href="dashboard.html" class="nav-link"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
+        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
+        <a href="portfolio-new.html" class="nav-link active"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
+        <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar" id="user-avatar">–</div>
+          <div><p class="user-name" id="user-name">–</p><p class="user-role">Faculty</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title" id="page-title">Create Portfolio</h1>
+          <p class="page-subtitle" id="page-subtitle">Complete each step, then submit for administrative review.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" data-action="download-pdf"><i data-lucide="download" class="svg-icon"></i> Download PDF</button>
+          <button class="btn btn-outline" data-action="save-draft" id="save-draft-btn"><i data-lucide="save" class="svg-icon"></i> Save Draft</button>
+        </div>
+      </header>
+
+      <div id="loading-state" class="empty-state"><span class="spinner"></span><span>Loading portfolio…</span></div>
+
+      <div id="wizard-root" style="display:none;">
+        <!-- Stepper -->
+        <div class="stepper" id="stepper">
+          <div class="step" data-step="1"><span class="step-num">1</span><span class="step-label">Course Information</span></div>
+          <div class="step-line"></div>
+          <div class="step" data-step="2"><span class="step-num">2</span><span class="step-label">Preview</span></div>
+          <div class="step-line"></div>
+          <div class="step" data-step="3"><span class="step-num">3</span><span class="step-label">Submit</span></div>
+        </div>
+
+        <div id="revision-banner" class="form-error" style="display:none;margin-bottom:1.5rem;"></div>
+        <div id="locked-banner" class="form-success" style="display:none;margin-bottom:1.5rem;"></div>
+
+        <!-- ===== STEP 1: Course / Portfolio Information ===== -->
+        <section class="wizard-panel" data-panel="1">
+          <div class="grid-3">
+            <div class="card card-pad span-2" style="margin-bottom:1.5rem;">
+              <h3 class="card-title" style="margin-bottom:1rem;">Course Information</h3>
+              <div class="grid-3" style="gap:1rem;margin-bottom:1rem;">
+                <div class="field">
+                  <label class="field-label">Department</label>
+                  <button type="button" class="select" id="course-department-select"></button>
+                  <input type="hidden" id="f-departmentId" />
+                </div>
+                <div class="field" style="grid-column:span 2;">
+                  <label class="field-label">Program</label>
+                  <button type="button" class="select" id="course-program-select"></button>
+                  <input type="hidden" id="f-programId" />
+                </div>
+              </div>
+              <div class="field" style="margin-bottom:1rem;">
+                <label class="field-label">Course *</label>
+                <button type="button" class="select" id="course-select"></button>
+                <div id="template-status" class="field-hint" style="display:none;"></div>
+                <button type="button" class="btn btn-outline btn-sm" id="reload-template-btn" style="display:none;margin-top:0.5rem;">
+                  <i data-lucide="refresh-cw" class="svg-icon"></i> Reload Official Template
+                </button>
+              </div>
+              <div class="grid-3" style="gap:1rem;margin-bottom:1rem;">
+                <div class="field"><label class="field-label">Course Code</label><input class="input" id="f-courseCode" readonly placeholder="Select a course above" /></div>
+                <div class="field" style="grid-column:span 2;"><label class="field-label">Course Title</label><input class="input" id="f-courseTitle" readonly placeholder="Select a course above" /></div>
+              </div>
+              <div class="field" style="margin-bottom:1rem;"><label class="field-label">Pre-requisite / Co-requisite</label><input class="input" id="f-prerequisite" placeholder="e.g. none" /></div>
+              <div class="grid-3" style="gap:1rem;margin-bottom:1rem;">
+                <div class="field">
+                  <label class="field-label">Semester *</label>
+                  <select class="input select" id="f-semester">
+                    <option>1st Semester</option>
+                    <option>2nd Semester</option>
+                    <option>Summer</option>
+                  </select>
+                </div>
+                <div class="field" style="grid-column:span 2;">
+                  <label class="field-label">Academic Year *</label>
+                  <button type="button" class="select" id="academicyear-select"></button>
+                  <input type="hidden" id="f-academicYear" />
+                </div>
+              </div>
+              <div class="field"><label class="field-label" id="f-description-label">Course Description *</label><textarea class="textarea" id="f-description" rows="4" placeholder="Describe the course content and scope…"></textarea></div>
+            </div>
+
+            <div class="card card-pad" style="margin-bottom:1.5rem;">
+              <h3 class="card-title" style="margin-bottom:1rem;">Faculty Information</h3>
+              <p class="section-sub" style="margin-bottom:0.75rem;">Your course-offering details — always yours to edit, template or not.</p>
+              <div class="field" style="margin-bottom:1rem;"><label class="field-label">Faculty</label><input class="input" id="f-facultyName" disabled /></div>
+              <div class="field" style="margin-bottom:1rem;">
+                <label class="field-label">Department</label>
+                <button type="button" class="select" id="department-select"></button>
+                <input type="hidden" id="f-facultyDepartment" />
+              </div>
+              <div class="field" style="margin-bottom:1rem;"><label class="field-label">Units</label><input class="input" id="f-facultyUnits" placeholder="e.g. 3" /></div>
+              <div class="field"><label class="field-label">Schedule</label><input class="input" id="f-facultySchedule" placeholder="e.g. MWF 9:00–10:00 AM" /></div>
+            </div>
+          </div>
+
+          <!-- Shown only when the selected course has an official OBTLP template:
+               read-only preview of the official content, so faculty never
+               re-type what the template already provides. -->
+          <div class="card card-pad" id="official-content-card" style="display:none;margin-bottom:1.5rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+              <i data-lucide="shield-check" class="svg-icon t-success" style="width:1.125rem;height:1.125rem;"></i>
+              <h3 class="card-title" style="margin-bottom:0;">Official Template Content</h3>
+              <span class="badge badge-approved" id="official-content-template-name"></span>
+            </div>
+            <p class="section-sub" style="margin-bottom:1rem;">Pulled automatically from the official course template — read-only here. The fully formatted document is in the Preview step.</p>
+            <div class="grid-3" style="gap:1.5rem;">
+              <div>
+                <h4 class="field-label" style="margin-bottom:0.5rem;">Course Intended Learning Outcomes (CILO)</h4>
+                <ol class="pdf-list" id="official-cilo-list"><li class="t-muted">—</li></ol>
+              </div>
+              <div>
+                <h4 class="field-label" style="margin-bottom:0.5rem;">Teaching &amp; Learning Plan</h4>
+                <p class="section-sub" id="official-teachingplan-summary">—</p>
+                <h4 class="field-label" style="margin:0.75rem 0 0.5rem;">Grading System</h4>
+                <p class="section-sub" id="official-grading-summary">—</p>
+              </div>
+              <div>
+                <h4 class="field-label" style="margin-bottom:0.5rem;">References</h4>
+                <p class="section-sub" id="official-references-summary">—</p>
+                <h4 class="field-label" style="margin:0.75rem 0 0.5rem;">Course Requirements</h4>
+                <p class="section-sub" id="official-requirements-summary">—</p>
+              </div>
+            </div>
+            <h4 class="field-label" style="margin:1rem 0 0.375rem;">Effectivity Period</h4>
+            <p class="section-sub" id="official-effectivity-summary">—</p>
+          </div>
+
+          <div id="legacy-content-grids">
+            <div class="grid-3" style="gap:1.5rem;">
+              <div class="card card-pad">
+                <h3 class="card-title" style="margin-bottom:0.75rem;">Course Objectives</h3>
+                <div class="list-editor" id="list-objectives"></div>
+                <button type="button" class="btn btn-outline btn-sm add-row-btn" data-list="objectives" style="margin-top:0.75rem;"><i data-lucide="plus" class="svg-icon"></i> Add Objective</button>
+              </div>
+              <div class="card card-pad">
+                <h3 class="card-title" style="margin-bottom:0.75rem;">Intended Learning Outcomes</h3>
+                <div class="list-editor" id="list-outcomes"></div>
+                <button type="button" class="btn btn-outline btn-sm add-row-btn" data-list="outcomes" style="margin-top:0.75rem;"><i data-lucide="plus" class="svg-icon"></i> Add Outcome</button>
+              </div>
+              <div class="card card-pad">
+                <h3 class="card-title" style="margin-bottom:0.75rem;">References</h3>
+                <div class="list-editor" id="list-references"></div>
+                <button type="button" class="btn btn-outline btn-sm add-row-btn" data-list="references" style="margin-top:0.75rem;"><i data-lucide="plus" class="svg-icon"></i> Add Reference</button>
+              </div>
+            </div>
+
+            <div class="grid-3" style="gap:1.5rem;margin-top:1.5rem;">
+              <div class="card card-pad span-2">
+                <h3 class="card-title" style="margin-bottom:0.75rem;">Syllabus Summary</h3>
+                <textarea class="textarea" id="f-syllabus" rows="4" placeholder="Summarize the syllabus / instructional plan for this course…"></textarea>
+              </div>
+              <div class="card card-pad">
+                <h3 class="card-title" style="margin-bottom:0.75rem;">Teaching Materials &amp; Modules</h3>
+                <div class="list-editor" id="list-teachingMaterials"></div>
+                <button type="button" class="btn btn-outline btn-sm add-row-btn" data-list="teachingMaterials" style="margin-top:0.75rem;"><i data-lucide="plus" class="svg-icon"></i> Add Item</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="wizard-actions">
+            <span></span>
+            <button type="button" class="btn btn-primary" id="step1-next">Next: Preview <i data-lucide="arrow-right" class="svg-icon"></i></button>
+          </div>
+        </section>
+
+        <!-- ===== STEP 2: Preview ===== -->
+        <section class="wizard-panel" data-panel="2">
+          <div class="pdf-canvas">
+            <div class="pdf-sheet" id="pdf-sheet">
+              <div id="pdf-official-letterhead" class="t-muted" style="display:none;text-align:center;font-size:0.6875rem;line-height:1.5;padding:0.75rem 2.5rem 0;"></div>
+              <div class="pdf-letterhead">
+                <div class="pdf-seal"><img src="assets/pnc-logo.png" alt="University of Cabuyao seal" style="width:100%;height:100%;object-fit:contain;border-radius:999px;" /></div>
+                <div>
+                  <p class="card-title" style="font-size:1.125rem;line-height:1.1;" id="pdf-school">Institution</p>
+                  <p class="section-sub" id="pdf-college">College / Department</p>
+                </div>
+                <div style="margin-left:auto;text-align:right;">
+                  <p style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;" class="t-muted">Document</p>
+                  <p class="card-title" style="font-size:0.875rem;" id="pdf-doc-id">OBTLP-0000</p>
+                  <p class="t-muted" style="font-size:9px;display:none;" id="pdf-form-code"></p>
+                </div>
+              </div>
+
+              <div class="pdf-body">
+                <p class="pdf-eyebrow">Outcomes-Based Teaching &amp; Learning Plan</p>
+                <h2 class="pdf-title" id="pdf-title">Course Title</h2>
+                <p class="pdf-meta" id="pdf-meta">Course Code · Semester · Academic Year</p>
+
+                <!-- Phase 1: when the course has a resolved OBTLP template,
+                     this container is filled by the generic section
+                     renderer (templates-render.js) instead of the fixed
+                     sections below, which stay exactly as before for any
+                     course that has no template yet. -->
+                <div id="pdf-generated" style="display:none;"></div>
+
+                <div id="pdf-legacy-sections">
+                  <div class="pdf-section">
+                    <h3>Course Description</h3>
+                    <p id="pdf-description">—</p>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Faculty Information</h3>
+                    <dl class="pdf-dl">
+                      <dt>Faculty</dt><dd id="pdf-faculty">—</dd>
+                      <dt>Department</dt><dd id="pdf-faculty-dept">—</dd>
+                      <dt>Units</dt><dd id="pdf-units">—</dd>
+                      <dt>Schedule</dt><dd id="pdf-schedule">—</dd>
+                    </dl>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Course Objectives</h3>
+                    <ol class="pdf-list" id="pdf-objectives"><li>—</li></ol>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Intended Learning Outcomes</h3>
+                    <ol class="pdf-list" id="pdf-outcomes"><li>—</li></ol>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Syllabus Summary</h3>
+                    <p id="pdf-syllabus">—</p>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Teaching Materials &amp; Modules</h3>
+                    <ul class="pdf-list" id="pdf-materials"><li>—</li></ul>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>References</h3>
+                    <ul class="pdf-list" id="pdf-references"><li>—</li></ul>
+                  </div>
+
+                </div>
+
+                <div class="pdf-foot">
+                  <span id="pdf-generated">Generated on request</span>
+                  <span id="pdf-status">Draft</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wizard-actions">
+            <button type="button" class="btn btn-outline" id="step2-back"><i data-lucide="arrow-left" class="svg-icon"></i> Back</button>
+            <button type="button" class="btn btn-primary" id="step2-next">Next: Submit <i data-lucide="arrow-right" class="svg-icon"></i></button>
+          </div>
+        </section>
+
+        <!-- ===== STEP 3: Submit ===== -->
+        <section class="wizard-panel" data-panel="3">
+          <div class="grid-3">
+            <div class="card card-pad span-2">
+              <h3 class="card-title" style="margin-bottom:1rem;">Ready to Submit</h3>
+              <ul class="checklist" id="validation-list"></ul>
+            </div>
+            <div class="card card-pad">
+              <h3 class="card-title" style="margin-bottom:0.75rem;">Submission Notes</h3>
+              <p class="section-sub" style="margin-bottom:0.75rem;">Optional message visible to the reviewing administrator.</p>
+              <textarea class="textarea" rows="5" id="f-notes" placeholder="Add any notes for the reviewer…"></textarea>
+            </div>
+          </div>
+          <div class="wizard-actions">
+            <button type="button" class="btn btn-outline" id="step3-back"><i data-lucide="arrow-left" class="svg-icon"></i> Back</button>
+            <button class="btn btn-primary" data-action="submit-for-review" id="submit-btn"><i data-lucide="send" class="svg-icon"></i> Submit for Review</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="course-modal" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title">Create New Course</h3>
+        <button type="button" class="modal-close" id="course-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <div class="field" style="margin-bottom:1rem;">
+        <label class="field-label">Course Code *</label>
+        <input class="input" id="new-course-code" placeholder="e.g. IT 311" />
+      </div>
+      <div class="field" style="margin-bottom:1.25rem;">
+        <label class="field-label">Course Title *</label>
+        <input class="input" id="new-course-title" placeholder="e.g. Systems Analysis &amp; Design" />
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:0.5rem;">
+        <button type="button" class="btn btn-outline" id="course-modal-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="course-modal-save">Add Course</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="db.js"></script>
+  <script src="combobox.js"></script>
+  <script src="templates-render.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    (async function () {
+      const api = window.__OBTLP_API__;
+      const session = api.getSession();
+      if (!session) { window.location.href = 'index.html'; return; }
+      if (session.role !== 'faculty') {
+        window.location.href = session.role === 'admin' ? 'admin.html' : 'it-admin.html';
+        return;
+      }
+
+      const ui = window.__OBTLP_UI__;
+      const params = new URLSearchParams(window.location.search);
+      let portfolioId = params.get('id');
+      let current = null;
+      let editable = true;
+      let step = 1;
+
+      const LIST_FIELDS = ['objectives', 'outcomes', 'references', 'teachingMaterials'];
+      const listData = { objectives: [], outcomes: [], references: [], teachingMaterials: [] };
+      let catalog = { courses: [], departments: [], academicYears: [] };
+      let courseTemplates = [];
+      let obtlpTemplates = [];
+      let orgProfile = {};
+
+      document.getElementById('user-name').textContent = session.name || '—';
+      document.getElementById('user-avatar').textContent = (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+      document.getElementById('f-facultyName').value = session.name || '';
+
+      function fieldIds() {
+        return ['courseCode', 'courseTitle', 'semester', 'academicYear', 'description', 'facultyDepartment', 'facultyUnits', 'facultySchedule', 'syllabus', 'notes', 'departmentId', 'programId', 'prerequisite'];
+      }
+
+      // Phase 1: structured OBTLP data that isn't a plain text field — it
+      // is loaded wholesale from the course's template (see
+      // applyStructuredTemplateData below) rather than typed in, and is
+      // merged into collectEdits() so it persists with the portfolio.
+      let structuredData = {
+        templateId: '',
+        soMap: [],
+        teachingPlan: [],
+        referenceGroups: { textbooks: [], onlineResources: [] },
+        grading: { components: [] },
+        courseRequirements: [],
+        classPoliciesOverride: '',
+        effectivityText: ''
+      };
+      let resolvedTemplate = null;
+      let resolvedProgram = null;
+      let departments = [];
+      let allPrograms = [];
+
+      function fillFormFromPortfolio(p) {
+        fieldIds().forEach((k) => {
+          const el = document.getElementById(`f-${k}`);
+          if (el) el.value = p[k] || (k === 'semester' ? '1st Semester' : '');
+        });
+        LIST_FIELDS.forEach((k) => { listData[k] = Array.isArray(p[k]) ? p[k].slice() : []; renderList(k); });
+
+        structuredData = {
+          templateId: p.templateId || '',
+          soMap: Array.isArray(p.soMap) ? p.soMap.slice() : [],
+          teachingPlan: Array.isArray(p.teachingPlan) ? p.teachingPlan.slice() : [],
+          referenceGroups: p.referenceGroups || { textbooks: [], onlineResources: [] },
+          grading: p.grading || { components: [] },
+          courseRequirements: Array.isArray(p.courseRequirements) ? p.courseRequirements.slice() : [],
+          classPoliciesOverride: p.classPoliciesOverride || '',
+          effectivityText: p.effectivityText || ''
+        };
+        resolvedTemplate = (window.__OBTLP_TEMPLATE_RENDERER__ && p.templateId)
+          ? (obtlpTemplates.find((t) => t.id === p.templateId) || null)
+          : null;
+        resolvedProgram = p.programId ? (allPrograms.find((pr) => pr.id === p.programId) || null) : null;
+
+        syncTriggerLabels();
+      }
+
+      // ---------- list editors (objectives / outcomes / references / materials) ----------
+      function renderList(key) {
+        const container = document.getElementById(`list-${key}`);
+        if (!listData[key].length) listData[key] = [''];
+        container.innerHTML = listData[key].map((val, i) => `
+          <div class="list-editor-row" data-idx="${i}">
+            <input class="input" data-list="${key}" data-idx="${i}" value="${(val || '').replace(/"/g, '&quot;')}" placeholder="Type here…" />
+            <button type="button" class="remove-row-btn" data-remove="${key}" data-idx="${i}" title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+          </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+        container.querySelectorAll('input[data-list]').forEach((inp) => {
+          inp.addEventListener('input', () => { listData[key][Number(inp.dataset.idx)] = inp.value; });
+        });
+        container.querySelectorAll('[data-remove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            listData[key].splice(Number(btn.dataset.idx), 1);
+            if (!listData[key].length) listData[key] = [''];
+            renderList(key);
+          });
+        });
+      }
+      document.querySelectorAll('.add-row-btn[data-list]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.list;
+          listData[key].push('');
+          renderList(key);
+        });
+      });
+
+      // ---------- Course / Department / Academic Year real dropdowns ----------
+      let courseDD = null;
+      let deptDD = null;
+      let yearDD = null;
+      // Phase 1: Department -> Program -> Course cascading selects, distinct
+      // from the Faculty Information "Department" combobox above (deptDD),
+      // which is the faculty member's own home department.
+      let courseDeptDD = null;
+      let courseProgDD = null;
+
+      function courseLabel(c) {
+        return `${c.code || '(no code)'} — ${c.title || '(untitled)'}`;
+      }
+
+      function courseItems(query) {
+        const q = query.trim().toLowerCase();
+        const programId = document.getElementById('f-programId').value;
+        let list;
+        if (programId) {
+          // A program is selected: offer that program's own course
+          // templates first, but still fall back to the legacy free-text
+          // catalog so nothing that already worked stops working.
+          const fromProgram = courseTemplates
+            .filter((t) => t.programId === programId)
+            .map((t) => ({ code: t.courseCode, title: t.courseTitle }));
+          const seen = new Set(fromProgram.map((c) => c.code.toLowerCase()));
+          const rest = catalog.courses.filter((c) => !seen.has(String(c.code || '').toLowerCase()));
+          list = fromProgram.concat(rest);
+        } else {
+          list = catalog.courses;
+        }
+        if (q) list = list.filter((c) => c.code.toLowerCase().includes(q) || c.title.toLowerCase().includes(q));
+        return list.slice(0, 50).map((c) => ({ label: courseLabel(c), data: c }));
+      }
+
+      // ---------- automated course template ----------
+      // Selecting a Course Code looks up an official template (managed by
+      // System/IT Administrators in it-admin.html) and, if one exists, fills
+      // in the text sections automatically. It only ever fills fields that
+      // are currently BLANK — an existing saved portfolio's content is never
+      // silently overwritten. "Reload Official Template" is the explicit,
+      // confirmed way to force-overwrite when the user really wants that.
+      function findTemplateFor(courseCode) {
+        const code = String(courseCode || '').trim().toLowerCase();
+        if (!code) return null;
+        return courseTemplates.find((t) => String(t.courseCode || '').trim().toLowerCase() === code) || null;
+      }
+
+      function showTemplateStatus(text, variant) {
+        const el = document.getElementById('template-status');
+        el.textContent = text;
+        el.className = 'field-hint';
+        if (variant) el.classList.add(variant);
+        el.style.display = text ? 'block' : 'none';
+      }
+
+      function applyTemplateToFields(tpl, force) {
+        const setIfBlankOrForce = (id, value) => {
+          const el = document.getElementById(id);
+          if (el && (force || !el.value.trim())) el.value = value || '';
+        };
+        setIfBlankOrForce('f-description', tpl.description);
+        setIfBlankOrForce('f-syllabus', tpl.syllabus);
+        setIfBlankOrForce('f-prerequisite', tpl.prerequisite);
+        LIST_FIELDS.forEach((k) => {
+          if (!Array.isArray(tpl[k])) return;
+          const hasContent = listData[k].some((v) => v && v.trim());
+          if (force || !hasContent) {
+            listData[k] = tpl[k].length ? tpl[k].slice() : [''];
+            renderList(k);
+          }
+        });
+      }
+
+      // Phase 1: load the course's structured OBTLP data (Student Outcomes
+      // map, Teaching & Learning Plan, references, grading breakdown,
+      // course requirements, department/program, and the applicable OBTLP
+      // template) wholesale from the course template. Unlike the free-text
+      // fields above there is no per-field editing UI for these yet, so
+      // there is nothing "already typed" to protect — this always syncs to
+      // match the selected course, exactly like re-selecting a course would
+      // reasonably be expected to do.
+      function applyStructuredTemplateData(tpl) {
+        structuredData = {
+          templateId: tpl.obtlpTemplateId || '',
+          soMap: Array.isArray(tpl.soMap) ? tpl.soMap.slice() : [],
+          teachingPlan: Array.isArray(tpl.teachingPlan) ? tpl.teachingPlan.slice() : [],
+          referenceGroups: tpl.referenceGroups || { textbooks: [], onlineResources: [] },
+          grading: tpl.grading || { components: [] },
+          courseRequirements: Array.isArray(tpl.courseRequirements) ? tpl.courseRequirements.slice() : [],
+          classPoliciesOverride: tpl.classPoliciesOverride || '',
+          effectivityText: tpl.effectivityText || ''
+        };
+
+        if (tpl.departmentId) {
+          document.getElementById('f-departmentId').value = tpl.departmentId;
+          const d = departments.find((x) => x.id === tpl.departmentId);
+          if (d && courseDeptDD) courseDeptDD.setValue(`${d.code} — ${d.name}`);
+        }
+        if (tpl.programId) {
+          document.getElementById('f-programId').value = tpl.programId;
+          resolvedProgram = allPrograms.find((p) => p.id === tpl.programId) || null;
+          if (resolvedProgram && courseProgDD) courseProgDD.setValue(`${resolvedProgram.code} — ${resolvedProgram.name}`);
+        } else {
+          resolvedProgram = null;
+        }
+
+        resolvedTemplate = tpl.obtlpTemplateId
+          ? (obtlpTemplates.find((t) => t.id === tpl.obtlpTemplateId && t.active) || null)
+          : null;
+      }
+
+      function clearStructuredTemplateData() {
+        structuredData = {
+          templateId: '', soMap: [], teachingPlan: [],
+          referenceGroups: { textbooks: [], onlineResources: [] },
+          grading: { components: [] }, courseRequirements: [],
+          classPoliciesOverride: '', effectivityText: ''
+        };
+        resolvedTemplate = null;
+      }
+
+      // Phase 2: clearly separate "official / template-provided" content
+      // (read-only — comes from the course's OBTLP template) from
+      // "course-offering" content (always faculty-editable: semester,
+      // academic year, faculty units/schedule/notes, documents). Faculty
+      // never re-types what the official template already provides.
+      function applyOfficialContentLockState() {
+        const officialCard = document.getElementById('official-content-card');
+        const legacyGrids = document.getElementById('legacy-content-grids');
+        const descEl = document.getElementById('f-description');
+        const descLabel = document.getElementById('f-description-label');
+
+        if (resolvedTemplate) {
+          officialCard.style.display = 'block';
+          legacyGrids.style.display = 'none';
+          document.getElementById('official-content-template-name').textContent = resolvedTemplate.name;
+          const cilo = (listData.outcomes || []).map((s) => (s || '').trim()).filter(Boolean);
+          const ciloList = document.getElementById('official-cilo-list');
+          ciloList.innerHTML = cilo.length ? cilo.map((s) => `<li>${s}</li>`).join('') : '<li class="t-muted">No CILO on file yet.</li>';
+          descEl.disabled = true;
+          descLabel.textContent = 'Course Description (official — read-only)';
+
+          const weeks = structuredData.teachingPlan.filter((r) => r.type === 'week').length;
+          const milestones = structuredData.teachingPlan.filter((r) => r.type === 'milestone').length;
+          document.getElementById('official-teachingplan-summary').textContent = structuredData.teachingPlan.length
+            ? `${weeks} week${weeks === 1 ? '' : 's'}${milestones ? ` + ${milestones} exam milestone${milestones === 1 ? '' : 's'}` : ''}`
+            : 'Not entered yet.';
+
+          const gradingComps = structuredData.grading.components || [];
+          document.getElementById('official-grading-summary').textContent = gradingComps.length
+            ? gradingComps.map((c) => `${c.name} (${c.weightPct}%)`).join(', ')
+            : 'Not entered yet.';
+
+          const rg = structuredData.referenceGroups || { textbooks: [], onlineResources: [] };
+          const refCount = (rg.textbooks || []).length + (rg.onlineResources || []).length;
+          document.getElementById('official-references-summary').textContent = refCount
+            ? `${(rg.textbooks || []).length} textbook(s), ${(rg.onlineResources || []).length} online resource(s)`
+            : 'Not entered yet.';
+
+          document.getElementById('official-requirements-summary').textContent = structuredData.courseRequirements.length
+            ? structuredData.courseRequirements.join(', ')
+            : 'Not entered yet.';
+
+          document.getElementById('official-effectivity-summary').textContent = structuredData.effectivityText || 'Not entered yet.';
+        } else {
+          officialCard.style.display = 'none';
+          legacyGrids.style.display = 'block';
+          descEl.disabled = !editable;
+          descLabel.textContent = 'Course Description *';
+        }
+        if (window.lucide) lucide.createIcons();
+      }
+
+      function loadCourseTemplateFor(courseCode, force) {
+        const reloadBtn = document.getElementById('reload-template-btn');
+        if (!courseCode) {
+          showTemplateStatus('', null);
+          reloadBtn.style.display = 'none';
+          return;
+        }
+        try {
+          const tpl = findTemplateFor(courseCode);
+          if (!tpl) {
+            showTemplateStatus('No template has been assigned to this course yet. You can continue with manual entry.', 't-muted');
+            reloadBtn.style.display = 'none';
+            clearStructuredTemplateData();
+            applyOfficialContentLockState();
+            return;
+          }
+          applyTemplateToFields(tpl, force);
+          applyStructuredTemplateData(tpl);
+          applyOfficialContentLockState();
+          showTemplateStatus(
+            resolvedTemplate ? `Official OBTLP template loaded: ${resolvedTemplate.name}.` : 'Course template loaded successfully.',
+            't-success'
+          );
+          reloadBtn.style.display = 'inline-flex';
+        } catch (err) {
+          showTemplateStatus('Unable to load course template.', 't-destructive');
+          reloadBtn.style.display = 'none';
+        }
+      }
+
+      document.getElementById('reload-template-btn').addEventListener('click', () => {
+        const code = document.getElementById('f-courseCode').value.trim();
+        if (!code) return;
+        if (!confirm('Reload the official template? This replaces your current Course Description, Objectives, Outcomes, Syllabus, Teaching Materials, and References with the template content.')) return;
+        loadCourseTemplateFor(code, true);
+      });
+
+      function applyCourseFields(course) {
+        document.getElementById('f-courseCode').value = course.code || '';
+        document.getElementById('f-courseTitle').value = course.title || '';
+        if (courseDD) courseDD.setValue(course.code || course.title ? courseLabel(course) : '');
+        loadCourseTemplateFor(course.code, false);
+      }
+
+      // Reflect the current (possibly just-loaded) field values on every
+      // trigger's visible label — used after fillFormFromPortfolio() so an
+      // existing saved course/department/year shows correctly even if it
+      // isn't in the reusable catalog list.
+      function syncTriggerLabels() {
+        const code = document.getElementById('f-courseCode').value;
+        const title = document.getElementById('f-courseTitle').value;
+        if (courseDD) courseDD.setValue(code || title ? courseLabel({ code, title }) : '');
+        if (deptDD) deptDD.setValue(document.getElementById('f-facultyDepartment').value || '');
+        if (yearDD) yearDD.setValue(document.getElementById('f-academicYear').value || '');
+
+        const deptId = document.getElementById('f-departmentId').value;
+        const dept = deptId ? departments.find((d) => d.id === deptId) : null;
+        if (courseDeptDD) courseDeptDD.setValue(dept ? `${dept.code} — ${dept.name}` : '');
+
+        const progId = document.getElementById('f-programId').value;
+        const prog = progId ? allPrograms.find((p) => p.id === progId) : null;
+        if (courseProgDD) courseProgDD.setValue(prog ? `${prog.code} — ${prog.name}` : '');
+      }
+
+      const courseModal = document.getElementById('course-modal');
+      function openCourseModal(prefillCode) {
+        document.getElementById('new-course-code').value = prefillCode || document.getElementById('f-courseCode').value.trim();
+        document.getElementById('new-course-title').value = document.getElementById('f-courseTitle').value.trim();
+        courseModal.style.display = 'flex';
+        document.getElementById('new-course-code').focus();
+      }
+      function closeCourseModal() { courseModal.style.display = 'none'; }
+      document.getElementById('course-modal-close').addEventListener('click', closeCourseModal);
+      document.getElementById('course-modal-cancel').addEventListener('click', closeCourseModal);
+      courseModal.addEventListener('click', (e) => { if (e.target === courseModal) closeCourseModal(); });
+      document.getElementById('course-modal-save').addEventListener('click', async () => {
+        const code = document.getElementById('new-course-code').value.trim();
+        const title = document.getElementById('new-course-title').value.trim();
+        if (!code || !title) { ui.notify('Missing Information', 'Enter both a Course Code and Course Title.'); return; }
+        applyCourseFields({ code, title });
+        closeCourseModal();
+        try { catalog = await api.addCatalogEntry({ type: 'course', code, title }); } catch (err) { /* field is already filled in even if this fails */ }
+      });
+
+      if (window.__OBTLP_SELECT_DD__) {
+        courseDeptDD = window.__OBTLP_SELECT_DD__.attach(document.getElementById('course-department-select'), {
+          placeholder: 'Select Department',
+          searchPlaceholder: 'Search department…',
+          getItems: (query) => {
+            const q = query.trim().toLowerCase();
+            let list = departments;
+            if (q) list = list.filter((d) => d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q));
+            return list.slice(0, 50).map((d) => ({ label: `${d.code} — ${d.name}`, data: d }));
+          },
+          isSelected: (item) => item.data.id === document.getElementById('f-departmentId').value,
+          onSelect: (item) => {
+            document.getElementById('f-departmentId').value = item.data.id;
+            courseDeptDD.setValue(`${item.data.code} — ${item.data.name}`);
+            // Changing department invalidates any previously chosen program.
+            document.getElementById('f-programId').value = '';
+            resolvedProgram = null;
+            if (courseProgDD) courseProgDD.setValue('');
+          },
+          emptyText: 'No departments yet — an IT Administrator can add one.'
+        });
+
+        courseProgDD = window.__OBTLP_SELECT_DD__.attach(document.getElementById('course-program-select'), {
+          placeholder: 'Select Program',
+          searchPlaceholder: 'Search program…',
+          getItems: (query) => {
+            const deptId = document.getElementById('f-departmentId').value;
+            const q = query.trim().toLowerCase();
+            let list = deptId ? allPrograms.filter((p) => p.departmentId === deptId) : allPrograms;
+            if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
+            return list.slice(0, 50).map((p) => ({ label: `${p.code} — ${p.name}`, data: p }));
+          },
+          isSelected: (item) => item.data.id === document.getElementById('f-programId').value,
+          onSelect: (item) => {
+            document.getElementById('f-programId').value = item.data.id;
+            resolvedProgram = item.data;
+            courseProgDD.setValue(`${item.data.code} — ${item.data.name}`);
+            if (!document.getElementById('f-departmentId').value) {
+              document.getElementById('f-departmentId').value = item.data.departmentId;
+              const d = departments.find((x) => x.id === item.data.departmentId);
+              if (d && courseDeptDD) courseDeptDD.setValue(`${d.code} — ${d.name}`);
+            }
+          },
+          emptyText: 'No programs yet — pick a department or ask IT to add one.'
+        });
+
+        courseDD = window.__OBTLP_SELECT_DD__.attach(document.getElementById('course-select'), {
+          placeholder: 'Select Course',
+          searchPlaceholder: 'Search by code or title…',
+          getItems: courseItems,
+          isSelected: (item) => item.data.code === document.getElementById('f-courseCode').value && item.data.title === document.getElementById('f-courseTitle').value,
+          onSelect: (item) => applyCourseFields(item.data),
+          createText: () => '+ Create New Course',
+          onCreate: (query) => openCourseModal(query),
+          emptyText: 'No courses yet — create one below.'
+        });
+
+        deptDD = window.__OBTLP_SELECT_DD__.attach(document.getElementById('department-select'), {
+          placeholder: 'Select Department',
+          searchPlaceholder: 'Search department…',
+          getItems: (query) => {
+            const q = query.trim().toLowerCase();
+            let list = catalog.departments;
+            if (q) list = list.filter((d) => d.toLowerCase().includes(q));
+            return list.slice(0, 50).map((d) => ({ label: d, data: d }));
+          },
+          isSelected: (item) => item.data === document.getElementById('f-facultyDepartment').value,
+          onSelect: (item) => {
+            document.getElementById('f-facultyDepartment').value = item.data;
+            deptDD.setValue(item.data);
+          },
+          createText: (query) => {
+            const q = query.trim();
+            if (!q) return '';
+            const exists = catalog.departments.some((d) => d.toLowerCase() === q.toLowerCase());
+            return exists ? '' : `+ Use "${q}" as new department`;
+          },
+          onCreate: async (query) => {
+            const name = query.trim();
+            if (!name) return;
+            document.getElementById('f-facultyDepartment').value = name;
+            deptDD.setValue(name);
+            try { catalog = await api.addCatalogEntry({ type: 'department', name }); } catch (err) { /* ignore */ }
+          },
+          emptyText: 'No departments yet — search to add one.'
+        });
+
+        yearDD = window.__OBTLP_SELECT_DD__.attach(document.getElementById('academicyear-select'), {
+          placeholder: 'Select Academic Year',
+          searchPlaceholder: 'Search or type e.g. 2026-2027…',
+          getItems: (query) => {
+            const q = query.trim().toLowerCase();
+            let list = catalog.academicYears;
+            if (q) list = list.filter((y) => y.toLowerCase().includes(q));
+            return list.slice(0, 50).map((y) => ({ label: y, data: y }));
+          },
+          isSelected: (item) => item.data === document.getElementById('f-academicYear').value,
+          onSelect: (item) => {
+            document.getElementById('f-academicYear').value = item.data;
+            yearDD.setValue(item.data);
+          },
+          createText: (query) => {
+            const q = query.trim();
+            if (!q) return '';
+            const exists = catalog.academicYears.some((y) => y.toLowerCase() === q.toLowerCase());
+            return exists ? '' : `+ Use "${q}" as new academic year`;
+          },
+          onCreate: async (query) => {
+            const year = query.trim();
+            if (!year) return;
+            document.getElementById('f-academicYear').value = year;
+            yearDD.setValue(year);
+            try { catalog = await api.addCatalogEntry({ type: 'academicYear', year }); } catch (err) { /* ignore */ }
+          },
+          emptyText: 'No academic years yet — search to add one.'
+        });
+      }
+
+      // ---------- collect / preview ----------
+      function collectEdits() {
+        const edits = {};
+        fieldIds().forEach((k) => {
+          const el = document.getElementById(`f-${k}`);
+          if (el) edits[k] = el.value;
+        });
+        LIST_FIELDS.forEach((k) => { edits[k] = listData[k].map((s) => (s || '').trim()).filter(Boolean); });
+        // Phase 1 structured fields — loaded wholesale from the course
+        // template (see applyStructuredTemplateData), no per-field UI yet.
+        edits.templateId = structuredData.templateId;
+        edits.soMap = structuredData.soMap;
+        edits.teachingPlan = structuredData.teachingPlan;
+        edits.referenceGroups = structuredData.referenceGroups;
+        edits.grading = structuredData.grading;
+        edits.courseRequirements = structuredData.courseRequirements;
+        edits.classPoliciesOverride = structuredData.classPoliciesOverride;
+        edits.effectivityText = structuredData.effectivityText;
+        return edits;
+      }
+
+      // Builds the single merged data object consumed by BOTH the on-screen
+      // preview (renderPreview, via templates-render.js's HTML renderer)
+      // and the downloadable PDF (getPdfData -> app-actions.js's
+      // buildPortfolioPdf, via templates-render.js's PDF renderer) — same
+      // data, two output forms, matching Phase 1's "structured data in, one
+      // generator, multiple outputs" goal.
+      function buildRenderModel(edits) {
+        return {
+          schoolName: (window.__OBTLP_SETTINGS__ && window.__OBTLP_SETTINGS__.schoolName) || 'Your Institution',
+          college: edits.facultyDepartment || 'College / Department',
+          docId: `OBTLP-${current.id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`,
+          courseTitle: edits.courseTitle || 'Untitled Course',
+          courseCode: edits.courseCode || 'UNTITLED',
+          semester: edits.semester || '',
+          academicYear: edits.academicYear || '',
+          description: edits.description || 'No course description provided yet.',
+          prerequisite: edits.prerequisite || '',
+          faculty: session.name || '',
+          facultyDept: edits.facultyDepartment || '',
+          facultyUnits: edits.facultyUnits || '',
+          units: edits.facultyUnits || '',
+          schedule: edits.facultySchedule || '',
+          objectives: edits.objectives || [],
+          outcomes: edits.outcomes || [],
+          syllabus: edits.syllabus || 'No syllabus summary provided yet.',
+          teachingMaterials: edits.teachingMaterials || [],
+          references: edits.references || [],
+          status: current.status,
+          filename: window.__OBTLP_UI__.buildPdfFilename(edits.courseCode, edits.academicYear),
+          // Phase 1 structured data
+          soMap: edits.soMap || [],
+          teachingPlan: edits.teachingPlan || [],
+          referenceGroups: edits.referenceGroups || { textbooks: [], onlineResources: [] },
+          grading: edits.grading || { components: [] },
+          courseRequirements: edits.courseRequirements || [],
+          classPoliciesOverride: edits.classPoliciesOverride || '',
+          effectivityText: edits.effectivityText || '',
+          program: resolvedProgram,
+          orgProfile: orgProfile,
+          signatories: current.signatories || { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] },
+          template: resolvedTemplate
+        };
+      }
+
+      function renderPreview() {
+        const edits = collectEdits();
+        const model = buildRenderModel(edits);
+        document.getElementById('pdf-school').textContent = model.schoolName;
+        document.getElementById('pdf-college').textContent = model.college;
+        document.getElementById('pdf-doc-id').textContent = model.docId;
+        document.getElementById('pdf-title').textContent = model.courseTitle;
+        document.getElementById('pdf-meta').textContent = `${model.courseCode} · ${model.semester} · ${model.academicYear}`;
+        document.getElementById('pdf-status').textContent = current.status;
+        if (window.__OBTLP_TEMPLATE_RENDERER__) window.__OBTLP_TEMPLATE_RENDERER__.applyOfficialLetterhead(model);
+
+        const generatedEl = document.getElementById('pdf-generated');
+        const legacyEl = document.getElementById('pdf-legacy-sections');
+
+        if (resolvedTemplate && window.__OBTLP_TEMPLATE_RENDERER__) {
+          generatedEl.innerHTML = window.__OBTLP_TEMPLATE_RENDERER__.renderSectionsHtml(resolvedTemplate, model);
+          generatedEl.style.display = 'block';
+          legacyEl.style.display = 'none';
+          return;
+        }
+
+        generatedEl.style.display = 'none';
+        legacyEl.style.display = 'block';
+
+        document.getElementById('pdf-description').textContent = model.description;
+        document.getElementById('pdf-faculty').textContent = model.faculty || '—';
+        document.getElementById('pdf-faculty-dept').textContent = model.facultyDept || '—';
+        document.getElementById('pdf-units').textContent = model.units || '—';
+        document.getElementById('pdf-schedule').textContent = model.schedule || '—';
+        document.getElementById('pdf-syllabus').textContent = model.syllabus;
+
+        function fillList(id, arr, fallback) {
+          const el = document.getElementById(id);
+          el.innerHTML = arr.length ? arr.map((s) => `<li>${s}</li>`).join('') : `<li class="t-muted">${fallback}</li>`;
+        }
+        fillList('pdf-objectives', model.objectives, 'No objectives added yet.');
+        fillList('pdf-outcomes', model.outcomes, 'No learning outcomes added yet.');
+        fillList('pdf-materials', model.teachingMaterials, 'No teaching materials listed yet.');
+        fillList('pdf-references', model.references, 'No references listed yet.');
+      }
+
+      // Structured data for Download PDF (app-actions.js calls this — see
+      // window.__OBTLP_PDF_DATA__ below). Reads straight from the live form,
+      // independent of which wizard step is currently visible.
+      function getPdfData() {
+        if (!current) return null;
+        return buildRenderModel(collectEdits());
+      }
+      window.__OBTLP_PDF_DATA__ = getPdfData;
+
+      // ---------- validation ----------
+      function step1Errors() {
+        const edits = collectEdits();
+        const errs = [];
+        if (!edits.courseCode) errs.push('Course code is required.');
+        if (!edits.courseTitle) errs.push('Course title is required.');
+        if (!edits.academicYear) errs.push('Academic year is required.');
+        if (!edits.description) errs.push('Course description is required.');
+        return errs;
+      }
+
+      function renderValidationList() {
+        const edits = collectEdits();
+        const items = [
+          { ok: !!(edits.courseCode && edits.courseTitle && edits.academicYear && edits.description), label: 'Course information complete' }
+        ];
+        if (resolvedTemplate) {
+          items.push({ ok: true, label: `Official "${resolvedTemplate.name}" content loaded (outcomes, teaching plan, grading, references, requirements)` });
+        } else {
+          items.push({ ok: edits.outcomes.length > 0, label: 'Intended learning outcomes added' });
+        }
+        document.getElementById('validation-list').innerHTML = items.map((it) => `
+          <li><span class="dot ${it.ok ? 'dot-success' : 'dot-muted'}"></span><span>${it.label}</span></li>
+        `).join('');
+      }
+
+      // ---------- step navigation ----------
+      function goToStep(n) {
+        step = n;
+        document.querySelectorAll('.wizard-panel').forEach((el) => el.classList.toggle('active', Number(el.dataset.panel) === n));
+        document.querySelectorAll('.step').forEach((el) => {
+          const s = Number(el.dataset.step);
+          el.querySelector('.step-num').classList.toggle('active', s === n);
+          el.querySelector('.step-label').classList.toggle('active', s === n);
+        });
+        if (n === 2) renderPreview();
+        if (n === 3) { renderPreview(); renderValidationList(); }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      async function persistStep1() {
+        const edits = collectEdits();
+        current = await api.updatePortfolio(current.id, edits);
+      }
+
+      document.getElementById('step1-next').addEventListener('click', async () => {
+        const errs = step1Errors();
+        if (errs.length) { ui.notify('Missing Information', errs.join(' ')); return; }
+        try { await persistStep1(); goToStep(2); }
+        catch (err) { ui.notifyError(err); }
+      });
+      document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
+      document.getElementById('step2-next').addEventListener('click', () => goToStep(3));
+      document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
+
+      document.querySelectorAll('.step[data-step]').forEach((el) => {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => {
+          const target = Number(el.dataset.step);
+          if (target === 1 || current) goToStep(target);
+        });
+      });
+
+      window.__OBTLP_COLLECT_EDITS__ = function () {
+        if (!editable) return null;
+        return collectEdits();
+      };
+      window.__OBTLP_AFTER_SUBMIT__ = function () {
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+      };
+      window.__OBTLP_AFTER_SAVE__ = function () {
+        if (step === 2 || step === 3) renderPreview();
+      };
+
+      // ---------- initial load ----------
+      try {
+        const [settingsResp, catalogResp, templatesResp, deptResp, progResp, obtlpTplResp, orgProfileResp] = await Promise.all([
+          api.getSettings().catch(() => ({})),
+          api.getCatalog().catch(() => ({ courses: [], departments: [], academicYears: [] })),
+          api.getCourseTemplates().catch(() => []),
+          api.getDepartments().catch(() => []),
+          api.getPrograms().catch(() => []),
+          api.getObtlpTemplates().catch(() => []),
+          api.getOrgProfile().catch(() => ({}))
+        ]);
+        window.__OBTLP_SETTINGS__ = settingsResp;
+        catalog = catalogResp || catalog;
+        courseTemplates = templatesResp || [];
+        departments = deptResp || [];
+        allPrograms = progResp || [];
+        obtlpTemplates = obtlpTplResp || [];
+        orgProfile = orgProfileResp || {};
+
+        if (!portfolioId) {
+          current = await api.createPortfolio();
+          portfolioId = current.id;
+          window.history.replaceState(null, '', `portfolio-new.html?id=${encodeURIComponent(portfolioId)}`);
+        } else {
+          const state = await api.getState();
+          current = (state.portfolios || []).find((x) => x.id === portfolioId);
+          if (!current) {
+            document.getElementById('loading-state').innerHTML = '<p>Portfolio not found.</p>';
+            return;
+          }
+        }
+
+        editable = current.status === 'Draft' || current.status === 'Revision Required';
+        document.title = `${editable ? 'Edit' : 'View'} ${current.courseCode || 'Portfolio'} · OBTLP`;
+        document.getElementById('page-title').textContent = editable ? (portfolioId ? `Edit ${current.courseCode || 'Portfolio'}` : 'Create Portfolio') : `${current.courseCode} — ${current.status}`;
+
+        if (current.status === 'Revision Required' && current.review && current.review.notes) {
+          const banner = document.getElementById('revision-banner');
+          banner.textContent = `Admin feedback — revision requested: ${current.review.notes}`;
+          banner.style.display = 'block';
+        }
+        if (!editable) {
+          const banner = document.getElementById('locked-banner');
+          banner.textContent = `This portfolio is ${current.status} and can no longer be edited. You can still preview and download it.`;
+          banner.style.display = 'block';
+          document.getElementById('save-draft-btn').style.display = 'none';
+          document.querySelectorAll('.add-row-btn, #reload-template-btn').forEach((el) => el.style.display = 'none');
+          document.querySelectorAll('#wizard-root input, #wizard-root select, #wizard-root textarea, #wizard-root .select-dd-trigger').forEach((el) => el.disabled = true);
+        }
+
+        fillFormFromPortfolio(current);
+        LIST_FIELDS.forEach(renderList);
+        // Non-destructive: only surfaces template status/"Reload" for an
+        // already-selected course, and only fills fields that are blank —
+        // an existing portfolio's saved content is left untouched.
+        if (current.courseCode) loadCourseTemplateFor(current.courseCode, false);
+
+        document.getElementById('save-draft-btn').dataset.portfolioId = current.id;
+        document.getElementById('submit-btn').dataset.portfolioId = current.id;
+        if (current.status === 'Revision Required') {
+          document.getElementById('submit-btn').innerHTML = '<i data-lucide="send" class="svg-icon"></i> Save &amp; Resubmit';
+        }
+        document.getElementById('f-notes').value = current.notes || '';
+
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('wizard-root').style.display = 'block';
+        goToStep(1);
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        document.getElementById('loading-state').innerHTML = '<p>Could not load this portfolio.</p>';
+        ui.notifyError(err);
+      }
+    })();
+  </script>
+</body>
+</html>

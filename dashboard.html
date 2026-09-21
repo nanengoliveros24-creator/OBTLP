@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Faculty Dashboard · OBTLP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div>
+            <p class="brand-title">OBTLP</p>
+            <p class="brand-sub">Generator System</p>
+          </div>
+        </a>
+      </div>
+      <nav class="nav">
+        <a href="dashboard.html" class="nav-link active"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
+        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
+        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
+        <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar" id="user-avatar">–</div>
+          <div>
+            <p class="user-name" id="user-name">–</p>
+            <p class="user-role" id="user-role">Faculty Member</p>
+          </div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title" id="greeting">Welcome</h1>
+          <p class="page-subtitle">Here's the status of your OBTLP reports for this academic year.</p>
+        </div>
+        <div class="header-actions">
+          <a href="portfolio-new.html" class="btn btn-primary"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+        </div>
+      </header>
+
+      <!-- Stats -->
+      <section class="stats-grid">
+        <div class="stat"><div class="stat-top"><p class="stat-label">Total Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-total">0</p></div>
+        <div class="stat"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="check-circle-2" class="svg-icon t-success"></i></div><p class="stat-value" id="stat-approved">0</p></div>
+        <div class="stat"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-pending">0</p></div>
+        <div class="stat"><div class="stat-top"><p class="stat-label">Needs Revision</p><i data-lucide="alert-triangle" class="svg-icon t-destructive"></i></div><p class="stat-value" id="stat-revision">0</p></div>
+      </section>
+
+      <!-- Portfolio table -->
+      <section class="card mb-8" style="overflow:hidden;">
+        <div class="section-head">
+          <div>
+            <h2 class="card-title" style="font-size:1.125rem;">My Portfolios</h2>
+            <p class="section-sub">Your saved OBTLP report records</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <input class="input input-search" id="portfolio-search" placeholder="Search portfolios…" />
+            <a href="my-portfolios.html" class="btn btn-outline btn-sm">View All</a>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Course</th><th>Semester</th><th>Updated</th><th>Status</th><th class="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="portfolio-rows">
+              <tr><td colspan="5" class="t-muted" style="padding:1.5rem;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Activity -->
+      <section class="grid-3">
+        <div class="card card-pad span-2">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <h3 class="card-title">Submission Timeline</h3>
+            <i data-lucide="trending-up" class="svg-icon t-success"></i>
+          </div>
+          <div class="timeline" id="timeline">
+            <div class="timeline-item"><span class="dot dot-muted"></span><div><p class="item-title">No activity recorded yet.</p></div></div>
+          </div>
+        </div>
+
+        <div class="promo">
+          <div class="glow"></div>
+          <h3>OBE-Aligned Templates</h3>
+          <p>All generated portfolios use the official institutional template, ensuring compliance and consistency.</p>
+          <a href="portfolio-new.html" class="btn btn-accent btn-sm">Start a new portfolio</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    const api = window.__OBTLP_API__;
+    const session = api.getSession();
+
+    // If no session, redirect to the login page. Admin/IT accounts have
+    // their own dashboards, so send them there instead of the faculty view.
+    if (!session) {
+      window.location.href = 'index.html';
+    } else if (session.role === 'admin') {
+      window.location.href = 'admin.html';
+    } else if (session.role === 'it') {
+      window.location.href = 'it-admin.html';
+    }
+
+    const badgeClassFor = {
+      'Approved': 'badge-approved',
+      'Pending Review': 'badge-pending',
+      'In Review': 'badge-review',
+      'Revision Required': 'badge-revision',
+      'Draft': 'badge-draft'
+    };
+
+    function initials(name) {
+      return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+    }
+
+    function fmtWhen(iso) {
+      if (!iso) return '';
+      const diffMs = Date.now() - new Date(iso).getTime();
+      const mins = Math.round(diffMs / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.round(hrs / 24);
+      if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+      return new Date(iso).toLocaleDateString();
+    }
+
+    const DELETABLE_STATUSES = ['Draft', 'Revision Required'];
+
+    function actionsCellFor(p) {
+      const canEdit = DELETABLE_STATUSES.includes(p.status);
+      const editLink = `<a href="portfolio-new.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="${p.status === 'Draft' ? 'Continue Editing' : 'Edit'}"><i data-lucide="pencil" class="svg-icon"></i></a>`;
+      const deleteBtn = canEdit
+        ? `<button type="button" class="icon-btn" data-delete="${p.id}" data-label="${p.courseCode || 'this portfolio'}" title="Delete"><i data-lucide="trash-2" class="svg-icon"></i></button>`
+        : '';
+      return `
+        <div class="row-actions">
+          <a href="portfolio-preview.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="Preview"><i data-lucide="eye" class="svg-icon"></i></a>
+          ${editLink}
+          <a href="portfolio-preview.html?id=${encodeURIComponent(p.id)}&print=1" class="icon-btn" title="Download PDF"><i data-lucide="download" class="svg-icon"></i></a>
+          ${deleteBtn}
+        </div>
+      `;
+    }
+
+    let allPortfolios = [];
+
+    function renderRows(filterText) {
+      const tbody = document.getElementById('portfolio-rows');
+      const term = (filterText || '').trim().toLowerCase();
+      const rows = allPortfolios.filter((p) =>
+        !term || p.courseCode.toLowerCase().includes(term) || p.courseTitle.toLowerCase().includes(term)
+      );
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="t-muted" style="padding:1.5rem;">No portfolios yet. Create one to get started.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((p) => `
+        <tr>
+          <td><p class="cell-strong">${p.courseCode}</p><p class="cell-sub">${p.courseTitle}</p></td>
+          <td class="t-muted">${p.semester} · ${p.academicYear}</td>
+          <td class="t-muted">${fmtWhen(p.updatedAt)}</td>
+          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${p.status}</span></td>
+          <td>${actionsCellFor(p)}</td>
+        </tr>
+      `).join('');
+      if (window.lucide) lucide.createIcons();
+      tbody.querySelectorAll('[data-delete]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Delete the draft "${btn.dataset.label}"? This cannot be undone.`)) return;
+          try {
+            await api.deletePortfolio(btn.dataset.delete);
+            allPortfolios = allPortfolios.filter((p) => p.id !== btn.dataset.delete);
+            window.__OBTLP_UI__.notify('Portfolio Deleted', 'The draft has been removed.');
+            renderRows(searchInput ? searchInput.value : '');
+          } catch (err) {
+            window.__OBTLP_UI__.notifyError(err);
+          }
+        });
+      });
+    }
+
+    async function loadDashboard() {
+      try {
+        // Display session user info.
+        document.getElementById('user-name').textContent = session.name || '—';
+        document.getElementById('user-avatar').textContent = initials(session.name);
+        document.getElementById('greeting').textContent = `Good day, ${(session.name || 'Faculty Member').split(' ')[0]}`;
+
+        const state = await api.getState();
+        allPortfolios = state.portfolios || [];
+
+        document.getElementById('stat-total').textContent = allPortfolios.length;
+        document.getElementById('stat-approved').textContent = allPortfolios.filter((p) => p.status === 'Approved').length;
+        document.getElementById('stat-pending').textContent = allPortfolios.filter((p) => p.status === 'Pending Review' || p.status === 'In Review').length;
+        document.getElementById('stat-revision').textContent = allPortfolios.filter((p) => p.status === 'Revision Required').length;
+
+        renderRows('');
+
+        const timeline = document.getElementById('timeline');
+        const myLogs = (state.auditLogs || []).filter((l) => allPortfolios.some((p) => p.id === l.portfolioId) || l.actor === session.userId).slice(0, 6);
+        if (!myLogs.length) {
+          timeline.innerHTML = '<div class="timeline-item"><span class="dot dot-muted"></span><div><p class="item-title">No activity yet.</p></div></div>';
+        } else {
+          const dotFor = { approve: 'dot-success', submit: 'dot-primary', resubmit: 'dot-primary', 'request-revision': 'dot-destructive', edit: 'dot-muted', create: 'dot-muted' };
+          timeline.innerHTML = myLogs.map((l) => `
+            <div class="timeline-item">
+              <span class="dot ${dotFor[l.action] || 'dot-muted'}"></span>
+              <div><p class="item-title">${l.detail}</p><p class="item-time">${fmtWhen(l.at)}</p></div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        window.__OBTLP_UI__.notifyError(err);
+      }
+    }
+
+    const searchInput = document.getElementById('portfolio-search');
+    if (searchInput) searchInput.addEventListener('input', (e) => renderRows(e.target.value));
+
+    loadDashboard();
+  </script>
+</body>
+</html>

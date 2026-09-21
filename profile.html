@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile &amp; Account Settings · OBTLP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" class="brand" id="brand-link">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar" id="user-avatar">–</div>
+          <div><p class="user-name" id="user-name">–</p><p class="user-role" id="user-role">–</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Profile &amp; Account Settings</h1>
+          <p class="page-subtitle">Manage your display name and password.</p>
+        </div>
+      </header>
+
+      <div class="grid-3">
+        <section class="card card-pad span-2">
+          <h3 class="card-title" style="margin-bottom:1rem;">Account Information</h3>
+          <form id="profile-form" class="form-stack">
+            <div class="field">
+              <label class="field-label" for="p-name">Full Name</label>
+              <input class="input" id="p-name" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="p-username">Username / Email</label>
+              <input class="input" id="p-username" disabled />
+            </div>
+            <div class="field">
+              <label class="field-label" for="p-role">Role</label>
+              <input class="input" id="p-role" disabled />
+            </div>
+            <div class="form-error" id="profile-error" style="display:none;" role="alert"></div>
+            <div class="form-success" id="profile-success" style="display:none;">Profile updated.</div>
+            <button type="submit" class="btn btn-primary" id="profile-save-btn">Save Changes</button>
+          </form>
+        </section>
+
+        <section class="card card-pad">
+          <h3 class="card-title" style="margin-bottom:1rem;">Change Password</h3>
+          <form id="password-form" class="form-stack">
+            <div class="field">
+              <label class="field-label" for="p-current">Current Password</label>
+              <input class="input" id="p-current" type="password" autocomplete="current-password" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="p-new">New Password</label>
+              <input class="input" id="p-new" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="p-confirm">Confirm New Password</label>
+              <input class="input" id="p-confirm" type="password" autocomplete="new-password" />
+            </div>
+            <div class="form-error" id="password-error" style="display:none;" role="alert"></div>
+            <div class="form-success" id="password-success" style="display:none;">Password updated. Other sessions were signed out.</div>
+            <button type="submit" class="btn btn-primary" id="password-save-btn">Update Password</button>
+          </form>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    const api = window.__OBTLP_API__;
+    const ui = window.__OBTLP_UI__;
+    const session = api.getSession();
+    if (!session) { window.location.href = 'index.html'; }
+
+    const NAV_BY_ROLE = {
+      faculty: [
+        { href: 'dashboard.html', icon: 'layout-dashboard', label: 'Dashboard' },
+        { href: 'my-portfolios.html', icon: 'folder-open', label: 'My Portfolios' },
+        { href: 'portfolio-new.html', icon: 'file-plus-2', label: 'Create New Portfolio' },
+        { href: 'my-portfolios.html?filter=submitted', icon: 'send', label: 'Submitted Portfolios' },
+        { href: 'profile.html', icon: 'user-cog', label: 'Profile', active: true },
+        { action: 'notifications', icon: 'bell', label: 'Notifications' }
+      ],
+      admin: [
+        { href: 'admin.html', icon: 'clipboard-list', label: 'Review Queue' },
+        { href: 'profile.html', icon: 'user-cog', label: 'Profile', active: true },
+        { action: 'notifications', icon: 'bell', label: 'Notifications' }
+      ],
+      it: [
+        { href: 'it-admin.html', icon: 'shield-check', label: 'System Overview' },
+        { href: 'profile.html', icon: 'user-cog', label: 'Profile', active: true },
+        { action: 'notifications', icon: 'bell', label: 'Notifications' }
+      ]
+    };
+    const ROLE_LABEL = { faculty: 'Faculty', admin: 'System Administrator', it: 'IT Administrator' };
+    const ROLE_HOME = { faculty: 'dashboard.html', admin: 'admin.html', it: 'it-admin.html' };
+
+    function initials(name) {
+      return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+    }
+
+    function renderNav() {
+      const items = NAV_BY_ROLE[session.role] || NAV_BY_ROLE.faculty;
+      document.getElementById('nav').innerHTML = items.map((it) => {
+        const cls = `nav-link${it.active ? ' active' : ''}`;
+        if (it.action) return `<span class="${cls}" data-action="${it.action}"><i data-lucide="${it.icon}" class="svg-icon"></i> ${it.label}</span>`;
+        return `<a href="${it.href}" class="${cls}"><i data-lucide="${it.icon}" class="svg-icon"></i> ${it.label}</a>`;
+      }).join('');
+      document.getElementById('brand-link').setAttribute('href', ROLE_HOME[session.role] || 'index.html');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function load() {
+      renderNav();
+      document.getElementById('user-name').textContent = session.name || '—';
+      document.getElementById('user-avatar').textContent = initials(session.name);
+      document.getElementById('user-role').textContent = ROLE_LABEL[session.role] || session.role;
+      document.getElementById('p-name').value = session.name || '';
+      document.getElementById('p-role').value = ROLE_LABEL[session.role] || session.role;
+      try {
+        const state = await api.getState();
+        const me = (state.users || []).find((u) => u.id === session.userId) || {};
+        document.getElementById('p-username').value = me.username || '';
+      } catch (err) {
+        ui.notifyError(err);
+      }
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('profile-error');
+      const okEl = document.getElementById('profile-success');
+      errEl.style.display = 'none';
+      okEl.style.display = 'none';
+      const name = document.getElementById('p-name').value.trim();
+      if (!name) {
+        errEl.textContent = 'Name is required.';
+        errEl.style.display = 'block';
+        return;
+      }
+      const btn = document.getElementById('profile-save-btn');
+      btn.disabled = true;
+      try {
+        const updated = await api.updateMe({ name });
+        const current = api.getSession();
+        api.setSession(Object.assign({}, current, { name: updated.name }));
+        document.getElementById('user-name').textContent = updated.name;
+        document.getElementById('user-avatar').textContent = initials(updated.name);
+        okEl.style.display = 'block';
+        ui.notify('Profile Updated', 'Your name has been updated.');
+      } catch (err) {
+        errEl.textContent = err.message || 'Could not update profile.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('password-error');
+      const okEl = document.getElementById('password-success');
+      errEl.style.display = 'none';
+      okEl.style.display = 'none';
+      const currentPassword = document.getElementById('p-current').value;
+      const newPassword = document.getElementById('p-new').value;
+      const confirm = document.getElementById('p-confirm').value;
+      if (!currentPassword || !newPassword || !confirm) {
+        errEl.textContent = 'Please fill in all password fields.';
+        errEl.style.display = 'block';
+        return;
+      }
+      if (newPassword !== confirm) {
+        errEl.textContent = 'New password and confirmation do not match.';
+        errEl.style.display = 'block';
+        return;
+      }
+      if (newPassword.length < 6) {
+        errEl.textContent = 'New password must be at least 6 characters.';
+        errEl.style.display = 'block';
+        return;
+      }
+      const btn = document.getElementById('password-save-btn');
+      btn.disabled = true;
+      try {
+        await api.changeMyPassword(currentPassword, newPassword);
+        okEl.style.display = 'block';
+        document.getElementById('password-form').reset();
+        ui.notify('Password Updated', 'Your password has been changed.');
+      } catch (err) {
+        errEl.textContent = err.message || 'Could not update password.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

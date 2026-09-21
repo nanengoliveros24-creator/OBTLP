@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preview &amp; Submit · OBTLP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav">
+        <a href="dashboard.html" class="nav-link"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
+        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
+        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
+        <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar" id="user-avatar">–</div>
+          <div><p class="user-name" id="user-name">–</p><p class="user-role">Faculty</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title" id="page-title">Preview &amp; Submit</h1>
+          <p class="page-subtitle" id="page-subtitle">Review the final document before submitting it for institutional review.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline" data-action="download-pdf"><i data-lucide="download" class="svg-icon"></i> Download PDF</button>
+          <a href="portfolio-new.html" id="edit-link" class="btn btn-outline"><i data-lucide="pencil" class="svg-icon"></i> Edit</a>
+          <button class="btn btn-primary" data-action="submit-for-review" id="submit-btn"><i data-lucide="send" class="svg-icon"></i> Submit for Review</button>
+        </div>
+      </header>
+
+      <div id="picker" class="card card-pad empty-state">
+        <i data-lucide="folder-open" class="svg-icon"></i>
+        <p>No portfolio selected.</p>
+        <a href="dashboard.html" class="btn btn-outline btn-sm">Go to Dashboard</a>
+      </div>
+
+      <div id="content" style="display:none;">
+        <div class="grid-4">
+          <div class="pdf-canvas span-3">
+            <div class="pdf-sheet" id="pdf-sheet">
+              <div id="pdf-official-letterhead" class="t-muted" style="display:none;text-align:center;font-size:0.6875rem;line-height:1.5;padding:0.75rem 2.5rem 0;"></div>
+              <div class="pdf-letterhead">
+                <div class="pdf-seal"><img src="assets/pnc-logo.png" alt="University of Cabuyao seal" style="width:100%;height:100%;object-fit:contain;border-radius:999px;" /></div>
+                <div>
+                  <p class="card-title" style="font-size:1.125rem;line-height:1.1;" id="pdf-school">Institution</p>
+                  <p class="section-sub" id="pdf-college">College / Department</p>
+                </div>
+                <div style="margin-left:auto;text-align:right;">
+                  <p style="font-size:10px;text-transform:uppercase;letter-spacing:.15em;" class="t-muted">Document</p>
+                  <p class="card-title" style="font-size:0.875rem;" id="pdf-doc-id">OBTLP-0000</p>
+                  <p class="t-muted" style="font-size:9px;display:none;" id="pdf-form-code"></p>
+                </div>
+              </div>
+
+              <div class="pdf-body">
+                <p class="pdf-eyebrow">Outcomes-Based Teaching &amp; Learning Plan</p>
+                <h2 class="pdf-title" id="pdf-title">Course Title</h2>
+                <p class="pdf-meta" id="pdf-meta">Course Code · Semester · Academic Year</p>
+
+                <div class="pdf-section" id="revision-notice" style="display:none;border-color:var(--destructive);">
+                  <h3 style="color:var(--destructive);">Admin Feedback — Revision Requested</h3>
+                  <p id="revision-notice-text"></p>
+                </div>
+
+                <!-- Phase 1: generic template-driven sections (see
+                     templates-render.js) render here when the portfolio has
+                     a resolved OBTLP template; otherwise the fixed sections
+                     below render exactly as before. -->
+                <div id="pdf-generated" style="display:none;"></div>
+
+                <div id="pdf-legacy-sections">
+                  <div class="pdf-section">
+                    <h3>Course Description</h3>
+                    <p id="pdf-description">—</p>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Faculty Information</h3>
+                    <dl class="pdf-dl">
+                      <dt>Faculty</dt><dd id="pdf-faculty">—</dd>
+                      <dt>Department</dt><dd id="pdf-faculty-dept">—</dd>
+                      <dt>Units</dt><dd id="pdf-units">—</dd>
+                      <dt>Schedule</dt><dd id="pdf-schedule">—</dd>
+                    </dl>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Course Objectives</h3>
+                    <ol class="pdf-list" id="pdf-objectives"><li>—</li></ol>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Intended Learning Outcomes</h3>
+                    <ol class="pdf-list" id="pdf-outcomes"><li>—</li></ol>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Syllabus Summary</h3>
+                    <p id="pdf-syllabus">—</p>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Teaching Materials &amp; Modules</h3>
+                    <ul class="pdf-list" id="pdf-materials"><li>—</li></ul>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>References</h3>
+                    <ul class="pdf-list" id="pdf-references"><li>—</li></ul>
+                  </div>
+
+                  <div class="pdf-section">
+                    <h3>Attached Evidence</h3>
+                    <ul class="pdf-list plain" id="pdf-evidence"><li>No documents attached.</li></ul>
+                  </div>
+                </div>
+
+                <div class="pdf-foot">
+                  <span id="pdf-generated">Generated on request</span>
+                  <span id="pdf-status">Draft</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="space-y-6">
+            <div class="card card-pad">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+                <i data-lucide="shield-check" class="svg-icon t-success" style="width:1.25rem;height:1.25rem;"></i>
+                <h3 class="card-title">Submission Status</h3>
+              </div>
+              <p class="section-sub" id="submission-status">Loading…</p>
+              <p class="section-sub" id="template-caption" style="display:none;margin-top:0.5rem;"></p>
+            </div>
+
+            <div class="card card-pad">
+              <h3 class="card-title" style="margin-bottom:0.75rem;">Attached Documents</h3>
+              <ul class="file-list" id="doc-list"></ul>
+            </div>
+
+            <div class="card card-pad">
+              <h3 class="card-title" style="margin-bottom:0.75rem;">Submission Notes</h3>
+              <p class="section-sub" style="margin-bottom:0.75rem;">Optional message visible to the reviewing administrator.</p>
+              <textarea class="textarea" rows="5" id="f-notes" placeholder="Add any notes for the reviewer…"></textarea>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="db.js"></script>
+  <script src="templates-render.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    (async function () {
+      const api = window.__OBTLP_API__;
+      const ui = window.__OBTLP_UI__;
+      const session = api.getSession();
+      if (!session) { window.location.href = 'index.html'; return; }
+
+      if (session.role !== 'faculty') {
+        document.querySelectorAll(
+          '.sidebar .nav a[href="dashboard.html"], .sidebar .nav a[href="portfolio-new.html"], .sidebar .nav a[href^="my-portfolios.html"]'
+        ).forEach((el) => el.remove());
+        const brand = document.querySelector('.sidebar-head .brand');
+        if (brand) brand.setAttribute('href', session.role === 'admin' ? 'admin.html' : 'it-admin.html');
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const portfolioId = params.get('id');
+
+      document.getElementById('user-name').textContent = session.name || '—';
+      document.getElementById('user-avatar').textContent = (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+
+      if (!portfolioId) return; // picker empty-state stays visible
+
+      function fmtSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      }
+
+      function fillList(id, arr, fallback) {
+        const el = document.getElementById(id);
+        el.innerHTML = (arr && arr.length) ? arr.map((s) => `<li>${s}</li>`).join('') : `<li class="t-muted">${fallback}</li>`;
+      }
+
+      try {
+        const [state, settings, obtlpTemplates, programs, orgProfile] = await Promise.all([
+          api.getState(),
+          api.getSettings().catch(() => ({})),
+          api.getObtlpTemplates().catch(() => []),
+          api.getPrograms().catch(() => []),
+          api.getOrgProfile().catch(() => ({}))
+        ]);
+        const p = (state.portfolios || []).find((x) => x.id === portfolioId);
+        if (!p) {
+          document.getElementById('picker').innerHTML = '<p>Portfolio not found, or you do not have access to it.</p>';
+          return;
+        }
+
+        document.getElementById('picker').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+
+        // Phase 1: resolve the OBTLP template this portfolio was generated
+        // against (captured on p.templateId when the faculty selected the
+        // course in portfolio-new.html). A portfolio with no template
+        // resolves to null and falls back to the legacy fixed layout below
+        // — nothing changes for courses that don't have a template yet.
+        const resolvedTemplate = p.templateId ? (obtlpTemplates.find((t) => t.id === p.templateId && t.active) || null) : null;
+        const resolvedProgram = p.programId ? (programs.find((pr) => pr.id === p.programId) || null) : null;
+
+        document.title = `Preview ${p.courseCode || 'Portfolio'} · OBTLP`;
+        document.getElementById('pdf-school').textContent = settings.schoolName || 'Your Institution';
+        document.getElementById('pdf-college').textContent = p.facultyDepartment || 'College / Department';
+        document.getElementById('pdf-doc-id').textContent = `OBTLP-${p.id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`;
+        document.getElementById('pdf-title').textContent = p.courseTitle || 'Untitled Course';
+        document.getElementById('pdf-meta').textContent = `${p.courseCode || 'UNTITLED'} · ${p.semester || ''} · ${p.academicYear || ''}`;
+        document.getElementById('pdf-status').textContent = p.status;
+        document.getElementById('submission-status').textContent = p.status;
+        document.getElementById('f-notes').value = p.notes || '';
+
+        function buildRenderModel() {
+          return {
+            schoolName: settings.schoolName || 'Your Institution',
+            college: p.facultyDepartment || 'College / Department',
+            docId: `OBTLP-${p.id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`,
+            courseTitle: p.courseTitle || 'Untitled Course',
+            courseCode: p.courseCode || 'UNTITLED',
+            semester: p.semester || '',
+            academicYear: p.academicYear || '',
+            description: p.description || 'No course description provided yet.',
+            prerequisite: p.prerequisite || '',
+            faculty: session.name || '',
+            facultyDept: p.facultyDepartment || '',
+            facultyUnits: p.facultyUnits || '',
+            units: p.facultyUnits || '',
+            schedule: p.facultySchedule || '',
+            objectives: p.objectives || [],
+            outcomes: p.outcomes || [],
+            syllabus: p.syllabus || 'No syllabus summary provided yet.',
+            teachingMaterials: p.teachingMaterials || [],
+            references: p.references || [],
+            evidence: (p.documents || []).map((d) => `${d.name} (${d.type})`),
+            status: p.status,
+            filename: window.__OBTLP_UI__.buildPdfFilename(p.courseCode, p.academicYear),
+            soMap: p.soMap || [],
+            teachingPlan: p.teachingPlan || [],
+            referenceGroups: p.referenceGroups || { textbooks: [], onlineResources: [] },
+            grading: p.grading || { components: [] },
+            courseRequirements: p.courseRequirements || [],
+            classPoliciesOverride: p.classPoliciesOverride || '',
+            effectivityText: p.effectivityText || '',
+            program: resolvedProgram,
+            orgProfile: orgProfile,
+            signatories: p.signatories || { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] },
+            template: resolvedTemplate
+          };
+        }
+        const model = buildRenderModel();
+        const docs = p.documents || [];
+        if (window.__OBTLP_TEMPLATE_RENDERER__) window.__OBTLP_TEMPLATE_RENDERER__.applyOfficialLetterhead(model);
+
+        // Structured data for Download PDF (app-actions.js calls this).
+        window.__OBTLP_PDF_DATA__ = () => buildRenderModel();
+
+        const generatedEl = document.getElementById('pdf-generated');
+        const legacyEl = document.getElementById('pdf-legacy-sections');
+
+        const templateCaption = document.getElementById('template-caption');
+        if (resolvedTemplate) {
+          templateCaption.textContent = `Follows the official "${resolvedTemplate.name}" OBTLP format.`;
+          templateCaption.style.display = 'block';
+        }
+
+        if (resolvedTemplate && window.__OBTLP_TEMPLATE_RENDERER__) {
+          generatedEl.innerHTML = window.__OBTLP_TEMPLATE_RENDERER__.renderSectionsHtml(resolvedTemplate, model);
+          generatedEl.style.display = 'block';
+          legacyEl.style.display = 'none';
+        } else {
+          generatedEl.style.display = 'none';
+          legacyEl.style.display = 'block';
+
+          document.getElementById('pdf-description').textContent = model.description;
+          document.getElementById('pdf-faculty').textContent = session.name || '—';
+          document.getElementById('pdf-faculty-dept').textContent = p.facultyDepartment || '—';
+          document.getElementById('pdf-units').textContent = p.facultyUnits || '—';
+          document.getElementById('pdf-schedule').textContent = p.facultySchedule || '—';
+          document.getElementById('pdf-syllabus').textContent = model.syllabus;
+
+          fillList('pdf-objectives', p.objectives, 'No objectives added yet.');
+          fillList('pdf-outcomes', p.outcomes, 'No learning outcomes added yet.');
+          fillList('pdf-materials', p.teachingMaterials, 'No teaching materials listed yet.');
+          fillList('pdf-references', p.references, 'No references listed yet.');
+
+          document.getElementById('pdf-evidence').innerHTML = docs.length
+            ? docs.map((d) => `<li>${d.name} (${d.type})</li>`).join('')
+            : '<li>No documents attached.</li>';
+        }
+
+        const docList = document.getElementById('doc-list');
+        docList.innerHTML = docs.length
+          ? docs.map((d) => `
+              <li class="file-item">
+                <div class="file-icon"><i data-lucide="file-text" class="svg-icon"></i></div>
+                <div style="flex:1;min-width:0;"><p class="file-name">${d.name}</p><p class="file-size">${d.type} · ${fmtSize(d.size)}</p></div>
+                <button type="button" class="icon-btn" data-download="${d.id}" title="Download"><i data-lucide="download" class="svg-icon"></i></button>
+              </li>`).join('')
+          : '<li class="section-sub" style="padding:0.5rem 0;">No documents attached.</li>';
+        docList.querySelectorAll('[data-download]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const doc = docs.find((d) => d.id === btn.dataset.download);
+            try { await api.downloadDocument(p.id, btn.dataset.download, doc ? doc.name : 'document'); }
+            catch (err) { ui.notifyError(err); }
+          });
+        });
+        if (window.lucide) lucide.createIcons();
+
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.dataset.portfolioId = p.id;
+        document.getElementById('edit-link').href = `portfolio-new.html?id=${encodeURIComponent(p.id)}`;
+
+        const editable = (p.status === 'Draft' || p.status === 'Revision Required') && p.facultyId === session.userId;
+        if (!editable) {
+          submitBtn.disabled = true;
+          submitBtn.title = p.facultyId !== session.userId ? 'Only the owning faculty member can submit this portfolio.' : `Already ${p.status}`;
+          document.getElementById('f-notes').disabled = true;
+        }
+        if (p.status === 'Revision Required') {
+          submitBtn.innerHTML = '<i data-lucide="send" class="svg-icon"></i> Save &amp; Resubmit';
+          if (p.review && p.review.notes) {
+            document.getElementById('revision-notice').style.display = '';
+            document.getElementById('revision-notice-text').textContent = p.review.notes;
+          }
+          if (window.lucide) lucide.createIcons();
+        }
+
+        window.__OBTLP_COLLECT_EDITS__ = function () {
+          if (!editable) return null;
+          return { notes: document.getElementById('f-notes').value };
+        };
+        window.__OBTLP_AFTER_SUBMIT__ = function () {
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+        };
+
+        if (params.get('print') === '1') {
+          setTimeout(() => { if (window.__OBTLP_UI__ && window.__OBTLP_UI__.downloadPdf) window.__OBTLP_UI__.downloadPdf(); }, 400);
+        }
+      } catch (err) {
+        document.getElementById('picker').style.display = 'block';
+        document.getElementById('picker').innerHTML = '<p>Could not load this portfolio.</p>';
+        ui.notifyError(err);
+      }
+    })();
+  </script>
+</body>
+</html>

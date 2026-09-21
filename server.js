@@ -1,0 +1,1435 @@
+/*
+  Static file server + JSON API for the OBTLP app.
+  Run: node server.js
+  Then open: http://localhost:3000
+
+  All reads and writes go through db.json on disk via dbstore.js, so faculty,
+  admin, and IT views (even in different browsers) see the same data.
+
+  Authentication: token-based. Login/registration issue an opaque session
+  token (see auth.js) that the client must send as
+  "Authorization: Bearer <token>" on every request other than
+  login/register/setup. The server resolves the token to a real user on
+  every request and uses THAT identity for ownership/role checks -- it
+  never trusts a userId/role/facultyId supplied by the client body.
+*/
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const store = require('./dbstore');
+const auth = require('./auth');
+
+const ROOT = __dirname;
+// Same override pattern as dbstore.js: lets tests use throwaway folders
+// instead of the real uploads/backups directories.
+const UPLOADS_DIR = process.env.OBTLP_UPLOADS_DIR
+  ? path.resolve(process.env.OBTLP_UPLOADS_DIR)
+  : path.join(ROOT, 'uploads');
+const BACKUPS_DIR = process.env.OBTLP_BACKUPS_DIR
+  ? path.resolve(process.env.OBTLP_BACKUPS_DIR)
+  : path.join(ROOT, 'backups');
+const PORT = process.env.PORT || 3000;
+
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+if (!fs.existsSync(BACKUPS_DIR)) fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon'
+};
+
+const DOC_MIME = {
+  '.pdf': 'application/pdf',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+};
+const ALLOWED_DOC_EXT = Object.keys(DOC_MIME);
+const MAX_DOC_BYTES = 15 * 1024 * 1024; // 15MB per file
+
+// ---------- helpers ----------
+
+function sendJson(res, status, data) {
+  const body = JSON.stringify(data);
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store'
+  });
+  res.end(body);
+}
+
+function readBody(req, limitBytes) {
+  const limit = limitBytes || 5 * 1024 * 1024;
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (total > limit) {
+        reject(new Error('Request body too large'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      if (!chunks.length) return resolve({});
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      } catch (e) {
+        reject(new Error('Invalid JSON body'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function pushAudit(db, entry) {
+  if (!db.auditLogs) db.auditLogs = [];
+  db.auditLogs.unshift(Object.assign({ id: store.nextId('log'), at: store.nowIso() }, entry));
+  db.auditLogs = db.auditLogs.slice(0, 500);
+}
+
+function pushNotification(db, { userId, role, title, message, portfolioId }) {
+  if (!db.notifications) db.notifications = [];
+  db.notifications.unshift({
+    id: store.nextId('note'),
+    userId: userId || null,
+    role: role || null,
+    title,
+    message,
+    portfolioId: portfolioId || null,
+    read: false,
+    createdAt: store.nowIso()
+  });
+}
+
+// Statuses that block a brand-new submission (already in the pipeline).
+const BLOCKS_RESUBMIT = ['Pending Review', 'In Review', 'Approved'];
+const EDITABLE_STATUSES = ['Draft', 'Revision Required'];
+
+// The three supported roles in the system (RBAC).
+const ROLES = ['faculty', 'admin', 'it'];
+function isRole(role) {
+  return ROLES.includes(String(role || '').toLowerCase());
+}
+
+function stripPassword(u) {
+  const copy = Object.assign({}, u);
+  delete copy.passwordHash;
+  return copy;
+}
+
+function findUserByUsername(db, username) {
+  const needle = String(username || '').trim().toLowerCase();
+  return (db.users || []).find((u) => String(u.username || '').toLowerCase() === needle);
+}
+
+// Resolve the caller's identity from the Authorization header against the
+// live db (so the check always reflects current sessions/users).
+function resolveAuth(db, req) {
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+  if (!token) return null;
+  if (!db.sessions) db.sessions = [];
+  const session = db.sessions.find((s) => s.token === token);
+  if (!session || auth.isExpired(session)) return null;
+  const user = (db.users || []).find((u) => u.id === session.userId);
+  if (!user) return null;
+  return { token, session, user };
+}
+
+function requireAuth(db, req) {
+  const ctx = resolveAuth(db, req);
+  if (!ctx) throw { status: 401, message: 'Your session has expired. Please sign in again.' };
+  return ctx;
+}
+
+function requireRole(ctx, roles) {
+  if (!roles.includes(ctx.user.role)) {
+    throw { status: 403, message: 'You do not have permission to perform this action.' };
+  }
+}
+
+function ownedPortfolio(db, id, ctx) {
+  const p = (db.portfolios || []).find((x) => x.id === id);
+  if (!p) throw { status: 404, message: 'Portfolio not found.' };
+  if (p.facultyId !== ctx.user.id && !['admin', 'it'].includes(ctx.user.role)) {
+    throw { status: 403, message: 'You do not have access to this portfolio.' };
+  }
+  return p;
+}
+
+function sanitizeStrList(v) {
+  if (!Array.isArray(v)) return [];
+  return v.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 100);
+}
+
+function docExtOf(name) {
+  return path.extname(String(name || '')).toLowerCase();
+}
+
+// ---------- Phase 1: structured OBTLP field sanitizers ----------
+// These mirror the shape produced by seed-ccs101.js from the actual CCS101
+// DOCX. Kept generic (not CCS101-specific) so any future department/CHED
+// template's course data validates the same way.
+
+function sanitizeSoMap(v) {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 50).map((row) => ({
+    soCode: String((row && row.soCode) || '').trim(),
+    intensity: String((row && row.intensity) || '').trim()
+  })).filter((row) => row.soCode);
+}
+
+function sanitizeTeachingPlanRow(row) {
+  if (!row || typeof row !== 'object') return null;
+  if (row.type === 'milestone') {
+    const label = String(row.label || '').trim();
+    return label ? { type: 'milestone', label } : null;
+  }
+  return {
+    type: 'week',
+    week: String(row.week || '').trim(),
+    topics: sanitizeStrList(row.topics),
+    ilo: sanitizeStrList(row.ilo),
+    tla: sanitizeStrList(row.tla),
+    instructionalMaterials: sanitizeStrList(row.instructionalMaterials),
+    assessmentTasks: sanitizeStrList(row.assessmentTasks)
+  };
+}
+
+function sanitizeTeachingPlan(v) {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 200).map(sanitizeTeachingPlanRow).filter(Boolean);
+}
+
+function sanitizeReferenceGroups(v) {
+  const src = v && typeof v === 'object' ? v : {};
+  return {
+    textbooks: sanitizeStrList(src.textbooks),
+    onlineResources: sanitizeStrList(src.onlineResources)
+  };
+}
+
+function sanitizeGradingComponent(c) {
+  if (!c || typeof c !== 'object') return null;
+  const name = String(c.name || '').trim();
+  if (!name) return null;
+  const items = Array.isArray(c.items) ? c.items.slice(0, 50).map((it) => ({
+    item: String((it && it.item) || '').trim(),
+    source: String((it && it.source) || '').trim(),
+    pct: Number.isFinite(Number(it && it.pct)) ? Number(it.pct) : 0
+  })).filter((it) => it.item) : [];
+  return {
+    name,
+    weightPct: Number.isFinite(Number(c.weightPct)) ? Number(c.weightPct) : 0,
+    weightNote: String(c.weightNote || '').trim(),
+    items
+  };
+}
+
+function sanitizeGrading(v) {
+  const src = v && typeof v === 'object' ? v : {};
+  const components = Array.isArray(src.components) ? src.components.slice(0, 10).map(sanitizeGradingComponent).filter(Boolean) : [];
+  return { components };
+}
+
+function sanitizeSignatory(s) {
+  if (!s || typeof s !== 'object') return null;
+  const name = String(s.name || '').trim();
+  if (!name) return null;
+  return { name, date: String(s.date || '').trim() };
+}
+
+function sanitizeSignatories(v) {
+  const src = v && typeof v === 'object' ? v : {};
+  const single = (s) => sanitizeSignatory(s) || null;
+  const multi = (arr) => (Array.isArray(arr) ? arr.slice(0, 10).map(sanitizeSignatory).filter(Boolean) : []);
+  return {
+    preparedBy: multi(src.preparedBy),
+    reviewedBy: single(src.reviewedBy),
+    concurredBy: single(src.concurredBy),
+    approvedBy: multi(src.approvedBy)
+  };
+}
+
+// Phase 3: light relational validation so the Department/Program/Template
+// selectors can't be pointed at nonsense — friendly 400s instead of silently
+// accepting a broken link (which would just fail to resolve a template
+// later, invisibly). Empty strings are always allowed (means "not set").
+function assertDeptProgramLink(db, departmentId, programId) {
+  const deptId = String(departmentId || '').trim();
+  const progId = String(programId || '').trim();
+  if (deptId && !(db.departments || []).some((d) => d.id === deptId)) {
+    throw { status: 400, message: 'Selected Department was not found. Please choose a Department again.' };
+  }
+  if (progId) {
+    const program = (db.programs || []).find((p) => p.id === progId);
+    if (!program) {
+      throw { status: 400, message: 'Selected Program was not found. Please choose a Program again.' };
+    }
+    if (deptId && program.departmentId !== deptId) {
+      throw { status: 400, message: 'The selected Program does not belong to the selected Department.' };
+    }
+  }
+}
+
+function blankStructuredFields() {
+  return {
+    departmentId: '',
+    programId: '',
+    prerequisite: '',
+    soMap: [],
+    teachingPlan: [],
+    referenceGroups: { textbooks: [], onlineResources: [] },
+    grading: { components: [] },
+    courseRequirements: [],
+    classPoliciesOverride: '',
+    effectivityText: ''
+  };
+}
+
+// Reusable Course Code / Course Title / Department / Academic Year lists for
+// the portfolio wizard's searchable selectors. Built from whatever faculty
+// have explicitly added (db.catalog) merged with distinct values already
+// used on saved portfolios, so the list stays useful even before anyone
+// explicitly "creates" an entry.
+function buildCatalog(db) {
+  if (!db.catalog) db.catalog = { courses: [], departments: [], academicYears: [] };
+
+  const courseMap = new Map();
+  (db.catalog.courses || []).forEach((c) => {
+    const code = String(c.code || '').trim();
+    const title = String(c.title || '').trim();
+    if (!code && !title) return;
+    courseMap.set(`${code.toLowerCase()}|${title.toLowerCase()}`, { code, title });
+  });
+  (db.portfolios || []).forEach((p) => {
+    const code = String(p.courseCode || '').trim();
+    const title = String(p.courseTitle || '').trim();
+    if (!code && !title) return;
+    const key = `${code.toLowerCase()}|${title.toLowerCase()}`;
+    if (!courseMap.has(key)) courseMap.set(key, { code, title });
+  });
+
+  const departments = new Set((db.catalog.departments || []).map((d) => String(d || '').trim()).filter(Boolean));
+  (db.portfolios || []).forEach((p) => {
+    const dept = String(p.facultyDepartment || '').trim();
+    if (dept) departments.add(dept);
+  });
+
+  const academicYears = new Set((db.catalog.academicYears || []).map((y) => String(y || '').trim()).filter(Boolean));
+  (db.portfolios || []).forEach((p) => {
+    const year = String(p.academicYear || '').trim();
+    if (year) academicYears.add(year);
+  });
+
+  return {
+    courses: Array.from(courseMap.values()).sort((a, b) => a.code.localeCompare(b.code)),
+    departments: Array.from(departments).sort((a, b) => a.localeCompare(b)),
+    academicYears: Array.from(academicYears).sort((a, b) => b.localeCompare(a))
+  };
+}
+
+// ---------- route table ----------
+// Each entry: { auth: bool, roles: [optional array], handler(db, ctx, query, body, params) }
+
+const routes = {
+  // ---- public / auth ----
+  'GET /api/setup-status': {
+    auth: false,
+    handler: (db) => ({ status: 200, data: { hasUsers: (db.users || []).length > 0 } })
+  },
+
+  'POST /api/setup': {
+    auth: false,
+    handler: (db, ctx, query, body) => {
+      if ((db.users || []).length > 0) {
+        throw { status: 403, message: 'Setup has already been completed. Please sign in, or contact your IT administrator.' };
+      }
+      const name = String(body.name || '').trim();
+      const username = String(body.username || '').trim();
+      const password = String(body.password || '');
+      const role = String(body.role || 'it').toLowerCase();
+      if (!name || !username || !password) {
+        throw { status: 400, message: 'Name, username, and password are required.' };
+      }
+      if (!['admin', 'it'].includes(role)) {
+        throw { status: 400, message: 'The first account must be an Administrator or IT Administrator.' };
+      }
+      if (password.length < 6) {
+        throw { status: 400, message: 'Password must be at least 6 characters.' };
+      }
+      const user = {
+        id: store.nextId('u'),
+        name,
+        username,
+        role,
+        passwordHash: auth.hashPassword(password)
+      };
+      db.users = [user];
+      pushAudit(db, { actor: user.id, action: 'user-create', portfolioId: null, detail: `Created initial ${user.role} account ${user.username}` });
+      const session = auth.newSession(user.id);
+      if (!db.sessions) db.sessions = [];
+      db.sessions.push(session);
+      return { status: 201, data: { token: session.token, user: stripPassword(user) } };
+    }
+  },
+
+  'POST /api/register': {
+    auth: false,
+    handler: (db, ctx, query, body) => {
+      const name = String(body.name || '').trim();
+      const username = String(body.username || '').trim();
+      const password = String(body.password || '');
+      const confirmPassword = String(body.confirmPassword || '');
+      if (!name || !username || !password || !confirmPassword) {
+        throw { status: 400, message: 'Please fill in all required fields.' };
+      }
+      if (password !== confirmPassword) {
+        throw { status: 400, message: 'Password and confirm password do not match.' };
+      }
+      if (password.length < 6) {
+        throw { status: 400, message: 'Password must be at least 6 characters.' };
+      }
+      if (findUserByUsername(db, username)) {
+        throw { status: 409, message: 'An account with that email/username already exists.' };
+      }
+      // Public self-registration creates an account with the requested role
+      // (Faculty, System Administrator, or IT Administrator); anything
+      // outside those three falls back to Faculty.
+      const requestedRole = String(body.role || '').toLowerCase();
+      const role = isRole(requestedRole) ? requestedRole : 'faculty';
+      const user = {
+        id: store.nextId('u'),
+        name,
+        username,
+        role,
+        passwordHash: auth.hashPassword(password)
+      };
+      if (!db.users) db.users = [];
+      db.users.push(user);
+      const roleLabel = { faculty: 'faculty', admin: 'System Administrator', it: 'IT Administrator' }[role];
+      pushAudit(db, { actor: user.id, action: 'user-create', portfolioId: null, detail: `Registered new ${roleLabel} account ${user.username}` });
+      const session = auth.newSession(user.id);
+      if (!db.sessions) db.sessions = [];
+      db.sessions.push(session);
+      return { status: 201, data: { token: session.token, user: stripPassword(user) } };
+    }
+  },
+
+  'POST /api/login': {
+    auth: false,
+    handler: (db, ctx, query, body) => {
+      const username = String(body.username || '').trim();
+      const password = String(body.password || '');
+      const selectedRole = body.role ? String(body.role).toLowerCase() : null;
+      if (!username || !password) {
+        throw { status: 400, message: 'Username and password are required.' };
+      }
+      if (selectedRole && !isRole(selectedRole)) {
+        throw { status: 400, message: 'Please choose a valid role.' };
+      }
+      const user = findUserByUsername(db, username);
+      if (!user) {
+        throw { status: 401, message: 'Incorrect username or password.' };
+      }
+      if (!user.passwordHash || !auth.verifyPassword(password, user.passwordHash)) {
+        throw { status: 401, message: 'Incorrect username or password.' };
+      }
+      // The selected role is a real credential check, not a client-trusted
+      // value: a correct password with the wrong role selection is rejected
+      // with the same generic message used for a wrong password, so the
+      // login form can't be used to probe which role an account holds.
+      if (selectedRole && user.role !== selectedRole) {
+        throw { status: 401, message: 'Incorrect username or password.' };
+      }
+      if (!db.sessions) db.sessions = [];
+      // Housekeeping: drop expired sessions.
+      db.sessions = db.sessions.filter((s) => !auth.isExpired(s));
+      const session = auth.newSession(user.id);
+      db.sessions.push(session);
+      pushAudit(db, { actor: user.id, action: 'login', portfolioId: null, detail: `${user.name} signed in` });
+      return { status: 200, data: { token: session.token, user: stripPassword(user) } };
+    }
+  },
+
+  'POST /api/logout': {
+    auth: true,
+    handler: (db, ctx) => {
+      db.sessions = (db.sessions || []).filter((s) => s.token !== ctx.token);
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- self-service profile (any signed-in user, own account only) ----
+  'PUT /api/me': {
+    auth: true,
+    handler: (db, ctx, query, body) => {
+      const name = String(body.name || '').trim();
+      if (!name) throw { status: 400, message: 'Name is required.' };
+      ctx.user.name = name;
+      pushAudit(db, { actor: ctx.user.id, action: 'user-update', portfolioId: null, detail: `${ctx.user.username} updated their profile` });
+      return { status: 200, data: stripPassword(ctx.user) };
+    }
+  },
+
+  'POST /api/me/password': {
+    auth: true,
+    handler: (db, ctx, query, body) => {
+      const currentPassword = String(body.currentPassword || '');
+      const newPassword = String(body.newPassword || '');
+      if (!currentPassword || !newPassword) {
+        throw { status: 400, message: 'Current and new password are required.' };
+      }
+      if (!auth.verifyPassword(currentPassword, ctx.user.passwordHash)) {
+        throw { status: 401, message: 'Your current password is incorrect.' };
+      }
+      if (newPassword.length < 6) {
+        throw { status: 400, message: 'New password must be at least 6 characters.' };
+      }
+      ctx.user.passwordHash = auth.hashPassword(newPassword);
+      // Keep the session that just made this change alive; sign the account
+      // out everywhere else since the old password is no longer valid.
+      db.sessions = (db.sessions || []).filter((s) => s.token === ctx.token || s.userId !== ctx.user.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'password-change', portfolioId: null, detail: `${ctx.user.username} changed their own password` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- state ----
+  'GET /api/state': {
+    auth: true,
+    handler: (db, ctx) => {
+      const isStaff = ['admin', 'it'].includes(ctx.user.role);
+      const portfolios = isStaff ? (db.portfolios || []) : (db.portfolios || []).filter((p) => p.facultyId === ctx.user.id);
+      const notifications = (db.notifications || []).filter(
+        (n) => n.userId === ctx.user.id || n.role === ctx.user.role
+      );
+      return {
+        status: 200,
+        data: {
+          users: isStaff ? (db.users || []).map(stripPassword) : [stripPassword(ctx.user)],
+          portfolios,
+          allPortfolios: isStaff ? (db.portfolios || []) : [],
+          notifications,
+          auditLogs: isStaff ? (db.auditLogs || []).slice(0, 50) : [],
+          settings: db.settings || {}
+        }
+      };
+    }
+  },
+
+  // ---- catalog (reusable course / department / academic year picks) ----
+  'GET /api/catalog': {
+    auth: true,
+    handler: (db) => ({ status: 200, data: buildCatalog(db) })
+  },
+
+  'POST /api/catalog': {
+    auth: true,
+    roles: ['faculty'],
+    handler: (db, ctx, query, body) => {
+      if (!db.catalog) db.catalog = { courses: [], departments: [], academicYears: [] };
+      const type = String(body.type || '');
+      if (type === 'course') {
+        const code = String(body.code || '').trim();
+        const title = String(body.title || '').trim();
+        if (!code || !title) throw { status: 400, message: 'Course code and title are required.' };
+        const exists = db.catalog.courses.some(
+          (c) => String(c.code || '').toLowerCase() === code.toLowerCase() && String(c.title || '').toLowerCase() === title.toLowerCase()
+        );
+        if (!exists) db.catalog.courses.push({ code, title });
+      } else if (type === 'department') {
+        const name = String(body.name || '').trim();
+        if (!name) throw { status: 400, message: 'Department name is required.' };
+        if (!db.catalog.departments.some((d) => String(d || '').toLowerCase() === name.toLowerCase())) {
+          db.catalog.departments.push(name);
+        }
+      } else if (type === 'academicYear') {
+        const year = String(body.year || '').trim();
+        if (!year) throw { status: 400, message: 'Academic year is required.' };
+        if (!db.catalog.academicYears.some((y) => String(y || '').toLowerCase() === year.toLowerCase())) {
+          db.catalog.academicYears.push(year);
+        }
+      } else {
+        throw { status: 400, message: 'Unknown catalog entry type.' };
+      }
+      return { status: 200, data: buildCatalog(db) };
+    }
+  },
+
+  // ---- departments (Phase 1: Department -> Program -> Course -> Template) ----
+  'GET /api/departments': {
+    auth: true,
+    handler: (db) => ({ status: 200, data: (db.departments || []) })
+  },
+
+  'POST /api/departments': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body) => {
+      const code = String(body.code || '').trim();
+      const name = String(body.name || '').trim();
+      if (!code || !name) throw { status: 400, message: 'Department code and name are required.' };
+      if (!db.departments) db.departments = [];
+      if (db.departments.some((d) => d.code.toLowerCase() === code.toLowerCase())) {
+        throw { status: 409, message: `A department with code ${code} already exists.` };
+      }
+      const dept = { id: store.nextId('dept'), code, name, createdAt: store.nowIso() };
+      db.departments.push(dept);
+      pushAudit(db, { actor: ctx.user.id, action: 'department-create', portfolioId: null, detail: `Created department ${code} — ${name}` });
+      return { status: 201, data: dept };
+    }
+  },
+
+  'PUT /api/departments/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const dept = (db.departments || []).find((d) => d.id === params.id);
+      if (!dept) throw { status: 404, message: 'Department not found.' };
+      if (body.code !== undefined) dept.code = String(body.code).trim();
+      if (body.name !== undefined) dept.name = String(body.name).trim();
+      pushAudit(db, { actor: ctx.user.id, action: 'department-update', portfolioId: null, detail: `Updated department ${dept.code}` });
+      return { status: 200, data: dept };
+    }
+  },
+
+  'DELETE /api/departments/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const dept = (db.departments || []).find((d) => d.id === params.id);
+      if (!dept) throw { status: 404, message: 'Department not found.' };
+      if ((db.programs || []).some((p) => p.departmentId === dept.id)) {
+        throw { status: 409, message: 'This department still has programs under it. Remove those first.' };
+      }
+      db.departments = db.departments.filter((d) => d.id !== dept.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'department-delete', portfolioId: null, detail: `Deleted department ${dept.code}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- programs (belong to a department; carry PEO + Student Outcomes) ----
+  'GET /api/programs': {
+    auth: true,
+    handler: (db, ctx, query) => {
+      const deptId = query.get ? query.get('departmentId') : null;
+      let programs = db.programs || [];
+      if (deptId) programs = programs.filter((p) => p.departmentId === deptId);
+      return { status: 200, data: programs };
+    }
+  },
+
+  'POST /api/programs': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body) => {
+      const departmentId = String(body.departmentId || '').trim();
+      const code = String(body.code || '').trim();
+      const name = String(body.name || '').trim();
+      if (!departmentId || !code || !name) throw { status: 400, message: 'Department, program code, and program name are required.' };
+      if (!(db.departments || []).some((d) => d.id === departmentId)) throw { status: 400, message: 'Unknown department.' };
+      if (!db.programs) db.programs = [];
+      if (db.programs.some((p) => p.code.toLowerCase() === code.toLowerCase() && p.departmentId === departmentId)) {
+        throw { status: 409, message: `A program with code ${code} already exists in this department.` };
+      }
+      const program = {
+        id: store.nextId('prog'),
+        departmentId,
+        code,
+        name,
+        peoIntro: String(body.peoIntro || ''),
+        peo: sanitizeStrList(body.peo),
+        studentOutcomes: Array.isArray(body.studentOutcomes)
+          ? body.studentOutcomes.slice(0, 50).map((s) => ({ code: String((s && s.code) || '').trim(), description: String((s && s.description) || '').trim() })).filter((s) => s.code)
+          : [],
+        createdAt: store.nowIso()
+      };
+      db.programs.push(program);
+      pushAudit(db, { actor: ctx.user.id, action: 'program-create', portfolioId: null, detail: `Created program ${code} — ${name}` });
+      return { status: 201, data: program };
+    }
+  },
+
+  'PUT /api/programs/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const program = (db.programs || []).find((p) => p.id === params.id);
+      if (!program) throw { status: 404, message: 'Program not found.' };
+      if (body.departmentId !== undefined) program.departmentId = String(body.departmentId).trim();
+      if (body.code !== undefined) program.code = String(body.code).trim();
+      if (body.name !== undefined) program.name = String(body.name).trim();
+      if (body.peoIntro !== undefined) program.peoIntro = String(body.peoIntro);
+      if (body.peo !== undefined) program.peo = sanitizeStrList(body.peo);
+      if (body.studentOutcomes !== undefined) {
+        program.studentOutcomes = Array.isArray(body.studentOutcomes)
+          ? body.studentOutcomes.slice(0, 50).map((s) => ({ code: String((s && s.code) || '').trim(), description: String((s && s.description) || '').trim() })).filter((s) => s.code)
+          : [];
+      }
+      pushAudit(db, { actor: ctx.user.id, action: 'program-update', portfolioId: null, detail: `Updated program ${program.code}` });
+      return { status: 200, data: program };
+    }
+  },
+
+  'DELETE /api/programs/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const program = (db.programs || []).find((p) => p.id === params.id);
+      if (!program) throw { status: 404, message: 'Program not found.' };
+      if ((db.courseTemplates || []).some((t) => t.programId === program.id)) {
+        throw { status: 409, message: 'This program still has course templates under it. Remove those first.' };
+      }
+      db.programs = db.programs.filter((p) => p.id !== program.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'program-delete', portfolioId: null, detail: `Deleted program ${program.code}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- OBTLP templates (data-driven blueprint; one row per department/
+  // program template version — the CCS101 template seeded from the actual
+  // DOCX is the first of these, not a special case in the code) ----
+  'GET /api/obtlp-templates': {
+    auth: true,
+    handler: (db, ctx) => {
+      const isStaff = ['admin', 'it'].includes(ctx.user.role);
+      const templates = db.obtlpTemplates || [];
+      return { status: 200, data: isStaff ? templates : templates.filter((t) => t.active) };
+    }
+  },
+
+  'POST /api/obtlp-templates': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body) => {
+      const code = String(body.code || '').trim();
+      const name = String(body.name || '').trim();
+      if (!code || !name) throw { status: 400, message: 'Template code and name are required.' };
+      if (!Array.isArray(body.sections) || !body.sections.length) {
+        throw { status: 400, message: 'A template needs at least one section.' };
+      }
+      if (!db.obtlpTemplates) db.obtlpTemplates = [];
+      if (db.obtlpTemplates.some((t) => t.code.toLowerCase() === code.toLowerCase())) {
+        throw { status: 409, message: `A template with code ${code} already exists.` };
+      }
+      const template = {
+        id: store.nextId('tpl'),
+        code,
+        name,
+        departmentId: String(body.departmentId || ''),
+        programId: String(body.programId || ''),
+        version: String(body.version || '1'),
+        formCode: String(body.formCode || ''),
+        effectivityText: String(body.effectivityText || ''),
+        active: body.active !== undefined ? !!body.active : true,
+        sections: body.sections,
+        createdAt: store.nowIso(),
+        updatedAt: store.nowIso()
+      };
+      db.obtlpTemplates.push(template);
+      pushAudit(db, { actor: ctx.user.id, action: 'obtlp-template-create', portfolioId: null, detail: `Created OBTLP template ${code}` });
+      return { status: 201, data: template };
+    }
+  },
+
+  'PUT /api/obtlp-templates/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const tpl = (db.obtlpTemplates || []).find((t) => t.id === params.id);
+      if (!tpl) throw { status: 404, message: 'OBTLP template not found.' };
+      if (body.name !== undefined) tpl.name = String(body.name).trim();
+      if (body.departmentId !== undefined) tpl.departmentId = String(body.departmentId);
+      if (body.programId !== undefined) tpl.programId = String(body.programId);
+      if (body.version !== undefined) tpl.version = String(body.version);
+      if (body.formCode !== undefined) tpl.formCode = String(body.formCode);
+      if (body.effectivityText !== undefined) tpl.effectivityText = String(body.effectivityText);
+      if (body.active !== undefined) tpl.active = !!body.active;
+      if (body.sections !== undefined) {
+        if (!Array.isArray(body.sections) || !body.sections.length) {
+          throw { status: 400, message: 'A template needs at least one section.' };
+        }
+        tpl.sections = body.sections;
+      }
+      tpl.updatedAt = store.nowIso();
+      pushAudit(db, { actor: ctx.user.id, action: 'obtlp-template-update', portfolioId: null, detail: `Updated OBTLP template ${tpl.code}` });
+      return { status: 200, data: tpl };
+    }
+  },
+
+  'DELETE /api/obtlp-templates/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const tpl = (db.obtlpTemplates || []).find((t) => t.id === params.id);
+      if (!tpl) throw { status: 404, message: 'OBTLP template not found.' };
+      if ((db.courseTemplates || []).some((t) => t.obtlpTemplateId === tpl.id)) {
+        throw { status: 409, message: 'This template is still linked to course templates. Unlink those first.' };
+      }
+      db.obtlpTemplates = db.obtlpTemplates.filter((t) => t.id !== tpl.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'obtlp-template-delete', portfolioId: null, detail: `Deleted OBTLP template ${tpl.code}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- org profile (Vision/Mission/Core Values/Graduate Attributes, SO
+  // intensity legend, standard attendance rule, standard class policies —
+  // shared boilerplate reused by every OBTLP template) ----
+  'GET /api/org-profile': {
+    auth: true,
+    handler: (db) => ({ status: 200, data: db.orgProfile || {} })
+  },
+
+  'PUT /api/org-profile': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body) => {
+      db.orgProfile = Object.assign({}, db.orgProfile, body, { updatedAt: store.nowIso() });
+      pushAudit(db, { actor: ctx.user.id, action: 'org-profile-update', portfolioId: null, detail: 'Updated organization profile' });
+      return { status: 200, data: db.orgProfile };
+    }
+  },
+
+  // ---- course templates (official per-course content, managed by staff) ----
+  // Selecting a Course Code in the portfolio wizard looks up a template here
+  // to auto-populate the text sections. Faculty get read-only access so the
+  // wizard can look one up; only staff (admin/it) can create or change one.
+  'GET /api/course-templates': {
+    auth: true,
+    handler: (db) => ({ status: 200, data: (db.courseTemplates || []) })
+  },
+
+  'POST /api/course-templates': {
+    auth: true,
+    roles: ['admin', 'it'],
+    handler: (db, ctx, query, body) => {
+      const courseCode = String(body.courseCode || '').trim();
+      if (!courseCode) throw { status: 400, message: 'Course code is required.' };
+      if (!db.courseTemplates) db.courseTemplates = [];
+      const dup = db.courseTemplates.some((t) => t.courseCode.toLowerCase() === courseCode.toLowerCase());
+      if (dup) throw { status: 409, message: `A template for ${courseCode} already exists. Edit it instead of creating a duplicate.` };
+      assertDeptProgramLink(db, body.departmentId, body.programId);
+      if (body.obtlpTemplateId && !(db.obtlpTemplates || []).some((t) => t.id === body.obtlpTemplateId)) {
+        throw { status: 400, message: 'Selected OBTLP Template was not found. Please choose again.' };
+      }
+      const template = Object.assign(blankStructuredFields(), {
+        id: store.nextId('tpl'),
+        courseCode,
+        courseTitle: String(body.courseTitle || '').trim(),
+        description: String(body.description || ''),
+        objectives: sanitizeStrList(body.objectives),
+        outcomes: sanitizeStrList(body.outcomes),
+        syllabus: String(body.syllabus || ''),
+        teachingMaterials: sanitizeStrList(body.teachingMaterials),
+        references: sanitizeStrList(body.references),
+        // Phase 1 structured fields (all optional — a course template
+        // without an OBTLP template still works exactly as before).
+        departmentId: String(body.departmentId || ''),
+        programId: String(body.programId || ''),
+        obtlpTemplateId: String(body.obtlpTemplateId || ''),
+        prerequisite: String(body.prerequisite || ''),
+        soMap: sanitizeSoMap(body.soMap),
+        teachingPlan: sanitizeTeachingPlan(body.teachingPlan),
+        referenceGroups: sanitizeReferenceGroups(body.referenceGroups),
+        grading: sanitizeGrading(body.grading),
+        courseRequirements: sanitizeStrList(body.courseRequirements),
+        classPoliciesOverride: String(body.classPoliciesOverride || ''),
+        effectivityText: String(body.effectivityText || ''),
+        updatedBy: ctx.user.id,
+        createdAt: store.nowIso(),
+        updatedAt: store.nowIso()
+      });
+      db.courseTemplates.push(template);
+      pushAudit(db, { actor: ctx.user.id, action: 'template-create', portfolioId: null, detail: `Created course template for ${courseCode}` });
+      return { status: 201, data: template };
+    }
+  },
+
+  'PUT /api/course-templates/:id': {
+    auth: true,
+    roles: ['admin', 'it'],
+    handler: (db, ctx, query, body, params) => {
+      const tpl = (db.courseTemplates || []).find((t) => t.id === params.id);
+      if (!tpl) throw { status: 404, message: 'Course template not found.' };
+      if (body.courseCode !== undefined) tpl.courseCode = String(body.courseCode || '').trim();
+      if (body.courseTitle !== undefined) tpl.courseTitle = String(body.courseTitle || '').trim();
+      if (body.description !== undefined) tpl.description = String(body.description || '');
+      if (body.syllabus !== undefined) tpl.syllabus = String(body.syllabus || '');
+      if (body.objectives !== undefined) tpl.objectives = sanitizeStrList(body.objectives);
+      if (body.outcomes !== undefined) tpl.outcomes = sanitizeStrList(body.outcomes);
+      if (body.teachingMaterials !== undefined) tpl.teachingMaterials = sanitizeStrList(body.teachingMaterials);
+      if (body.references !== undefined) tpl.references = sanitizeStrList(body.references);
+      if (body.departmentId !== undefined || body.programId !== undefined) {
+        assertDeptProgramLink(db, body.departmentId !== undefined ? body.departmentId : tpl.departmentId, body.programId !== undefined ? body.programId : tpl.programId);
+      }
+      if (body.obtlpTemplateId !== undefined && body.obtlpTemplateId && !(db.obtlpTemplates || []).some((t) => t.id === body.obtlpTemplateId)) {
+        throw { status: 400, message: 'Selected OBTLP Template was not found. Please choose again.' };
+      }
+      if (body.departmentId !== undefined) tpl.departmentId = String(body.departmentId || '');
+      if (body.programId !== undefined) tpl.programId = String(body.programId || '');
+      if (body.obtlpTemplateId !== undefined) tpl.obtlpTemplateId = String(body.obtlpTemplateId || '');
+      if (body.prerequisite !== undefined) tpl.prerequisite = String(body.prerequisite || '');
+      if (body.soMap !== undefined) tpl.soMap = sanitizeSoMap(body.soMap);
+      if (body.teachingPlan !== undefined) tpl.teachingPlan = sanitizeTeachingPlan(body.teachingPlan);
+      if (body.referenceGroups !== undefined) tpl.referenceGroups = sanitizeReferenceGroups(body.referenceGroups);
+      if (body.grading !== undefined) tpl.grading = sanitizeGrading(body.grading);
+      if (body.courseRequirements !== undefined) tpl.courseRequirements = sanitizeStrList(body.courseRequirements);
+      if (body.classPoliciesOverride !== undefined) tpl.classPoliciesOverride = String(body.classPoliciesOverride || '');
+      if (body.effectivityText !== undefined) tpl.effectivityText = String(body.effectivityText || '');
+      tpl.updatedBy = ctx.user.id;
+      tpl.updatedAt = store.nowIso();
+      pushAudit(db, { actor: ctx.user.id, action: 'template-update', portfolioId: null, detail: `Updated course template for ${tpl.courseCode}` });
+      return { status: 200, data: tpl };
+    }
+  },
+
+  'DELETE /api/course-templates/:id': {
+    auth: true,
+    roles: ['admin', 'it'],
+    handler: (db, ctx, query, body, params) => {
+      const tpl = (db.courseTemplates || []).find((t) => t.id === params.id);
+      if (!tpl) throw { status: 404, message: 'Course template not found.' };
+      db.courseTemplates = (db.courseTemplates || []).filter((t) => t.id !== params.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'template-delete', portfolioId: null, detail: `Deleted course template for ${tpl.courseCode}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- portfolios ----
+  'POST /api/portfolios': {
+    auth: true,
+    roles: ['faculty'],
+    handler: (db, ctx) => {
+      const id = store.nextId('p');
+      const portfolio = Object.assign(blankStructuredFields(), {
+        id,
+        facultyId: ctx.user.id,
+        courseCode: '',
+        courseTitle: '',
+        semester: '1st Semester',
+        academicYear: '',
+        description: '',
+        facultyDepartment: '',
+        facultyUnits: '',
+        facultySchedule: '',
+        objectives: [],
+        outcomes: [],
+        syllabus: '',
+        teachingMaterials: [],
+        references: [],
+        documents: [],
+        documentCount: 0,
+        notes: '',
+        // Phase 1: which OBTLP template (if any) this portfolio was
+        // generated against, captured at creation/course-selection time so
+        // later edits to the template don't retroactively change a
+        // portfolio that's already in progress or submitted.
+        templateId: '',
+        signatories: { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] },
+        updatedAt: store.nowIso(),
+        createdAt: store.nowIso(),
+        status: 'Draft',
+        review: { notes: '', requestedRevisionAt: null, approvedAt: null }
+      });
+      if (!db.portfolios) db.portfolios = [];
+      db.portfolios.push(portfolio);
+      pushAudit(db, { actor: ctx.user.id, action: 'create', portfolioId: id, detail: 'Created a new draft portfolio' });
+      return { status: 201, data: portfolio };
+    }
+  },
+
+  'PUT /api/portfolios/:id': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      if (p.facultyId !== ctx.user.id) {
+        throw { status: 403, message: 'Only the owning faculty member can edit this portfolio.' };
+      }
+      if (!EDITABLE_STATUSES.includes(p.status)) {
+        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and can no longer be edited.` };
+      }
+      if (body.departmentId !== undefined || body.programId !== undefined) {
+        assertDeptProgramLink(db, body.departmentId !== undefined ? body.departmentId : p.departmentId, body.programId !== undefined ? body.programId : p.programId);
+      }
+      const stringFields = [
+        'courseCode', 'courseTitle', 'semester', 'academicYear', 'description',
+        'facultyDepartment', 'facultyUnits', 'facultySchedule', 'syllabus', 'notes',
+        'departmentId', 'programId', 'templateId', 'prerequisite', 'classPoliciesOverride', 'effectivityText'
+      ];
+      stringFields.forEach((k) => {
+        if (body[k] !== undefined) p[k] = String(body[k]);
+      });
+      const listFields = ['objectives', 'outcomes', 'teachingMaterials', 'references', 'courseRequirements'];
+      listFields.forEach((k) => {
+        if (body[k] !== undefined) p[k] = sanitizeStrList(body[k]);
+      });
+      if (body.soMap !== undefined) p.soMap = sanitizeSoMap(body.soMap);
+      if (body.teachingPlan !== undefined) p.teachingPlan = sanitizeTeachingPlan(body.teachingPlan);
+      if (body.referenceGroups !== undefined) p.referenceGroups = sanitizeReferenceGroups(body.referenceGroups);
+      if (body.grading !== undefined) p.grading = sanitizeGrading(body.grading);
+      if (body.signatories !== undefined) p.signatories = sanitizeSignatories(body.signatories);
+      p.updatedAt = store.nowIso();
+      pushAudit(db, { actor: p.facultyId, action: 'edit', portfolioId: p.id, detail: `Edited ${p.courseCode || 'portfolio'}` });
+      return { status: 200, data: p };
+    }
+  },
+
+  'DELETE /api/portfolios/:id': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      if (p.facultyId !== ctx.user.id) {
+        throw { status: 403, message: 'Only the owning faculty member can delete this portfolio.' };
+      }
+      if (!EDITABLE_STATUSES.includes(p.status)) {
+        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and can no longer be deleted.` };
+      }
+      (p.documents || []).forEach((d) => {
+        const filePath = path.join(UPLOADS_DIR, d.storedName);
+        fs.existsSync(filePath) && fs.unlinkSync(filePath);
+      });
+      db.portfolios = (db.portfolios || []).filter((x) => x.id !== p.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'delete', portfolioId: p.id, detail: `Deleted draft ${p.courseCode || 'portfolio'}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  'POST /api/portfolios/:id/actions': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = (db.portfolios || []).find((x) => x.id === params.id);
+      if (!p) throw { status: 404, message: 'Portfolio not found.' };
+      const action = body.action;
+      const comment = String(body.comment || '').trim();
+
+      if (action === 'submit') {
+        if (p.facultyId !== ctx.user.id) throw { status: 403, message: 'Only the owning faculty member can submit this portfolio.' };
+        if (BLOCKS_RESUBMIT.includes(p.status)) {
+          throw { status: 409, message: `This portfolio is already ${p.status.toLowerCase()} and cannot be submitted again.` };
+        }
+        if (!p.courseCode || !p.courseTitle) {
+          throw { status: 400, message: 'Please complete the course code and course title before submitting.' };
+        }
+        const wasRevision = p.status === 'Revision Required';
+        p.status = 'Pending Review';
+        p.resubmitted = wasRevision;
+        // Auto-fill the "Prepared by" signatory with the submitting faculty
+        // member — the rest (Reviewed/Concurred/Approved) are filled in
+        // during administrative review.
+        if (!p.signatories) p.signatories = { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] };
+        if (!p.signatories.preparedBy || !p.signatories.preparedBy.length) {
+          p.signatories.preparedBy = [{ name: ctx.user.name, date: store.nowIso().slice(0, 10) }];
+        }
+        p.updatedAt = store.nowIso();
+        pushAudit(db, { actor: ctx.user.id, action: wasRevision ? 'resubmit' : 'submit', portfolioId: p.id, detail: `${wasRevision ? 'Resubmitted' : 'Submitted'} ${p.courseCode} for review` });
+        pushNotification(db, {
+          userId: p.facultyId,
+          title: 'Submission Received',
+          message: `Your ${p.courseCode} portfolio was received and is now pending review.`,
+          portfolioId: p.id
+        });
+        pushNotification(db, {
+          role: 'admin',
+          title: 'New Submission',
+          message: `${ctx.user.name} submitted ${p.courseCode} for review.`,
+          portfolioId: p.id
+        });
+        return { status: 200, data: p };
+      }
+
+      if (action === 'approve') {
+        requireRole(ctx, ['admin']);
+        p.status = 'Approved';
+        p.updatedAt = store.nowIso();
+        p.review = { notes: comment, requestedRevisionAt: null, approvedAt: store.nowIso() };
+        if (!p.signatories) p.signatories = { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] };
+        p.signatories.reviewedBy = { name: ctx.user.name, date: store.nowIso().slice(0, 10) };
+        pushAudit(db, { actor: ctx.user.id, action: 'approve', portfolioId: p.id, detail: `Approved ${p.courseCode}` });
+        pushNotification(db, {
+          userId: p.facultyId,
+          title: 'Portfolio Approved',
+          message: `Your ${p.courseCode} portfolio has been approved.`,
+          portfolioId: p.id
+        });
+        return { status: 200, data: p };
+      }
+
+      if (action === 'request-revision') {
+        requireRole(ctx, ['admin']);
+        p.status = 'Revision Required';
+        p.resubmitted = false;
+        p.updatedAt = store.nowIso();
+        p.review = { notes: comment, requestedRevisionAt: store.nowIso(), approvedAt: null };
+        pushAudit(db, { actor: ctx.user.id, action: 'request-revision', portfolioId: p.id, detail: `Requested revision on ${p.courseCode}${comment ? ': ' + comment : ''}` });
+        pushNotification(db, {
+          userId: p.facultyId,
+          title: 'Revision Requested',
+          message: `${p.courseCode} needs changes: ${comment || 'See admin comments.'}`,
+          portfolioId: p.id
+        });
+        return { status: 200, data: p };
+      }
+
+      throw { status: 400, message: 'Unknown action.' };
+    }
+  },
+
+  // ---- documents ----
+  'POST /api/portfolios/:id/documents': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      if (p.facultyId !== ctx.user.id) throw { status: 403, message: 'Only the owning faculty member can upload documents.' };
+      if (!EDITABLE_STATUSES.includes(p.status)) {
+        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and no longer accepts new documents.` };
+      }
+      const name = String(body.name || '').trim();
+      const dataBase64 = body.dataBase64;
+      if (!name || !dataBase64) throw { status: 400, message: 'A file name and file contents are required.' };
+      const ext = docExtOf(name);
+      if (!ALLOWED_DOC_EXT.includes(ext)) {
+        throw { status: 400, message: 'Only PDF, DOCX, and PPTX files are supported.' };
+      }
+      let buffer;
+      try {
+        buffer = Buffer.from(dataBase64, 'base64');
+      } catch (e) {
+        throw { status: 400, message: 'The uploaded file could not be read.' };
+      }
+      if (!buffer.length) throw { status: 400, message: 'The uploaded file is empty.' };
+      if (buffer.length > MAX_DOC_BYTES) {
+        throw { status: 400, message: 'Files must be 15MB or smaller.' };
+      }
+      const docId = store.nextId('doc');
+      const storedName = `${p.id}__${docId}${ext}`;
+      fs.writeFileSync(path.join(UPLOADS_DIR, storedName), buffer);
+      const doc = { id: docId, name, type: ext.replace('.', '').toUpperCase(), size: buffer.length, storedName, uploadedAt: store.nowIso() };
+      if (!p.documents) p.documents = [];
+      p.documents.push(doc);
+      p.documentCount = p.documents.length;
+      p.updatedAt = store.nowIso();
+      pushAudit(db, { actor: ctx.user.id, action: 'edit', portfolioId: p.id, detail: `Uploaded ${name} to ${p.courseCode || 'portfolio'}` });
+      return { status: 201, data: p };
+    }
+  },
+
+  'DELETE /api/portfolios/:id/documents/:docId': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      if (p.facultyId !== ctx.user.id) throw { status: 403, message: 'Only the owning faculty member can remove documents.' };
+      if (!EDITABLE_STATUSES.includes(p.status)) {
+        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and its documents can no longer be changed.` };
+      }
+      const idx = (p.documents || []).findIndex((d) => d.id === params.docId);
+      if (idx === -1) throw { status: 404, message: 'Document not found.' };
+      const [removed] = p.documents.splice(idx, 1);
+      const filePath = path.join(UPLOADS_DIR, removed.storedName);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      p.documentCount = p.documents.length;
+      p.updatedAt = store.nowIso();
+      pushAudit(db, { actor: ctx.user.id, action: 'edit', portfolioId: p.id, detail: `Removed ${removed.name} from ${p.courseCode || 'portfolio'}` });
+      return { status: 200, data: p };
+    }
+  },
+
+  // ---- notifications ----
+  'POST /api/notifications/:id/read': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const n = (db.notifications || []).find((x) => x.id === params.id);
+      if (!n) throw { status: 404, message: 'Notification not found.' };
+      if (n.userId && n.userId !== ctx.user.id) {
+        throw { status: 403, message: "You cannot modify another user's notification." };
+      }
+      n.read = true;
+      return { status: 200, data: n };
+    }
+  },
+
+  'POST /api/notifications/read-all': {
+    auth: true,
+    handler: (db, ctx) => {
+      (db.notifications || []).forEach((n) => {
+        if (n.userId === ctx.user.id || n.role === ctx.user.role) n.read = true;
+      });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- settings (IT admin only) ----
+  'GET /api/settings': {
+    auth: true,
+    handler: (db) => ({ status: 200, data: db.settings || {} })
+  },
+
+  'PUT /api/settings': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body) => {
+      const allowed = ['systemName', 'schoolName', 'schoolAddress'];
+      const patch = {};
+      allowed.forEach((k) => { if (body[k] !== undefined) patch[k] = String(body[k]); });
+      db.settings = Object.assign({}, db.settings, patch, { updatedAt: store.nowIso() });
+      pushAudit(db, { actor: ctx.user.id, action: 'settings-update', portfolioId: null, detail: 'Updated system settings' });
+      return { status: 200, data: db.settings };
+    }
+  },
+
+  // ---- users (IT admin only) ----
+  'GET /api/users': {
+    auth: true,
+    roles: ['it'],
+    handler: (db) => ({ status: 200, data: (db.users || []).map(stripPassword) })
+  },
+
+  'POST /api/users': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body) => {
+      const name = String(body.name || '').trim();
+      const username = String(body.username || '').trim();
+      if (!name || !username || !body.role) {
+        throw { status: 400, message: 'Name, username, and role are required.' };
+      }
+      if (!isRole(body.role)) throw { status: 400, message: 'Role must be one of: faculty, admin, it.' };
+      if (findUserByUsername(db, username)) throw { status: 409, message: 'A user with that username already exists.' };
+      const password = body.password && String(body.password).length >= 6 ? String(body.password) : auth.makeToken().slice(0, 12);
+      const user = {
+        id: store.nextId('u'),
+        name,
+        username,
+        role: String(body.role).toLowerCase(),
+        passwordHash: auth.hashPassword(password)
+      };
+      if (!db.users) db.users = [];
+      db.users.push(user);
+      pushAudit(db, { actor: ctx.user.id, action: 'user-create', portfolioId: null, detail: `Created user ${user.username} (${user.role})` });
+      return { status: 201, data: Object.assign(stripPassword(user), body.password ? {} : { temporaryPassword: password }) };
+    }
+  },
+
+  'PUT /api/users/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const u = (db.users || []).find((x) => x.id === params.id);
+      if (!u) throw { status: 404, message: 'User not found.' };
+      if (body.role !== undefined && !isRole(body.role)) {
+        throw { status: 400, message: 'Role must be one of: faculty, admin, it.' };
+      }
+      if (body.username !== undefined) {
+        const existing = findUserByUsername(db, body.username);
+        if (existing && existing.id !== u.id) throw { status: 409, message: 'A user with that username already exists.' };
+      }
+      ['name', 'username', 'role'].forEach((k) => {
+        if (body[k] !== undefined) u[k] = k === 'role' ? String(body[k]).toLowerCase() : String(body[k]);
+      });
+      pushAudit(db, { actor: ctx.user.id, action: 'user-update', portfolioId: null, detail: `Updated user ${u.username}` });
+      return { status: 200, data: stripPassword(u) };
+    }
+  },
+
+  'DELETE /api/users/:id': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      if (params.id === ctx.user.id) throw { status: 400, message: 'You cannot delete your own account while signed in.' };
+      const idx = (db.users || []).findIndex((x) => x.id === params.id);
+      if (idx === -1) throw { status: 404, message: 'User not found.' };
+      const [removed] = db.users.splice(idx, 1);
+      db.sessions = (db.sessions || []).filter((s) => s.userId !== removed.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'user-delete', portfolioId: null, detail: `Removed user ${removed.username}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  'POST /api/users/:id/password': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const u = (db.users || []).find((x) => x.id === params.id);
+      if (!u) throw { status: 404, message: 'User not found.' };
+      if (!body.newPassword || String(body.newPassword).length < 6) {
+        throw { status: 400, message: 'Password must be at least 6 characters.' };
+      }
+      u.passwordHash = auth.hashPassword(String(body.newPassword));
+      db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'password-change', portfolioId: null, detail: `Changed password for ${u.username}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- backup (IT admin only) ----
+  'POST /api/backup': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx) => {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `db-backup-${stamp}.json`;
+      fs.writeFileSync(path.join(BACKUPS_DIR, filename), JSON.stringify(db, null, 2), 'utf8');
+      pushAudit(db, { actor: ctx.user.id, action: 'backup', portfolioId: null, detail: `Created backup ${filename}` });
+      return { status: 200, data: { ok: true, filename } };
+    }
+  }
+};
+
+// Match a request method+path against the routes table (supports :id params).
+function matchRoute(method, pathname) {
+  for (const key of Object.keys(routes)) {
+    const [routeMethod, routePath] = key.split(' ');
+    if (routeMethod !== method) continue;
+    const routeParts = routePath.split('/').filter(Boolean);
+    const pathParts = pathname.split('/').filter(Boolean);
+    if (routeParts.length !== pathParts.length) continue;
+    const params = {};
+    let ok = true;
+    for (let i = 0; i < routeParts.length; i++) {
+      if (routeParts[i].startsWith(':')) {
+        params[routeParts[i].slice(1)] = decodeURIComponent(pathParts[i]);
+      } else if (routeParts[i] !== pathParts[i]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return { route: routes[key], params };
+  }
+  return null;
+}
+
+async function handleApi(req, res, pathname, query) {
+  const match = matchRoute(req.method, pathname);
+  if (!match) return sendJson(res, 404, { error: 'Not found' });
+
+  let body = {};
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
+    try {
+      body = await readBody(req, 20 * 1024 * 1024);
+    } catch (e) {
+      return sendJson(res, 400, { error: e.message });
+    }
+  }
+
+  try {
+    const { result } = await store.transact((db) => {
+      let ctx = null;
+      if (match.route.auth) {
+        ctx = requireAuth(db, req);
+        if (match.route.roles) requireRole(ctx, match.route.roles);
+      }
+      return match.route.handler(db, ctx, query, body, match.params);
+    });
+    sendJson(res, result.status, result.data);
+  } catch (err) {
+    if (err && err.status) {
+      sendJson(res, err.status, { error: err.message });
+    } else {
+      console.error(err);
+      sendJson(res, 500, { error: 'Something went wrong. Please try again.' });
+    }
+  }
+}
+
+// ---------- document download (binary, not JSON) ----------
+
+async function handleDocumentDownload(req, res, pathname) {
+  // /api/portfolios/:id/documents/:docId/download
+  const parts = pathname.split('/').filter(Boolean);
+  const portfolioId = decodeURIComponent(parts[2]);
+  const docId = decodeURIComponent(parts[4]);
+  try {
+    const db = store.readDb();
+    const ctx = requireAuth(db, req);
+    const p = (db.portfolios || []).find((x) => x.id === portfolioId);
+    if (!p) return sendJson(res, 404, { error: 'Portfolio not found.' });
+    if (p.facultyId !== ctx.user.id && !['admin', 'it'].includes(ctx.user.role)) {
+      return sendJson(res, 403, { error: 'You do not have access to this document.' });
+    }
+    const doc = (p.documents || []).find((d) => d.id === docId);
+    if (!doc) return sendJson(res, 404, { error: 'Document not found.' });
+    const filePath = path.join(UPLOADS_DIR, doc.storedName);
+    if (!fs.existsSync(filePath)) return sendJson(res, 404, { error: 'File is missing from storage.' });
+    const ext = docExtOf(doc.storedName);
+    res.writeHead(200, {
+      'Content-Type': DOC_MIME[ext] || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${doc.name.replace(/"/g, '')}"`,
+      'Cache-Control': 'no-store'
+    });
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    if (err && err.status) return sendJson(res, err.status, { error: err.message });
+    console.error(err);
+    sendJson(res, 500, { error: 'Something went wrong. Please try again.' });
+  }
+}
+
+// ---------- static file serving ----------
+
+function serveStatic(req, res, urlPath) {
+  const filePath = path.normalize(path.join(ROOT, urlPath));
+  if (!filePath.startsWith(ROOT)) {
+    res.writeHead(403);
+    return res.end('Forbidden');
+  }
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('404 - Not Found');
+      }
+      res.writeHead(500);
+      return res.end('Server error');
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    res.writeHead(200, {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'Cache-Control': 'no-store'
+    });
+    res.end(data);
+  });
+}
+
+const server = http.createServer((req, res) => {
+  try {
+    console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+
+    const fullUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const pathname = decodeURIComponent(fullUrl.pathname);
+
+    if (req.method === 'GET' && /^\/api\/portfolios\/[^/]+\/documents\/[^/]+\/download$/.test(pathname)) {
+      return handleDocumentDownload(req, res, pathname);
+    }
+
+    if (pathname.startsWith('/api/')) {
+      return handleApi(req, res, pathname, fullUrl.searchParams);
+    }
+
+    let urlPath = pathname;
+    if (urlPath === '/') urlPath = '/index.html';
+    if (urlPath.startsWith('/uploads/') || urlPath.startsWith('/backups/')) {
+      res.writeHead(403);
+      return res.end('Forbidden');
+    }
+    serveStatic(req, res, urlPath);
+  } catch (e) {
+    console.error(e);
+    res.writeHead(500);
+    res.end('Server error');
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`OBTLP app running at: http://localhost:${PORT}`);
+  console.log(`Open http://localhost:${PORT} in your browser to view the app.`);
+});

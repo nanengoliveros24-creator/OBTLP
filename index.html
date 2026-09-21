@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In · OBTLP Generator Report System</title>
+  <meta name="description" content="Secure access to the Web-Based OBTLP Generator Report System." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+    <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+    <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+  </button>
+
+  <div class="login-grid">
+    <!-- Brand panel -->
+    <div class="login-brand">
+      <div class="login-dots"></div>
+      <div class="login-blob"></div>
+      <div class="login-shard login-shard-1"></div>
+      <div class="login-shard login-shard-2"></div>
+
+      <div class="brand">
+        <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+        <div>
+          <p class="brand-title" style="font-size:1.25rem;">OBTLP</p>
+          <p class="brand-sub" style="letter-spacing:.2em;">Generator Report System</p>
+        </div>
+      </div>
+
+      <div>
+        <h1 class="login-headline">Web-Based OBTLP Generator Report System</h1>
+        <p class="login-lede">Automate faculty course portfolio preparation. Standardize OBE-aligned documentation. Centralize institutional records — securely.</p>
+        <div class="login-stats">
+          <div class="login-stat"><b>RBAC</b><span>Role-based access</span></div>
+          <div class="login-stat"><b>Hashed</b><span>Encrypted passwords</span></div>
+          <div class="login-stat"><b>Audit</b><span>Activity logs</span></div>
+        </div>
+        <p class="login-copyright">© <span id="year"></span> · Institutional Records</p>
+      </div>
+    </div>
+
+    <!-- Form panel -->
+    <div class="login-form-panel">
+      <div class="login-panel-header">
+        <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="login-seal" />
+        <p class="login-school-name">University of Cabuyao · Pamantasan ng Cabuyao</p>
+        <p class="login-wordmark"><span class="wm-accent">OB</span><span class="wm-rest">TLP</span></p>
+        <p class="login-wordmark-sub">Generator Report System</p>
+      </div>
+
+      <div class="login-form" id="login-form" style="display:none;">
+        <h2>Welcome back</h2>
+        <p class="lede">Sign in with your institutional credentials to continue.</p>
+
+        <div class="role-switch" id="role-switch" role="radiogroup" aria-label="Sign in as">
+          <button type="button" data-role="faculty" class="active" aria-pressed="true">Faculty</button>
+          <button type="button" data-role="admin" aria-pressed="false">System Administrator</button>
+          <button type="button" data-role="it" aria-pressed="false">IT Administrator</button>
+        </div>
+
+        <form class="form-stack" id="login-form-element" novalidate>
+          <div class="field">
+            <label class="field-label" for="username">Username</label>
+            <div class="input-with-icon">
+              <i data-lucide="mail" class="svg-icon"></i>
+              <input class="input" id="username" type="text" placeholder="you@university.edu" autocomplete="username" />
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label class="field-label" for="password">Password</label>
+            </div>
+            <div class="input-with-icon">
+              <i data-lucide="lock" class="svg-icon"></i>
+              <input class="input" id="password" type="password" placeholder="Enter your password" autocomplete="current-password" />
+            </div>
+          </div>
+
+          <div class="form-error" id="login-error" style="display:none;" role="alert"></div>
+          <div class="form-success" id="login-notice" style="display:none;"></div>
+
+          <button type="submit" class="btn btn-primary w-full" id="login-btn">Sign in</button>
+        </form>
+
+        <div class="notice">
+          <i data-lucide="shield-check" class="svg-icon"></i>
+          <p>Connection secured via HTTPS in production. Sessions are monitored and recorded in the activity log per institutional policy.</p>
+        </div>
+
+        <p class="login-foot">New faculty member? <a href="register.html" class="link-primary">Create an Account</a></p>
+      </div>
+
+      <!-- First-run setup: create the initial system administrator account -->
+      <div class="login-form" id="setup-form" style="display:none;">
+        <h2>Set Up This System</h2>
+        <p class="lede">No accounts exist yet. Create the first Administrator or IT Administrator account to begin using the system. Faculty members can create their own accounts afterward from the sign-in page.</p>
+
+        <form class="form-stack" id="setup-form-element" novalidate>
+          <div class="field">
+            <label class="field-label" for="setup-name">Full Name</label>
+            <div class="input-with-icon">
+              <i data-lucide="user" class="svg-icon"></i>
+              <input class="input" id="setup-name" type="text" placeholder="e.g. Jane Smith" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="setup-username">Username / Email</label>
+            <div class="input-with-icon">
+              <i data-lucide="mail" class="svg-icon"></i>
+              <input class="input" id="setup-username" type="text" placeholder="you@university.edu" autocomplete="username" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="setup-password">Password</label>
+            <div class="input-with-icon">
+              <i data-lucide="lock" class="svg-icon"></i>
+              <input class="input" id="setup-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="setup-role">Role</label>
+            <select class="input select" id="setup-role">
+              <option value="it">IT Administrator (manages accounts &amp; settings)</option>
+              <option value="admin">College Administrator (reviews portfolios)</option>
+            </select>
+          </div>
+
+          <div class="form-error" id="setup-error" style="display:none;" role="alert"></div>
+
+          <button type="submit" class="btn btn-primary w-full" id="setup-btn">Create Account &amp; Continue</button>
+        </form>
+      </div>
+
+      <div class="login-form" id="checking-form">
+        <div class="spinner-row"><span class="spinner"></span><span>Checking system status…</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script src="db.js"></script>
+  <script>
+    lucide.createIcons();
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const api = window.__OBTLP_API__;
+    const loginForm = document.getElementById('login-form-element');
+    const setupForm = document.getElementById('setup-form-element');
+    const loginError = document.getElementById('login-error');
+    const setupError = document.getElementById('setup-error');
+
+    function showError(el, msg) {
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function hideError(el) {
+      el.style.display = 'none';
+    }
+
+    function redirectForRole(user) {
+      if (user.role === 'admin') window.location.href = 'admin.html';
+      else if (user.role === 'it') window.location.href = 'it-admin.html';
+      else window.location.href = 'dashboard.html';
+    }
+
+    // If a real session already exists, skip straight to the right dashboard.
+    const existing = api.getSession();
+    if (existing) {
+      redirectForRole(existing);
+    }
+
+    // Determine whether to show login or first-run setup.
+    (async function init() {
+      try {
+        const status = await api.setupStatus();
+        document.getElementById('checking-form').style.display = 'none';
+        if (!status.hasUsers) {
+          document.getElementById('setup-form').style.display = 'block';
+        } else {
+          document.getElementById('login-form').style.display = 'block';
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('registered') === '1') {
+            const notice = document.getElementById('login-notice');
+            notice.textContent = 'Account created. Sign in with your new credentials below.';
+            notice.style.display = 'block';
+          }
+          if (params.get('expired') === '1') {
+            showError(loginError, 'Your session ended. Please sign in again.');
+          }
+        }
+      } catch (err) {
+        document.getElementById('checking-form').style.display = 'none';
+        document.getElementById('login-form').style.display = 'block';
+        showError(loginError, err.message || 'Could not reach the server.');
+      }
+    })();
+
+    let selectedRole = 'faculty';
+    const roleSwitch = document.getElementById('role-switch');
+    roleSwitch.querySelectorAll('button[data-role]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedRole = btn.dataset.role;
+        roleSwitch.querySelectorAll('button[data-role]').forEach((b) => {
+          b.classList.toggle('active', b === btn);
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+        });
+      });
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError(loginError);
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) {
+        showError(loginError, 'Please enter your username and password.');
+        return;
+      }
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+      try {
+        const { token, user } = await api.login(username, password, selectedRole);
+        api.setSession({ token, userId: user.id, role: user.role, name: user.name });
+        redirectForRole(user);
+      } catch (err) {
+        showError(loginError, err.message || 'Login failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+      }
+    });
+
+    setupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError(setupError);
+      const name = document.getElementById('setup-name').value.trim();
+      const username = document.getElementById('setup-username').value.trim();
+      const password = document.getElementById('setup-password').value;
+      const role = document.getElementById('setup-role').value;
+      if (!name || !username || !password) {
+        showError(setupError, 'Please fill in all fields.');
+        return;
+      }
+      if (password.length < 6) {
+        showError(setupError, 'Password must be at least 6 characters.');
+        return;
+      }
+      const btn = document.getElementById('setup-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+      try {
+        const { token, user } = await api.setup({ name, username, password, role });
+        api.setSession({ token, userId: user.id, role: user.role, name: user.name });
+        redirectForRole(user);
+      } catch (err) {
+        showError(setupError, err.message || 'Could not create account.');
+        btn.disabled = false;
+        btn.textContent = 'Create Account & Continue';
+      }
+    });
+  </script>
+</body>
+</html>

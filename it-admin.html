@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT Administrator · System Overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav">
+        <span class="nav-link active" data-tab="overview"><i data-lucide="shield-check" class="svg-icon"></i> System Overview</span>
+        <span class="nav-link" data-tab="users"><i data-lucide="users" class="svg-icon"></i> User Accounts</span>
+        <span class="nav-link" data-tab="settings"><i data-lucide="settings" class="svg-icon"></i> Settings</span>
+        <span class="nav-link" data-tab="templates"><i data-lucide="book-open" class="svg-icon"></i> Course Templates</span>
+        <span class="nav-link" data-tab="obtlp-templates"><i data-lucide="layout-template" class="svg-icon"></i> Departments &amp; OBTLP Templates</span>
+        <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
+        <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar" id="user-avatar">–</div>
+          <div><p class="user-name" id="user-name">–</p><p class="user-role">IT / System Admin</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- ===== System Overview ===== -->
+      <section class="tab-panel active" data-tab-panel="overview">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">System Overview</h1>
+            <p class="page-subtitle">Monitor platform activity and back up institutional data.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" data-action="run-backup"><i data-lucide="hard-drive-upload" class="svg-icon"></i> Run Backup</button>
+          </div>
+        </header>
+
+        <section class="stats-grid">
+          <div class="stat"><div class="stat-top"><p class="stat-label">Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-portfolios">–</p></div>
+          <div class="stat"><div class="stat-top"><p class="stat-label">Active Users</p><i data-lucide="user-cog" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-active-users">–</p></div>
+          <div class="stat"><div class="stat-top"><p class="stat-label">Audit Logs</p><i data-lucide="clipboard-list" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-logs">–</p></div>
+          <div class="stat"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value" id="stat-pending">–</p></div>
+        </section>
+
+        <div class="grid-3">
+          <section class="card span-2" id="activity-log">
+            <div class="section-head">
+              <h2 class="card-title">Activity Log</h2>
+              <span class="section-sub">Most recent first</span>
+            </div>
+            <ul class="log-list" id="it-log-list">
+              <li><span class="dot dot-muted"></span><p>Loading activity…</p></li>
+            </ul>
+          </section>
+
+          <section class="space-y-6">
+            <div class="promo">
+              <div class="glow"></div>
+              <h3>RBAC Active</h3>
+              <p style="margin-bottom:0;" id="rbac-summary">Role-based access enforcement is protecting portfolios, documents, and settings across 3 user roles.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ===== User Accounts ===== -->
+      <section class="tab-panel" data-tab-panel="users">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">User Accounts</h1>
+            <p class="page-subtitle">Create and manage Faculty, Administrator, and IT Administrator accounts.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="btn-new-user"><i data-lucide="user-plus" class="svg-icon"></i> New User</button>
+          </div>
+        </header>
+
+        <section class="card" style="overflow:hidden;">
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Name</th><th>Username</th><th>Role</th><th class="right">Actions</th></tr></thead>
+              <tbody id="user-rows"><tr><td colspan="4" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <!-- ===== Settings ===== -->
+      <section class="tab-panel" data-tab-panel="settings">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">System Settings</h1>
+            <p class="page-subtitle">Institutional information shown on generated portfolio documents.</p>
+          </div>
+        </header>
+
+        <section class="card card-pad" style="max-width:36rem;margin-bottom:1.5rem;">
+          <form id="settings-form" class="form-stack">
+            <div class="field"><label class="field-label">System Name</label><input class="input" id="s-systemName" /></div>
+            <div class="field"><label class="field-label">School / Institution Name</label><input class="input" id="s-schoolName" /></div>
+            <div class="field"><label class="field-label">School Address</label><input class="input" id="s-schoolAddress" /></div>
+            <div class="form-success" id="settings-success" style="display:none;">Settings saved.</div>
+            <button type="submit" class="btn btn-primary" id="settings-save-btn">Save Settings</button>
+          </form>
+        </section>
+
+        <section class="card card-pad" style="max-width:44rem;">
+          <h3 class="card-title" style="margin-bottom:0.25rem;">Organization Profile</h3>
+          <p class="section-sub" style="margin-bottom:1rem;">Vision, Mission, and standard policy text that every OBTLP template reuses — no need to retype this per department or template.</p>
+          <form id="org-profile-form" class="form-stack">
+            <div class="field"><label class="field-label">Vision</label><textarea class="textarea" id="op-vision" rows="2"></textarea></div>
+            <div class="field"><label class="field-label">Mission</label><textarea class="textarea" id="op-mission" rows="2"></textarea></div>
+            <div class="field"><label class="field-label">Core Values — intro line</label><input class="input" id="op-coreValuesIntro" /></div>
+            <div class="field">
+              <label class="field-label">Core Values</label>
+              <div class="list-editor" id="op-list-coreValues"></div>
+              <button type="button" class="btn btn-outline btn-sm add-row-btn" data-oplist="coreValues" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Core Value</button>
+            </div>
+            <div class="field">
+              <label class="field-label">Graduate Attributes</label>
+              <div class="list-editor" id="op-list-graduateAttributes"></div>
+              <button type="button" class="btn btn-outline btn-sm add-row-btn" data-oplist="graduateAttributes" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Attribute</button>
+            </div>
+            <div class="field">
+              <label class="field-label">Attendance Rule</label>
+              <p class="field-hint">Shown as a table in the generated OBTLP (e.g. meetings per week vs. maximum absences per semester).</p>
+              <textarea class="textarea" id="op-attendanceNote" rows="2" placeholder="Note shown above the table"></textarea>
+              <div id="op-attendance-rows" style="margin-top:0.5rem;"></div>
+              <button type="button" class="btn btn-outline btn-sm" id="op-add-attendance-row" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Row</button>
+            </div>
+            <div class="field"><label class="field-label">Class Attendance — heading</label><input class="input" id="op-attendanceHeading" /></div>
+            <div class="field"><label class="field-label">Class Attendance — text</label><textarea class="textarea" id="op-attendanceText" rows="2"></textarea></div>
+            <div class="field"><label class="field-label">Academic Dishonesty — heading</label><input class="input" id="op-academicDishonestyHeading" /></div>
+            <div class="field"><label class="field-label">Academic Dishonesty — intro</label><textarea class="textarea" id="op-academicDishonestyIntro" rows="2"></textarea></div>
+            <div class="field">
+              <label class="field-label">Academic Dishonesty — items</label>
+              <div class="list-editor" id="op-list-academicDishonestyItems"></div>
+              <button type="button" class="btn btn-outline btn-sm add-row-btn" data-oplist="academicDishonestyItems" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Item</button>
+            </div>
+            <div class="field"><label class="field-label">Submission of Course Requirements — heading</label><input class="input" id="op-submissionHeading" /></div>
+            <div class="field"><label class="field-label">Submission of Course Requirements — text</label><textarea class="textarea" id="op-submissionText" rows="2"></textarea></div>
+            <div class="form-success" id="org-profile-success" style="display:none;">Organization profile saved.</div>
+            <button type="submit" class="btn btn-primary" id="org-profile-save-btn">Save Organization Profile</button>
+          </form>
+        </section>
+      </section>
+
+      <!-- ===== Course Templates ===== -->
+      <section class="tab-panel" data-tab-panel="templates">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">Course Templates</h1>
+            <p class="page-subtitle">Official per-course content. When faculty select a Course Code in a new portfolio, the matching template here auto-populates it.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="btn-new-template"><i data-lucide="book-plus" class="svg-icon"></i> New Template</button>
+          </div>
+        </header>
+
+        <section class="card" style="overflow:hidden;">
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Course Code</th><th>Course Title</th><th>Last Updated</th><th class="right">Actions</th></tr></thead>
+              <tbody id="template-rows"><tr><td colspan="4" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <!-- ===== Departments / Programs / OBTLP Templates (Phase 1) ===== -->
+      <section class="tab-panel" data-tab-panel="obtlp-templates">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">Departments &amp; OBTLP Templates</h1>
+            <p class="page-subtitle">Department → Program → OBTLP Template structure behind automated generation. The CCS101 template seeded from the official DOCX is the first of these — more department/CHED templates can be added the same way, without code changes.</p>
+          </div>
+        </header>
+
+        <div class="grid-3" style="gap:1.5rem;">
+          <section class="card" style="overflow:hidden;">
+            <div class="section-head">
+              <h2 class="card-title" style="font-size:1rem;">Departments</h2>
+              <button class="btn btn-outline btn-sm" id="btn-new-department"><i data-lucide="plus" class="svg-icon"></i> New</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Code</th><th>Name</th><th class="right">Actions</th></tr></thead>
+                <tbody id="department-rows"><tr><td colspan="3" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card" style="overflow:hidden;">
+            <div class="section-head">
+              <h2 class="card-title" style="font-size:1rem;">Programs</h2>
+              <button class="btn btn-outline btn-sm" id="btn-new-program"><i data-lucide="plus" class="svg-icon"></i> New</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Code</th><th>Name</th><th>Department</th><th class="right">Actions</th></tr></thead>
+                <tbody id="program-rows"><tr><td colspan="4" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card" style="overflow:hidden;">
+            <div class="section-head">
+              <h2 class="card-title" style="font-size:1rem;">OBTLP Templates</h2>
+              <button class="btn btn-outline btn-sm" id="btn-new-obtlp-template"><i data-lucide="plus" class="svg-icon"></i> New</button>
+            </div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Code</th><th>Name</th><th>Program</th><th>Version</th><th>Status</th><th class="right">Actions</th></tr></thead>
+                <tbody id="obtlp-template-rows"><tr><td colspan="6" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+              </table>
+            </div>
+            <p class="section-sub" style="padding:0.75rem 1rem;">CCS101's template (seeded from the official DOCX) is just one example — create a new template here for any other department, program, or CHED format. "Manage Sections" controls what the generated OBTLP actually contains and in what order.</p>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- New user modal -->
+  <div class="modal-overlay" id="user-modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title">New User Account</h3>
+        <button type="button" class="modal-close" id="user-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="user-form" class="form-stack">
+        <div class="field"><label class="field-label">Full Name</label><input class="input" id="u-name" required /></div>
+        <div class="field"><label class="field-label">Username / Email</label><input class="input" id="u-username" required /></div>
+        <div class="field">
+          <label class="field-label">Role</label>
+          <select class="input select" id="u-role">
+            <option value="faculty">Faculty</option>
+            <option value="admin">College Administrator</option>
+            <option value="it">IT Administrator</option>
+          </select>
+        </div>
+        <div class="field"><label class="field-label">Temporary Password (optional)</label><input class="input" id="u-password" placeholder="Leave blank to auto-generate" /></div>
+        <div class="form-error" id="user-form-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full">Create User</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Reset password modal -->
+  <div class="modal-overlay" id="pw-modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title">Reset Password</h3>
+        <button type="button" class="modal-close" id="pw-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="pw-form" class="form-stack">
+        <p class="section-sub" id="pw-target-label"></p>
+        <div class="field"><label class="field-label">New Password</label><input class="input" id="pw-new" type="text" placeholder="At least 6 characters" required /></div>
+        <div class="form-error" id="pw-form-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full">Set New Password</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Course template modal -->
+  <div class="modal-overlay" id="template-modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:40rem;">
+      <div class="modal-head">
+        <h3 class="card-title" id="template-modal-title">New Course Template</h3>
+        <button type="button" class="modal-close" id="template-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="template-form" class="form-stack" style="max-height:70vh;overflow-y:auto;padding-right:0.5rem;">
+        <div class="grid-3" style="gap:1rem;">
+          <div class="field"><label class="field-label">Course Code *</label><input class="input" id="t-courseCode" required placeholder="e.g. IT 311" /></div>
+          <div class="field" style="grid-column:span 2;"><label class="field-label">Course Title *</label><input class="input" id="t-courseTitle" required placeholder="e.g. Systems Analysis &amp; Design" /></div>
+        </div>
+        <div class="grid-3" style="gap:1rem;">
+          <div class="field"><label class="field-label">Department</label><select class="input select" id="t-departmentId"><option value="">— None —</option></select></div>
+          <div class="field"><label class="field-label">Program</label><select class="input select" id="t-programId"><option value="">— None —</option></select></div>
+          <div class="field"><label class="field-label">Pre-requisite / Co-requisite</label><input class="input" id="t-prerequisite" placeholder="e.g. none" /></div>
+        </div>
+        <div class="field">
+          <label class="field-label">OBTLP Template</label>
+          <select class="input select" id="t-obtlpTemplateId"><option value="">— No template (legacy layout) —</option></select>
+          <p class="field-hint">Which data-driven OBTLP layout this course's portfolios generate against. Leave as "No template" for courses that don't have an official OBTLP template yet — they keep working exactly as before.</p>
+        </div>
+        <div class="field"><label class="field-label">Course Description</label><textarea class="textarea" id="t-description" rows="3" placeholder="Leave blank if not provided by the official template yet."></textarea></div>
+        <div class="field">
+          <label class="field-label">Intended Learning Outcomes / CILO</label>
+          <div class="list-editor" id="t-list-outcomes"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-tlist="outcomes" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Outcome</button>
+        </div>
+
+        <hr class="modal-divider" />
+        <p class="modal-section-label">Official OBTLP Content</p>
+
+        <div class="field">
+          <label class="field-label">Student Outcomes Map</label>
+          <p class="field-hint">Which Student Outcomes of the selected Program this course addresses, and at what intensity. Select a Program above to see its outcomes here.</p>
+          <div id="t-so-map-rows"><p class="t-muted" style="font-size:0.8125rem;">Select a Program to map Student Outcomes.</p></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Teaching &amp; Learning Plan</label>
+          <p class="field-hint">One card per week (or week range), plus milestone cards for exams that divide the term.</p>
+          <div id="t-teaching-plan-rows"></div>
+          <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+            <button type="button" class="btn btn-outline btn-sm" id="t-add-week"><i data-lucide="plus" class="svg-icon"></i> Add Week</button>
+            <button type="button" class="btn btn-outline btn-sm" id="t-add-milestone"><i data-lucide="flag" class="svg-icon"></i> Add Milestone (Exam)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Textbooks</label>
+          <div class="list-editor" id="t-list-refTextbooks"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-tlist="refTextbooks" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Textbook</button>
+        </div>
+        <div class="field">
+          <label class="field-label">Online Resources</label>
+          <div class="list-editor" id="t-list-refOnline"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-tlist="refOnline" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Online Resource</button>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Grading System</label>
+          <p class="field-hint">One card per component (e.g. Lecture, Laboratory) with its weight and assessment-item breakdown.</p>
+          <div id="t-grading-components"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="t-add-grading-component" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Grading Component</button>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Course Requirements</label>
+          <div class="list-editor" id="t-list-courseRequirements"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-tlist="courseRequirements" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Requirement</button>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Effectivity Period</label>
+          <textarea class="textarea" id="t-effectivityText" rows="2" placeholder="e.g. This course OBTL shall have three academic year effectivity."></textarea>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Class Policies — course-specific notes (optional)</label>
+          <p class="field-hint">Appears in addition to the organization's standard Class Policies (edit those under Settings → Organization Profile).</p>
+          <textarea class="textarea" id="t-classPoliciesOverride" rows="2"></textarea>
+        </div>
+
+        <hr class="modal-divider" />
+        <p class="modal-section-label">Legacy Fields <span class="t-muted" style="font-weight:400;text-transform:none;letter-spacing:0;">(only used for courses with no OBTLP Template selected above)</span></p>
+        <div class="field">
+          <label class="field-label">Course Objectives</label>
+          <div class="list-editor" id="t-list-objectives"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-tlist="objectives" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Objective</button>
+        </div>
+        <div class="field"><label class="field-label">Syllabus Summary</label><textarea class="textarea" id="t-syllabus" rows="3" placeholder="Leave blank if not provided by the official template yet."></textarea></div>
+        <div class="field">
+          <label class="field-label">Teaching Materials &amp; Modules</label>
+          <div class="list-editor" id="t-list-teachingMaterials"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-tlist="teachingMaterials" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Item</button>
+        </div>
+        <div class="field">
+          <label class="field-label">References (flat list)</label>
+          <div class="list-editor" id="t-list-references"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-tlist="references" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Reference</button>
+        </div>
+
+        <div class="form-error" id="template-form-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full" id="template-save-btn">Save Template</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- New/Edit department modal -->
+  <div class="modal-overlay" id="department-modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title" id="department-modal-title">New Department</h3>
+        <button type="button" class="modal-close" id="department-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="department-form" class="form-stack">
+        <div class="field"><label class="field-label">Code</label><input class="input" id="d-code" required placeholder="e.g. CCS" /></div>
+        <div class="field"><label class="field-label">Name</label><input class="input" id="d-name" required placeholder="e.g. College of Computing Studies" /></div>
+        <div class="form-error" id="department-form-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full" id="department-save-btn">Create Department</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- New/Edit program modal -->
+  <div class="modal-overlay" id="program-modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:36rem;">
+      <div class="modal-head">
+        <h3 class="card-title" id="program-modal-title">New Program</h3>
+        <button type="button" class="modal-close" id="program-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="program-form" class="form-stack" style="max-height:70vh;overflow-y:auto;padding-right:0.5rem;">
+        <div class="field"><label class="field-label">Department</label><select class="input select" id="pr-departmentId" required></select></div>
+        <div class="field"><label class="field-label">Code</label><input class="input" id="pr-code" required placeholder="e.g. BSIT" /></div>
+        <div class="field"><label class="field-label">Name</label><input class="input" id="pr-name" required placeholder="e.g. Bachelor of Science in Information Technology" /></div>
+        <div class="field"><label class="field-label">Program Educational Objectives intro</label><input class="input" id="pr-peoIntro" placeholder="e.g. Three to five years after graduation, ... shall:" /></div>
+        <div class="field">
+          <label class="field-label">Program Educational Objectives</label>
+          <div class="list-editor" id="pr-list-peo"></div>
+          <button type="button" class="btn btn-outline btn-sm add-row-btn" data-prlist="peo" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add PEO</button>
+        </div>
+        <div class="field">
+          <label class="field-label">Student Outcomes</label>
+          <p class="field-hint">Each outcome gets a short code (e.g. SO3) referenced later when mapping a course to its Student Outcomes.</p>
+          <div id="pr-so-rows"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="pr-add-so" style="margin-top:0.5rem;"><i data-lucide="plus" class="svg-icon"></i> Add Student Outcome</button>
+        </div>
+        <div class="form-error" id="program-form-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full" id="program-save-btn">Create Program</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- New/Edit OBTLP template (metadata) modal -->
+  <div class="modal-overlay" id="obtlp-template-modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title" id="obtlp-template-modal-title">New OBTLP Template</h3>
+        <button type="button" class="modal-close" id="obtlp-template-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="obtlp-template-form" class="form-stack">
+        <div class="field"><label class="field-label">Code</label><input class="input" id="ot-code" required placeholder="e.g. CHED-OBTLP-V1" /></div>
+        <div class="field"><label class="field-label">Name</label><input class="input" id="ot-name" required placeholder="e.g. CHED OBTLP (College of Engineering)" /></div>
+        <div class="field"><label class="field-label">Department</label><select class="input select" id="ot-departmentId"><option value="">— None —</option></select></div>
+        <div class="field"><label class="field-label">Program</label><select class="input select" id="ot-programId"><option value="">— None —</option></select></div>
+        <div class="grid-3" style="gap:1rem;">
+          <div class="field"><label class="field-label">Version</label><input class="input" id="ot-version" placeholder="e.g. 1" /></div>
+          <div class="field" style="grid-column:span 2;"><label class="field-label">Form Code</label><input class="input" id="ot-formCode" placeholder="e.g. PNC:AA-FO-06 rev.2 08182023" /></div>
+        </div>
+        <div class="field"><label class="field-label">Effectivity Period (template default)</label><textarea class="textarea" id="ot-effectivityText" rows="2"></textarea></div>
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;">
+          <input type="checkbox" id="ot-active" checked /> Active (available for faculty to generate OBTLPs against)
+        </label>
+        <div class="form-error" id="obtlp-template-form-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full" id="obtlp-template-save-btn">Save Template</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manage OBTLP template sections modal -->
+  <div class="modal-overlay" id="sections-modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:40rem;">
+      <div class="modal-head">
+        <h3 class="card-title" id="sections-modal-title">Manage Sections</h3>
+        <button type="button" class="modal-close" id="sections-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <p class="section-sub" style="margin-bottom:0.75rem;">These are the sections the generated OBTLP contains, in order. Reorder, relabel, remove, or add sections — the type determines how each one is filled in and rendered.</p>
+      <div id="sections-list" style="max-height:50vh;overflow-y:auto;margin-bottom:1rem;"></div>
+      <div class="card card-pad" style="margin-bottom:1rem;">
+        <p style="font-weight:600;font-size:0.875rem;margin-bottom:0.5rem;">Add a Section</p>
+        <div class="grid-3" style="gap:0.5rem;">
+          <select class="input select" id="section-add-type" style="grid-column:span 2;">
+            <option value="staticOrgTable">Vision / Mission / Core Values / Graduate Attributes</option>
+            <option value="programOutcomes">Program Educational Objectives &amp; CILO</option>
+            <option value="soMatrix">Student Outcomes Map</option>
+            <option value="keyvalueGrid">Course Information (key/value)</option>
+            <option value="weeklyPlanTable">Teaching &amp; Learning Plan (weekly table)</option>
+            <option value="referenceList">References</option>
+            <option value="gradingBreakdown">Grading System</option>
+            <option value="staticAttendanceTable">Attendance</option>
+            <option value="list">Simple List (e.g. Course Requirements)</option>
+            <option value="classPolicies">Class Policies</option>
+            <option value="richtext">Free Text (e.g. Effectivity)</option>
+            <option value="signatureBlock">Signatures / Approval</option>
+          </select>
+          <button type="button" class="btn btn-outline" id="btn-add-section">Add</button>
+        </div>
+      </div>
+      <div class="form-error" id="sections-form-error" style="display:none;"></div>
+      <button type="button" class="btn btn-primary w-full" id="sections-save-btn">Save Sections</button>
+    </div>
+  </div>
+
+  <!-- Assign courses to an OBTLP template -->
+  <div class="modal-overlay" id="courses-modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title" id="courses-modal-title">Assign Courses</h3>
+        <button type="button" class="modal-close" id="courses-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <p class="section-sub" style="margin-bottom:0.75rem;">Which course templates generate their OBTLP against this template. A course can only use one OBTLP template at a time — checking a course here unassigns it from whichever template it used before.</p>
+      <div id="courses-assign-list" style="max-height:50vh;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    (async function () {
+      const api = window.__OBTLP_API__;
+      const ui = window.__OBTLP_UI__;
+      const session = api.getSession();
+      if (!session) { window.location.href = 'index.html'; return; }
+      if (session.role !== 'it') { window.location.href = session.role === 'admin' ? 'admin.html' : 'dashboard.html'; return; }
+
+      document.getElementById('user-name').textContent = session.name || '—';
+      document.getElementById('user-avatar').textContent = (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+
+      // ---------- tabs ----------
+      document.querySelectorAll('[data-tab]').forEach((el) => {
+        el.addEventListener('click', () => {
+          document.querySelectorAll('[data-tab]').forEach((x) => x.classList.remove('active'));
+          el.classList.add('active');
+          const tab = el.dataset.tab;
+          document.querySelectorAll('[data-tab-panel]').forEach((panel) => {
+            panel.classList.toggle('active', panel.dataset.tabPanel === tab);
+          });
+        });
+      });
+
+      function fmtWhen(iso) {
+        const diffMs = Date.now() - new Date(iso).getTime();
+        const mins = Math.round(diffMs / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins} min ago`;
+        const hrs = Math.round(mins / 60);
+        if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+        const days = Math.round(hrs / 24);
+        if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+        return new Date(iso).toLocaleDateString();
+      }
+
+      const dotFor = {
+        approve: 'dot-success', submit: 'dot-primary', resubmit: 'dot-primary',
+        'request-revision': 'dot-destructive', edit: 'dot-muted', create: 'dot-muted',
+        'user-create': 'dot-primary', 'user-update': 'dot-muted', 'user-delete': 'dot-destructive',
+        'password-change': 'dot-primary', 'settings-update': 'dot-muted', login: 'dot-success', backup: 'dot-primary'
+      };
+
+      async function loadOverview() {
+        const state = await api.getState();
+        document.getElementById('stat-active-users').textContent = (state.users || []).length;
+        document.getElementById('stat-portfolios').textContent = (state.allPortfolios || []).length;
+        document.getElementById('stat-logs').textContent = (state.auditLogs || []).length;
+        document.getElementById('stat-pending').textContent = (state.allPortfolios || []).filter((p) => p.status === 'Pending Review' || p.status === 'In Review').length;
+
+        const list = document.getElementById('it-log-list');
+        const logs = state.auditLogs || [];
+        if (!logs.length) {
+          list.innerHTML = '<li><span class="dot dot-muted"></span><p>No activity recorded yet.</p></li>';
+          return;
+        }
+        const nameOf = (id) => {
+          const u = (state.users || []).find((x) => x.id === id);
+          return u ? u.name : (id || 'System');
+        };
+        list.innerHTML = logs.map((l) => `
+          <li>
+            <span class="dot ${dotFor[l.action] || 'dot-muted'}"></span>
+            <p><b>${nameOf(l.actor)}</b> <span class="t-muted">— ${l.detail}</span></p>
+            <span class="section-sub">${fmtWhen(l.at)}</span>
+          </li>
+        `).join('');
+      }
+
+      // ---------- users ----------
+      let usersCache = [];
+      function initials(name) { return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–'; }
+      const roleLabel = { faculty: 'Faculty', admin: 'College Administrator', it: 'IT Administrator' };
+
+      async function loadUsers() {
+        usersCache = await api.getUsers();
+        const rows = document.getElementById('user-rows');
+        if (!usersCache.length) {
+          rows.innerHTML = '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No users yet.</td></tr>';
+          return;
+        }
+        rows.innerHTML = usersCache.map((u) => `
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:0.625rem;"><div class="avatar-sec" style="height:2rem;width:2rem;font-size:0.75rem;">${initials(u.name)}</div><span class="cell-strong">${u.name}</span></div></td>
+            <td class="t-muted">${u.username}</td>
+            <td><span class="badge badge-accent">${roleLabel[u.role] || u.role}</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" title="Reset Password" data-reset="${u.id}" data-name="${u.name}"><i data-lucide="key-round" class="svg-icon"></i></button>
+                <button class="icon-btn" title="Delete" data-delete="${u.id}" data-name="${u.name}" ${u.id === session.userId ? 'disabled' : ''}><i data-lucide="trash-2" class="svg-icon"></i></button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+
+        rows.querySelectorAll('[data-delete]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm(`Remove ${btn.dataset.name}'s account? This cannot be undone.`)) return;
+            try {
+              await api.deleteUser(btn.dataset.delete);
+              ui.notify('User Removed', `${btn.dataset.name}'s account has been removed.`);
+              loadUsers();
+              loadOverview();
+            } catch (err) { ui.notifyError(err); }
+          });
+        });
+        rows.querySelectorAll('[data-reset]').forEach((btn) => {
+          btn.addEventListener('click', () => openPasswordModal(btn.dataset.reset, btn.dataset.name));
+        });
+      }
+
+      // New user modal
+      const userModal = document.getElementById('user-modal-overlay');
+      document.getElementById('btn-new-user').addEventListener('click', () => {
+        document.getElementById('user-form').reset();
+        document.getElementById('user-form-error').style.display = 'none';
+        userModal.style.display = 'flex';
+      });
+      document.getElementById('user-modal-close').addEventListener('click', () => userModal.style.display = 'none');
+      userModal.addEventListener('click', (e) => { if (e.target === userModal) userModal.style.display = 'none'; });
+
+      document.getElementById('user-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('u-name').value.trim();
+        const username = document.getElementById('u-username').value.trim();
+        const role = document.getElementById('u-role').value;
+        const password = document.getElementById('u-password').value.trim();
+        const errEl = document.getElementById('user-form-error');
+        errEl.style.display = 'none';
+        try {
+          const body = { name, username, role };
+          if (password) body.password = password;
+          const created = await api.createUser(body);
+          userModal.style.display = 'none';
+          ui.notify('User Created', created.temporaryPassword ? `Temporary password: ${created.temporaryPassword}` : `${name}'s account is ready.`);
+          loadUsers();
+          loadOverview();
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not create user.';
+          errEl.style.display = 'block';
+        }
+      });
+
+      // Reset password modal
+      const pwModal = document.getElementById('pw-modal-overlay');
+      let pwTargetId = null;
+      function openPasswordModal(id, name) {
+        pwTargetId = id;
+        document.getElementById('pw-target-label').textContent = `Set a new password for ${name}.`;
+        document.getElementById('pw-new').value = '';
+        document.getElementById('pw-form-error').style.display = 'none';
+        pwModal.style.display = 'flex';
+      }
+      document.getElementById('pw-modal-close').addEventListener('click', () => pwModal.style.display = 'none');
+      pwModal.addEventListener('click', (e) => { if (e.target === pwModal) pwModal.style.display = 'none'; });
+
+      document.getElementById('pw-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newPassword = document.getElementById('pw-new').value;
+        const errEl = document.getElementById('pw-form-error');
+        errEl.style.display = 'none';
+        try {
+          await api.changePassword(pwTargetId, newPassword);
+          pwModal.style.display = 'none';
+          ui.notify('Password Updated', 'The user will need to sign in again with the new password.');
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not update password.';
+          errEl.style.display = 'block';
+        }
+      });
+
+      // ---------- settings ----------
+      async function loadSettings() {
+        const s = await api.getSettings();
+        document.getElementById('s-systemName').value = s.systemName || '';
+        document.getElementById('s-schoolName').value = s.schoolName || '';
+        document.getElementById('s-schoolAddress').value = s.schoolAddress || '';
+      }
+      document.getElementById('settings-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const successEl = document.getElementById('settings-success');
+        successEl.style.display = 'none';
+        try {
+          await api.updateSettings({
+            systemName: document.getElementById('s-systemName').value.trim(),
+            schoolName: document.getElementById('s-schoolName').value.trim(),
+            schoolAddress: document.getElementById('s-schoolAddress').value.trim()
+          });
+          successEl.style.display = 'block';
+          ui.notify('Settings Saved', 'Institutional settings have been updated.');
+        } catch (err) {
+          ui.notifyError(err);
+        }
+      });
+
+      // ---------- course templates ----------
+      let templatesCache = [];
+      const TEMPLATE_LIST_FIELDS = ['objectives', 'outcomes', 'teachingMaterials', 'references', 'courseRequirements', 'refTextbooks', 'refOnline'];
+      const templateListData = { objectives: [], outcomes: [], teachingMaterials: [], references: [], courseRequirements: [], refTextbooks: [], refOnline: [] };
+      let editingTemplateId = null;
+      let departmentsCache = [];
+      let programsCache = [];
+      let obtlpTemplatesCache = [];
+      let templateSoMapData = [];
+      let templateTeachingPlanData = [];
+      let templateGradingData = { components: [] };
+
+      function populateSelect(selectEl, items, valueKey, labelFn, placeholder) {
+        const current = selectEl.value;
+        selectEl.innerHTML = `<option value="">${placeholder}</option>` + items.map((it) => `<option value="${it[valueKey]}">${labelFn(it)}</option>`).join('');
+        selectEl.value = current;
+      }
+
+      function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+      // ---- Student Outcomes Map editor (depends on the selected Program) ----
+      function renderSoMapEditor() {
+        const container = document.getElementById('t-so-map-rows');
+        const programId = document.getElementById('t-programId').value;
+        const program = programsCache.find((p) => p.id === programId);
+        if (!program || !(program.studentOutcomes || []).length) {
+          container.innerHTML = '<p class="t-muted" style="font-size:0.8125rem;">Select a Program with Student Outcomes to map this course against.</p>';
+          return;
+        }
+        container.innerHTML = program.studentOutcomes.map((so) => {
+          const existing = templateSoMapData.find((r) => r.soCode === so.code);
+          const checked = !!existing;
+          const intensity = existing ? existing.intensity : '';
+          return `
+            <div class="so-map-row">
+              <input type="checkbox" data-so-check="${so.code}" ${checked ? 'checked' : ''} style="margin-top:0.25rem;" />
+              <div class="so-desc"><b>${so.code}</b>${so.description}</div>
+              <select class="input select" data-so-intensity="${so.code}" style="width:8rem;" ${checked ? '' : 'disabled'}>
+                <option value="">—</option>
+                <option value="I/L" ${intensity === 'I/L' ? 'selected' : ''}>I/L</option>
+                <option value="E/P" ${intensity === 'E/P' ? 'selected' : ''}>E/P</option>
+                <option value="D/O" ${intensity === 'D/O' ? 'selected' : ''}>D/O</option>
+              </select>
+            </div>
+          `;
+        }).join('');
+        container.querySelectorAll('[data-so-check]').forEach((cb) => {
+          cb.addEventListener('change', () => {
+            const code = cb.dataset.soCheck;
+            const select = container.querySelector(`[data-so-intensity="${code}"]`);
+            if (cb.checked) {
+              if (!templateSoMapData.some((r) => r.soCode === code)) templateSoMapData.push({ soCode: code, intensity: '' });
+              select.disabled = false;
+            } else {
+              templateSoMapData = templateSoMapData.filter((r) => r.soCode !== code);
+              select.disabled = true;
+              select.value = '';
+            }
+          });
+        });
+        container.querySelectorAll('[data-so-intensity]').forEach((sel) => {
+          sel.addEventListener('change', () => {
+            const row = templateSoMapData.find((r) => r.soCode === sel.dataset.soIntensity);
+            if (row) row.intensity = sel.value;
+          });
+        });
+      }
+      document.getElementById('t-programId').addEventListener('change', renderSoMapEditor);
+
+      // ---- Teaching & Learning Plan editor ----
+      const PLAN_LIST_FIELDS = [
+        { key: 'topics', label: 'Topics' },
+        { key: 'ilo', label: 'Intended Learning Outcomes (ILO)' },
+        { key: 'tla', label: 'Teaching & Learning Activities (TLA)' },
+        { key: 'instructionalMaterials', label: 'Instructional Materials' },
+        { key: 'assessmentTasks', label: 'Assessment Tasks' }
+      ];
+
+      function miniListHtml(rowIdx, fieldKey, arr) {
+        const items = (arr && arr.length) ? arr : [''];
+        return items.map((val, i) => `
+          <div class="list-editor-row" data-plan-row="${rowIdx}" data-plan-field="${fieldKey}" data-idx="${i}">
+            <input class="input" data-plan-input value="${escapeAttr(val)}" placeholder="Type here…" />
+            <button type="button" class="remove-row-btn" data-plan-remove title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+          </div>
+        `).join('');
+      }
+
+      function renderTeachingPlanEditor() {
+        const container = document.getElementById('t-teaching-plan-rows');
+        if (!templateTeachingPlanData.length) {
+          container.innerHTML = '<p class="t-muted" style="font-size:0.8125rem;">No weeks yet — add a week or a milestone below.</p>';
+          return;
+        }
+        let weekCounter = 0;
+        container.innerHTML = templateTeachingPlanData.map((row, idx) => {
+          if (row.type === 'milestone') {
+            return `
+              <div class="editor-card" data-row="${idx}">
+                <div class="editor-card-head">
+                  <span class="badge badge-accent">Milestone</span>
+                  <div class="editor-card-actions">
+                    <button type="button" class="icon-btn" data-plan-move="up" data-row="${idx}" title="Move up"><i data-lucide="chevron-up" class="svg-icon"></i></button>
+                    <button type="button" class="icon-btn" data-plan-move="down" data-row="${idx}" title="Move down"><i data-lucide="chevron-down" class="svg-icon"></i></button>
+                    <button type="button" class="icon-btn" data-plan-remove-row="${idx}" title="Remove"><i data-lucide="trash-2" class="svg-icon"></i></button>
+                  </div>
+                </div>
+                <input class="input" data-plan-label="${idx}" value="${escapeAttr(row.label)}" placeholder="e.g. Prelim Examination" />
+              </div>
+            `;
+          }
+          weekCounter++;
+          return `
+            <div class="editor-card" data-row="${idx}">
+              <div class="editor-card-head">
+                <span class="badge badge-pending">Week</span>
+                <div class="editor-card-actions">
+                  <button type="button" class="icon-btn" data-plan-move="up" data-row="${idx}" title="Move up"><i data-lucide="chevron-up" class="svg-icon"></i></button>
+                  <button type="button" class="icon-btn" data-plan-move="down" data-row="${idx}" title="Move down"><i data-lucide="chevron-down" class="svg-icon"></i></button>
+                  <button type="button" class="icon-btn" data-plan-remove-row="${idx}" title="Remove"><i data-lucide="trash-2" class="svg-icon"></i></button>
+                </div>
+              </div>
+              <div class="field" style="margin-bottom:0.625rem;"><label class="field-label">Week label</label><input class="input" data-plan-week="${idx}" value="${escapeAttr(row.week)}" placeholder="e.g. 2-3" /></div>
+              ${PLAN_LIST_FIELDS.map((f) => `
+                <div class="field" style="margin-bottom:0.625rem;">
+                  <label class="field-label">${f.label}</label>
+                  <div data-plan-list="${idx}:${f.key}">${miniListHtml(idx, f.key, row[f.key])}</div>
+                  <button type="button" class="btn btn-outline btn-sm" data-plan-add="${idx}:${f.key}" style="margin-top:0.375rem;"><i data-lucide="plus" class="svg-icon"></i> Add</button>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
+        wireTeachingPlanEvents();
+      }
+
+      function wireTeachingPlanEvents() {
+        const container = document.getElementById('t-teaching-plan-rows');
+        container.querySelectorAll('[data-plan-label]').forEach((inp) => {
+          inp.addEventListener('input', () => { templateTeachingPlanData[Number(inp.dataset.planLabel)].label = inp.value; });
+        });
+        container.querySelectorAll('[data-plan-week]').forEach((inp) => {
+          inp.addEventListener('input', () => { templateTeachingPlanData[Number(inp.dataset.planWeek)].week = inp.value; });
+        });
+        container.querySelectorAll('[data-plan-remove-row]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            templateTeachingPlanData.splice(Number(btn.dataset.planRemoveRow), 1);
+            renderTeachingPlanEditor();
+          });
+        });
+        container.querySelectorAll('[data-plan-move]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.row);
+            const dir = btn.dataset.planMove === 'up' ? -1 : 1;
+            const target = idx + dir;
+            if (target < 0 || target >= templateTeachingPlanData.length) return;
+            const [item] = templateTeachingPlanData.splice(idx, 1);
+            templateTeachingPlanData.splice(target, 0, item);
+            renderTeachingPlanEditor();
+          });
+        });
+        container.querySelectorAll('[data-plan-input]').forEach((inp) => {
+          const row = inp.closest('[data-plan-row]');
+          inp.addEventListener('input', () => {
+            const rowIdx = Number(row.dataset.planRow);
+            const fieldKey = row.dataset.planField;
+            const idx = Number(row.dataset.idx);
+            templateTeachingPlanData[rowIdx][fieldKey][idx] = inp.value;
+          });
+        });
+        container.querySelectorAll('[data-plan-remove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const row = btn.closest('[data-plan-row]');
+            const rowIdx = Number(row.dataset.planRow);
+            const fieldKey = row.dataset.planField;
+            const idx = Number(row.dataset.idx);
+            templateTeachingPlanData[rowIdx][fieldKey].splice(idx, 1);
+            renderTeachingPlanEditor();
+          });
+        });
+        container.querySelectorAll('[data-plan-add]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const [rowIdx, fieldKey] = btn.dataset.planAdd.split(':');
+            const arr = templateTeachingPlanData[Number(rowIdx)][fieldKey];
+            arr.push('');
+            renderTeachingPlanEditor();
+          });
+        });
+      }
+
+      document.getElementById('t-add-week').addEventListener('click', () => {
+        templateTeachingPlanData.push({ type: 'week', week: '', topics: [''], ilo: [''], tla: [''], instructionalMaterials: [''], assessmentTasks: [''] });
+        renderTeachingPlanEditor();
+      });
+      document.getElementById('t-add-milestone').addEventListener('click', () => {
+        templateTeachingPlanData.push({ type: 'milestone', label: '' });
+        renderTeachingPlanEditor();
+      });
+
+      // ---- Grading System editor ----
+      function renderGradingEditor() {
+        const container = document.getElementById('t-grading-components');
+        const components = templateGradingData.components || [];
+        if (!components.length) {
+          container.innerHTML = '<p class="t-muted" style="font-size:0.8125rem;">No grading components yet — add one below (e.g. "Lecture").</p>';
+          return;
+        }
+        container.innerHTML = components.map((comp, ci) => {
+          const sum = (comp.items || []).reduce((a, it) => a + (Number(it.pct) || 0), 0);
+          const cls = sum === 100 ? 'ok' : 'warn';
+          return `
+            <div class="editor-card" data-comp="${ci}">
+              <div class="editor-card-head">
+                <input class="input" data-comp-name="${ci}" value="${escapeAttr(comp.name)}" placeholder="Component name (e.g. Lecture)" style="max-width:12rem;" />
+                <div class="editor-card-actions">
+                  <button type="button" class="icon-btn" data-comp-remove="${ci}" title="Remove component"><i data-lucide="trash-2" class="svg-icon"></i></button>
+                </div>
+              </div>
+              <div class="editor-subgrid" style="margin-bottom:0.625rem;">
+                <div class="field"><label class="field-label">Weight %</label><input class="input" type="number" min="0" max="100" data-comp-weight="${ci}" value="${comp.weightPct}" /></div>
+                <div class="field"><label class="field-label">Weight Note (optional)</label><input class="input" data-comp-note="${ci}" value="${escapeAttr(comp.weightNote)}" placeholder="e.g. to be computed with Laboratory grade" /></div>
+              </div>
+              <label class="field-label">Assessment Items</label>
+              <div data-comp-items="${ci}">
+                ${(comp.items || []).map((it, ii) => `
+                  <div class="grading-item-row" data-comp="${ci}" data-item="${ii}">
+                    <input class="input" data-item-field="item" value="${escapeAttr(it.item)}" placeholder="Item (e.g. Quizzes)" />
+                    <input class="input" data-item-field="source" value="${escapeAttr(it.source)}" placeholder="Grade Source" />
+                    <input class="input" type="number" min="0" max="100" data-item-field="pct" value="${it.pct}" placeholder="%" />
+                    <button type="button" class="icon-btn" data-item-remove title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+                  </div>
+                `).join('')}
+              </div>
+              <p class="grading-total-hint ${cls}">Items total: ${sum}%${sum !== 100 ? ' (should usually add up to 100%)' : ''}</p>
+              <button type="button" class="btn btn-outline btn-sm" data-comp-add-item="${ci}"><i data-lucide="plus" class="svg-icon"></i> Add Item</button>
+            </div>
+          `;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
+        wireGradingEvents();
+      }
+
+      function wireGradingEvents() {
+        const container = document.getElementById('t-grading-components');
+        container.querySelectorAll('[data-comp-name]').forEach((inp) => {
+          inp.addEventListener('input', () => { templateGradingData.components[Number(inp.dataset.compName)].name = inp.value; });
+        });
+        container.querySelectorAll('[data-comp-weight]').forEach((inp) => {
+          inp.addEventListener('input', () => { templateGradingData.components[Number(inp.dataset.compWeight)].weightPct = Number(inp.value) || 0; });
+        });
+        container.querySelectorAll('[data-comp-note]').forEach((inp) => {
+          inp.addEventListener('input', () => { templateGradingData.components[Number(inp.dataset.compNote)].weightNote = inp.value; });
+        });
+        container.querySelectorAll('[data-comp-remove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            templateGradingData.components.splice(Number(btn.dataset.compRemove), 1);
+            renderGradingEditor();
+          });
+        });
+        container.querySelectorAll('[data-comp-add-item]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            templateGradingData.components[Number(btn.dataset.compAddItem)].items.push({ item: '', source: '', pct: 0 });
+            renderGradingEditor();
+          });
+        });
+        container.querySelectorAll('.grading-item-row').forEach((row) => {
+          const ci = Number(row.dataset.comp);
+          const ii = Number(row.dataset.item);
+          row.querySelectorAll('[data-item-field]').forEach((inp) => {
+            inp.addEventListener('input', () => {
+              const field = inp.dataset.itemField;
+              const val = field === 'pct' ? (Number(inp.value) || 0) : inp.value;
+              templateGradingData.components[ci].items[ii][field] = val;
+              if (field === 'pct') renderGradingEditor();
+            });
+          });
+          const removeBtn = row.querySelector('[data-item-remove]');
+          if (removeBtn) removeBtn.addEventListener('click', () => {
+            templateGradingData.components[ci].items.splice(ii, 1);
+            renderGradingEditor();
+          });
+        });
+      }
+
+      document.getElementById('t-add-grading-component').addEventListener('click', () => {
+        templateGradingData.components.push({ name: '', weightPct: 0, weightNote: '', items: [] });
+        renderGradingEditor();
+      });
+
+      function renderTemplateList(key) {
+        const container = document.getElementById(`t-list-${key}`);
+        if (!templateListData[key].length) templateListData[key] = [''];
+        container.innerHTML = templateListData[key].map((val, i) => `
+          <div class="list-editor-row" data-idx="${i}">
+            <input class="input" data-tlist-input="${key}" data-idx="${i}" value="${(val || '').replace(/"/g, '&quot;')}" placeholder="Type here…" />
+            <button type="button" class="remove-row-btn" data-tremove="${key}" data-idx="${i}" title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+          </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+        container.querySelectorAll('input[data-tlist-input]').forEach((inp) => {
+          inp.addEventListener('input', () => { templateListData[key][Number(inp.dataset.idx)] = inp.value; });
+        });
+        container.querySelectorAll('[data-tremove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            templateListData[key].splice(Number(btn.dataset.idx), 1);
+            if (!templateListData[key].length) templateListData[key] = [''];
+            renderTemplateList(key);
+          });
+        });
+      }
+      document.querySelectorAll('.add-row-btn[data-tlist]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.tlist;
+          templateListData[key].push('');
+          renderTemplateList(key);
+        });
+      });
+
+      function fmtDate(iso) {
+        return iso ? new Date(iso).toLocaleDateString() : '—';
+      }
+
+      async function loadTemplates() {
+        templatesCache = await api.getCourseTemplates();
+        const rows = document.getElementById('template-rows');
+        if (!templatesCache.length) {
+          rows.innerHTML = '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No course templates yet. Create one so new portfolios can auto-populate.</td></tr>';
+          return;
+        }
+        rows.innerHTML = templatesCache.map((t) => `
+          <tr>
+            <td><span class="cell-strong">${t.courseCode}</span></td>
+            <td class="t-muted">${t.courseTitle || '—'}</td>
+            <td class="t-muted">${fmtDate(t.updatedAt)}</td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" title="Edit" data-edit-template="${t.id}"><i data-lucide="pencil" class="svg-icon"></i></button>
+                <button class="icon-btn" title="Delete" data-delete-template="${t.id}" data-code="${t.courseCode}"><i data-lucide="trash-2" class="svg-icon"></i></button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+
+        rows.querySelectorAll('[data-edit-template]').forEach((btn) => {
+          btn.addEventListener('click', () => openTemplateModal(templatesCache.find((t) => t.id === btn.dataset.editTemplate)));
+        });
+        rows.querySelectorAll('[data-delete-template]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm(`Delete the template for ${btn.dataset.code}? Portfolios already created from it are not affected.`)) return;
+            try {
+              await api.deleteCourseTemplate(btn.dataset.deleteTemplate);
+              ui.notify('Template Deleted', `The template for ${btn.dataset.code} has been removed.`);
+              loadTemplates();
+            } catch (err) { ui.notifyError(err); }
+          });
+        });
+      }
+
+      const templateModal = document.getElementById('template-modal-overlay');
+      function refreshTemplateModalSelects() {
+        populateSelect(document.getElementById('t-departmentId'), departmentsCache, 'id', (d) => `${d.code} — ${d.name}`, '— None —');
+        populateSelect(document.getElementById('t-programId'), programsCache, 'id', (p) => `${p.code} — ${p.name}`, '— None —');
+        populateSelect(document.getElementById('t-obtlpTemplateId'), obtlpTemplatesCache, 'id', (t) => `${t.code} — ${t.name}`, '— No template (legacy layout) —');
+      }
+      function openTemplateModal(tpl) {
+        editingTemplateId = tpl ? tpl.id : null;
+        document.getElementById('template-modal-title').textContent = tpl ? `Edit Template — ${tpl.courseCode}` : 'New Course Template';
+        document.getElementById('t-courseCode').value = tpl ? tpl.courseCode : '';
+        document.getElementById('t-courseTitle').value = tpl ? tpl.courseTitle : '';
+        document.getElementById('t-description').value = tpl ? tpl.description : '';
+        document.getElementById('t-syllabus').value = tpl ? tpl.syllabus : '';
+        document.getElementById('t-prerequisite').value = (tpl && tpl.prerequisite) || '';
+        document.getElementById('t-effectivityText').value = (tpl && tpl.effectivityText) || '';
+        document.getElementById('t-classPoliciesOverride').value = (tpl && tpl.classPoliciesOverride) || '';
+        refreshTemplateModalSelects();
+        document.getElementById('t-departmentId').value = (tpl && tpl.departmentId) || '';
+        document.getElementById('t-programId').value = (tpl && tpl.programId) || '';
+        document.getElementById('t-obtlpTemplateId').value = (tpl && tpl.obtlpTemplateId) || '';
+
+        TEMPLATE_LIST_FIELDS.forEach((k) => { templateListData[k] = ['']; });
+        ['objectives', 'outcomes', 'teachingMaterials', 'references', 'courseRequirements'].forEach((k) => {
+          templateListData[k] = (tpl && Array.isArray(tpl[k]) && tpl[k].length) ? tpl[k].slice() : [''];
+          renderTemplateList(k);
+        });
+        const rg = (tpl && tpl.referenceGroups) || { textbooks: [], onlineResources: [] };
+        templateListData.refTextbooks = (rg.textbooks && rg.textbooks.length) ? rg.textbooks.slice() : [''];
+        templateListData.refOnline = (rg.onlineResources && rg.onlineResources.length) ? rg.onlineResources.slice() : [''];
+        renderTemplateList('refTextbooks');
+        renderTemplateList('refOnline');
+
+        templateSoMapData = (tpl && Array.isArray(tpl.soMap)) ? tpl.soMap.map((r) => Object.assign({}, r)) : [];
+        renderSoMapEditor();
+
+        templateTeachingPlanData = (tpl && Array.isArray(tpl.teachingPlan)) ? JSON.parse(JSON.stringify(tpl.teachingPlan)) : [];
+        renderTeachingPlanEditor();
+
+        templateGradingData = (tpl && tpl.grading) ? JSON.parse(JSON.stringify(tpl.grading)) : { components: [] };
+        renderGradingEditor();
+
+        document.getElementById('template-form-error').style.display = 'none';
+        templateModal.style.display = 'flex';
+      }
+      document.getElementById('btn-new-template').addEventListener('click', () => openTemplateModal(null));
+      document.getElementById('template-modal-close').addEventListener('click', () => templateModal.style.display = 'none');
+      templateModal.addEventListener('click', (e) => { if (e.target === templateModal) templateModal.style.display = 'none'; });
+
+      document.getElementById('template-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('template-form-error');
+        errEl.style.display = 'none';
+        const body = {
+          courseCode: document.getElementById('t-courseCode').value.trim(),
+          courseTitle: document.getElementById('t-courseTitle').value.trim(),
+          description: document.getElementById('t-description').value,
+          syllabus: document.getElementById('t-syllabus').value,
+          prerequisite: document.getElementById('t-prerequisite').value.trim(),
+          effectivityText: document.getElementById('t-effectivityText').value,
+          classPoliciesOverride: document.getElementById('t-classPoliciesOverride').value,
+          departmentId: document.getElementById('t-departmentId').value,
+          programId: document.getElementById('t-programId').value,
+          obtlpTemplateId: document.getElementById('t-obtlpTemplateId').value,
+          objectives: templateListData.objectives.map((s) => (s || '').trim()).filter(Boolean),
+          outcomes: templateListData.outcomes.map((s) => (s || '').trim()).filter(Boolean),
+          teachingMaterials: templateListData.teachingMaterials.map((s) => (s || '').trim()).filter(Boolean),
+          references: templateListData.references.map((s) => (s || '').trim()).filter(Boolean),
+          courseRequirements: templateListData.courseRequirements.map((s) => (s || '').trim()).filter(Boolean),
+          referenceGroups: {
+            textbooks: templateListData.refTextbooks.map((s) => (s || '').trim()).filter(Boolean),
+            onlineResources: templateListData.refOnline.map((s) => (s || '').trim()).filter(Boolean)
+          },
+          soMap: templateSoMapData.filter((r) => r.soCode),
+          teachingPlan: templateTeachingPlanData
+            .map((row) => row.type === 'milestone'
+              ? { type: 'milestone', label: (row.label || '').trim() }
+              : {
+                  type: 'week',
+                  week: (row.week || '').trim(),
+                  topics: (row.topics || []).map((s) => (s || '').trim()).filter(Boolean),
+                  ilo: (row.ilo || []).map((s) => (s || '').trim()).filter(Boolean),
+                  tla: (row.tla || []).map((s) => (s || '').trim()).filter(Boolean),
+                  instructionalMaterials: (row.instructionalMaterials || []).map((s) => (s || '').trim()).filter(Boolean),
+                  assessmentTasks: (row.assessmentTasks || []).map((s) => (s || '').trim()).filter(Boolean)
+                })
+            .filter((row) => row.type === 'milestone' ? row.label : (row.week || row.topics.length)),
+          grading: {
+            components: (templateGradingData.components || [])
+              .filter((c) => c.name)
+              .map((c) => ({
+                name: c.name,
+                weightPct: Number(c.weightPct) || 0,
+                weightNote: c.weightNote || '',
+                items: (c.items || []).filter((it) => it.item).map((it) => ({ item: it.item, source: it.source || '', pct: Number(it.pct) || 0 }))
+              }))
+          }
+        };
+        if (!body.courseCode || !body.courseTitle) {
+          errEl.textContent = 'Course Code and Course Title are required.';
+          errEl.style.display = 'block';
+          return;
+        }
+        try {
+          if (editingTemplateId) {
+            await api.updateCourseTemplate(editingTemplateId, body);
+            ui.notify('Template Updated', `The template for ${body.courseCode} has been saved.`);
+          } else {
+            await api.createCourseTemplate(body);
+            ui.notify('Template Created', `${body.courseCode} now has an official template.`);
+          }
+          templateModal.style.display = 'none';
+          loadTemplates();
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not save the template.';
+          errEl.style.display = 'block';
+        }
+      });
+
+      // ---------- departments / programs / OBTLP templates ----------
+      async function loadDepartmentsProgramsTemplates() {
+        const [depts, progs, tpls] = await Promise.all([
+          api.getDepartments().catch(() => []),
+          api.getPrograms().catch(() => []),
+          api.getObtlpTemplates().catch(() => [])
+        ]);
+        departmentsCache = depts;
+        programsCache = progs;
+        obtlpTemplatesCache = tpls;
+
+        const deptRows = document.getElementById('department-rows');
+        deptRows.innerHTML = departmentsCache.length
+          ? departmentsCache.map((d) => `
+              <tr>
+                <td class="cell-strong">${d.code}</td><td class="t-muted">${d.name}</td>
+                <td><div class="row-actions"><button class="icon-btn" title="Edit" data-edit-dept="${d.id}"><i data-lucide="pencil" class="svg-icon"></i></button></div></td>
+              </tr>`).join('')
+          : '<tr><td colspan="3" class="t-muted" style="padding:1.5rem;">No departments yet.</td></tr>';
+        deptRows.querySelectorAll('[data-edit-dept]').forEach((btn) => {
+          btn.addEventListener('click', () => openDepartmentModal(departmentsCache.find((d) => d.id === btn.dataset.editDept)));
+        });
+
+        const progRows = document.getElementById('program-rows');
+        progRows.innerHTML = programsCache.length
+          ? programsCache.map((p) => {
+              const dept = departmentsCache.find((d) => d.id === p.departmentId);
+              return `
+                <tr>
+                  <td class="cell-strong">${p.code}</td><td class="t-muted">${p.name}</td><td class="t-muted">${dept ? dept.code : '—'}</td>
+                  <td><div class="row-actions"><button class="icon-btn" title="Edit" data-edit-prog="${p.id}"><i data-lucide="pencil" class="svg-icon"></i></button></div></td>
+                </tr>`;
+            }).join('')
+          : '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No programs yet.</td></tr>';
+        progRows.querySelectorAll('[data-edit-prog]').forEach((btn) => {
+          btn.addEventListener('click', () => openProgramModal(programsCache.find((p) => p.id === btn.dataset.editProg)));
+        });
+
+        const tplRows = document.getElementById('obtlp-template-rows');
+        tplRows.innerHTML = obtlpTemplatesCache.length
+          ? obtlpTemplatesCache.map((t) => {
+              const prog = programsCache.find((p) => p.id === t.programId);
+              return `
+                <tr>
+                  <td class="cell-strong">${t.code}</td>
+                  <td class="t-muted">${t.name}</td>
+                  <td class="t-muted">${prog ? prog.code : '—'}</td>
+                  <td class="t-muted">${t.version || '—'}</td>
+                  <td><button type="button" class="badge ${t.active ? 'badge-approved' : 'badge-draft'}" data-toggle-template="${t.id}" style="cursor:pointer;border:none;">${t.active ? 'Active' : 'Inactive'}</button></td>
+                  <td>
+                    <div class="row-actions">
+                      <button class="icon-btn" title="Edit" data-edit-obtlp="${t.id}"><i data-lucide="pencil" class="svg-icon"></i></button>
+                      <button class="icon-btn" title="Manage Sections" data-manage-sections="${t.id}"><i data-lucide="layers" class="svg-icon"></i></button>
+                      <button class="icon-btn" title="Assign Courses" data-manage-courses="${t.id}"><i data-lucide="book-open-check" class="svg-icon"></i></button>
+                      <button class="icon-btn" title="Delete" data-delete-obtlp="${t.id}" data-code="${t.code}"><i data-lucide="trash-2" class="svg-icon"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')
+          : '<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No OBTLP templates yet.</td></tr>';
+        if (window.lucide) lucide.createIcons();
+        tplRows.querySelectorAll('[data-toggle-template]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const tpl = obtlpTemplatesCache.find((t) => t.id === btn.dataset.toggleTemplate);
+            if (!tpl) return;
+            try {
+              await api.updateObtlpTemplate(tpl.id, { active: !tpl.active });
+              loadDepartmentsProgramsTemplates();
+            } catch (err) { ui.notifyError(err); }
+          });
+        });
+        tplRows.querySelectorAll('[data-edit-obtlp]').forEach((btn) => {
+          btn.addEventListener('click', () => openObtlpTemplateModal(obtlpTemplatesCache.find((t) => t.id === btn.dataset.editObtlp)));
+        });
+        tplRows.querySelectorAll('[data-manage-sections]').forEach((btn) => {
+          btn.addEventListener('click', () => openSectionsModal(obtlpTemplatesCache.find((t) => t.id === btn.dataset.manageSections)));
+        });
+        tplRows.querySelectorAll('[data-manage-courses]').forEach((btn) => {
+          btn.addEventListener('click', () => openCoursesModal(obtlpTemplatesCache.find((t) => t.id === btn.dataset.manageCourses)));
+        });
+        tplRows.querySelectorAll('[data-delete-obtlp]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm(`Delete the OBTLP template "${btn.dataset.code}"? Course templates still linked to it must be unlinked first.`)) return;
+            try {
+              await api.deleteObtlpTemplate(btn.dataset.deleteObtlp);
+              ui.notify('Template Deleted', `"${btn.dataset.code}" has been removed.`);
+              loadDepartmentsProgramsTemplates();
+            } catch (err) { ui.notifyError(err); }
+          });
+        });
+      }
+
+      // ---- Department modal (create/edit) ----
+      const departmentModal = document.getElementById('department-modal-overlay');
+      let editingDepartmentId = null;
+      function openDepartmentModal(dept) {
+        editingDepartmentId = dept ? dept.id : null;
+        document.getElementById('department-modal-title').textContent = dept ? 'Edit Department' : 'New Department';
+        document.getElementById('department-save-btn').textContent = dept ? 'Save Department' : 'Create Department';
+        document.getElementById('d-code').value = dept ? dept.code : '';
+        document.getElementById('d-name').value = dept ? dept.name : '';
+        document.getElementById('department-form-error').style.display = 'none';
+        departmentModal.style.display = 'flex';
+      }
+      document.getElementById('btn-new-department').addEventListener('click', () => openDepartmentModal(null));
+      document.getElementById('department-modal-close').addEventListener('click', () => departmentModal.style.display = 'none');
+      departmentModal.addEventListener('click', (e) => { if (e.target === departmentModal) departmentModal.style.display = 'none'; });
+      document.getElementById('department-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('department-form-error');
+        errEl.style.display = 'none';
+        const body = { code: document.getElementById('d-code').value.trim(), name: document.getElementById('d-name').value.trim() };
+        try {
+          if (editingDepartmentId) {
+            await api.updateDepartment(editingDepartmentId, body);
+            ui.notify('Department Updated', `${body.code} has been saved.`);
+          } else {
+            await api.createDepartment(body);
+            ui.notify('Department Created', 'The department is now available for programs and templates.');
+          }
+          departmentModal.style.display = 'none';
+          loadDepartmentsProgramsTemplates();
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not save department.';
+          errEl.style.display = 'block';
+        }
+      });
+
+      // ---- Program modal (create/edit) ----
+      const programModal = document.getElementById('program-modal-overlay');
+      let editingProgramId = null;
+      let programPeoData = [''];
+      let programSoData = [];
+
+      function renderProgramPeoList() {
+        const container = document.getElementById('pr-list-peo');
+        if (!programPeoData.length) programPeoData = [''];
+        container.innerHTML = programPeoData.map((val, i) => `
+          <div class="list-editor-row" data-idx="${i}">
+            <input class="input" data-prlist-input="peo" data-idx="${i}" value="${escapeAttr(val)}" placeholder="Type here…" />
+            <button type="button" class="remove-row-btn" data-prremove="peo" data-idx="${i}" title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+          </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+        container.querySelectorAll('input[data-prlist-input]').forEach((inp) => {
+          inp.addEventListener('input', () => { programPeoData[Number(inp.dataset.idx)] = inp.value; });
+        });
+        container.querySelectorAll('[data-prremove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            programPeoData.splice(Number(btn.dataset.idx), 1);
+            if (!programPeoData.length) programPeoData = [''];
+            renderProgramPeoList();
+          });
+        });
+      }
+      document.querySelectorAll('.add-row-btn[data-prlist]').forEach((btn) => {
+        btn.addEventListener('click', () => { programPeoData.push(''); renderProgramPeoList(); });
+      });
+
+      function renderProgramSoEditor() {
+        const container = document.getElementById('pr-so-rows');
+        if (!programSoData.length) {
+          container.innerHTML = '<p class="t-muted" style="font-size:0.8125rem;">No student outcomes yet.</p>';
+          return;
+        }
+        container.innerHTML = programSoData.map((so, i) => `
+          <div class="editor-subgrid" style="margin-bottom:0.5rem;align-items:start;">
+            <div class="field"><input class="input" data-so-code="${i}" value="${escapeAttr(so.code)}" placeholder="Code, e.g. SO3" style="max-width:8rem;" /></div>
+            <div style="display:flex;gap:0.5rem;">
+              <textarea class="textarea" data-so-desc="${i}" rows="2" placeholder="Description" style="flex:1;">${so.description || ''}</textarea>
+              <button type="button" class="icon-btn" data-so-remove="${i}" title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+            </div>
+          </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+        container.querySelectorAll('[data-so-code]').forEach((inp) => {
+          inp.addEventListener('input', () => { programSoData[Number(inp.dataset.soCode)].code = inp.value; });
+        });
+        container.querySelectorAll('[data-so-desc]').forEach((inp) => {
+          inp.addEventListener('input', () => { programSoData[Number(inp.dataset.soDesc)].description = inp.value; });
+        });
+        container.querySelectorAll('[data-so-remove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            programSoData.splice(Number(btn.dataset.soRemove), 1);
+            renderProgramSoEditor();
+          });
+        });
+      }
+      document.getElementById('pr-add-so').addEventListener('click', () => {
+        programSoData.push({ code: '', description: '' });
+        renderProgramSoEditor();
+      });
+
+      function openProgramModal(program) {
+        editingProgramId = program ? program.id : null;
+        document.getElementById('program-modal-title').textContent = program ? `Edit Program — ${program.code}` : 'New Program';
+        document.getElementById('program-save-btn').textContent = program ? 'Save Program' : 'Create Program';
+        document.getElementById('program-form').reset();
+        populateSelect(document.getElementById('pr-departmentId'), departmentsCache, 'id', (d) => `${d.code} — ${d.name}`, 'Select a department');
+        document.getElementById('pr-departmentId').value = program ? program.departmentId : '';
+        document.getElementById('pr-code').value = program ? program.code : '';
+        document.getElementById('pr-name').value = program ? program.name : '';
+        document.getElementById('pr-peoIntro').value = program ? (program.peoIntro || '') : '';
+        programPeoData = (program && program.peo && program.peo.length) ? program.peo.slice() : [''];
+        renderProgramPeoList();
+        programSoData = (program && program.studentOutcomes) ? program.studentOutcomes.map((s) => Object.assign({}, s)) : [];
+        renderProgramSoEditor();
+        document.getElementById('program-form-error').style.display = 'none';
+        programModal.style.display = 'flex';
+      }
+      document.getElementById('btn-new-program').addEventListener('click', () => openProgramModal(null));
+      document.getElementById('program-modal-close').addEventListener('click', () => programModal.style.display = 'none');
+      programModal.addEventListener('click', (e) => { if (e.target === programModal) programModal.style.display = 'none'; });
+      document.getElementById('program-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('program-form-error');
+        errEl.style.display = 'none';
+        const body = {
+          departmentId: document.getElementById('pr-departmentId').value,
+          code: document.getElementById('pr-code').value.trim(),
+          name: document.getElementById('pr-name').value.trim(),
+          peoIntro: document.getElementById('pr-peoIntro').value.trim(),
+          peo: programPeoData.map((s) => (s || '').trim()).filter(Boolean),
+          studentOutcomes: programSoData.map((s) => ({ code: (s.code || '').trim(), description: (s.description || '').trim() })).filter((s) => s.code)
+        };
+        if (!body.departmentId || !body.code || !body.name) {
+          errEl.textContent = 'Department, code, and name are required.';
+          errEl.style.display = 'block';
+          return;
+        }
+        try {
+          if (editingProgramId) {
+            await api.updateProgram(editingProgramId, body);
+            ui.notify('Program Updated', `${body.code} has been saved.`);
+          } else {
+            await api.createProgram(body);
+            ui.notify('Program Created', `${body.code} is now available for course templates.`);
+          }
+          programModal.style.display = 'none';
+          loadDepartmentsProgramsTemplates();
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not save program.';
+          errEl.style.display = 'block';
+        }
+      });
+
+      // ---- OBTLP Template modal (metadata: create/edit) ----
+      const obtlpTemplateModal = document.getElementById('obtlp-template-modal-overlay');
+      let editingObtlpTemplateId = null;
+
+      function defaultStarterSections() {
+        return [
+          { key: 'courseInfo', type: 'keyvalueGrid', label: 'Course Information', fields: [
+            { key: 'courseCode', label: 'Course/Subject Code' },
+            { key: 'courseTitle', label: 'Course/Subject Title' },
+            { key: 'facultyUnits', label: 'Credit Units' },
+            { key: 'prerequisite', label: 'Pre-requisite/Co-requisite' },
+            { key: 'description', label: 'Course Description', fullWidth: true }
+          ] },
+          { key: 'requirements', type: 'list', label: 'Course Requirements', source: 'courseRequirements' },
+          { key: 'effectivity', type: 'richtext', label: 'Effectivity Period', source: 'effectivityText' }
+        ];
+      }
+
+      function openObtlpTemplateModal(tpl) {
+        editingObtlpTemplateId = tpl ? tpl.id : null;
+        document.getElementById('obtlp-template-modal-title').textContent = tpl ? `Edit Template — ${tpl.code}` : 'New OBTLP Template';
+        document.getElementById('obtlp-template-save-btn').textContent = tpl ? 'Save Template' : 'Create Template';
+        document.getElementById('ot-code').value = tpl ? tpl.code : '';
+        document.getElementById('ot-name').value = tpl ? tpl.name : '';
+        populateSelect(document.getElementById('ot-departmentId'), departmentsCache, 'id', (d) => `${d.code} — ${d.name}`, '— None —');
+        populateSelect(document.getElementById('ot-programId'), programsCache, 'id', (p) => `${p.code} — ${p.name}`, '— None —');
+        document.getElementById('ot-departmentId').value = tpl ? (tpl.departmentId || '') : '';
+        document.getElementById('ot-programId').value = tpl ? (tpl.programId || '') : '';
+        document.getElementById('ot-version').value = tpl ? (tpl.version || '') : '1';
+        document.getElementById('ot-formCode').value = tpl ? (tpl.formCode || '') : '';
+        document.getElementById('ot-effectivityText').value = tpl ? (tpl.effectivityText || '') : '';
+        document.getElementById('ot-active').checked = tpl ? !!tpl.active : true;
+        document.getElementById('obtlp-template-form-error').style.display = 'none';
+        obtlpTemplateModal.style.display = 'flex';
+      }
+      document.getElementById('btn-new-obtlp-template').addEventListener('click', () => openObtlpTemplateModal(null));
+      document.getElementById('obtlp-template-modal-close').addEventListener('click', () => obtlpTemplateModal.style.display = 'none');
+      obtlpTemplateModal.addEventListener('click', (e) => { if (e.target === obtlpTemplateModal) obtlpTemplateModal.style.display = 'none'; });
+      document.getElementById('obtlp-template-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('obtlp-template-form-error');
+        errEl.style.display = 'none';
+        const body = {
+          code: document.getElementById('ot-code').value.trim(),
+          name: document.getElementById('ot-name').value.trim(),
+          departmentId: document.getElementById('ot-departmentId').value,
+          programId: document.getElementById('ot-programId').value,
+          version: document.getElementById('ot-version').value.trim(),
+          formCode: document.getElementById('ot-formCode').value.trim(),
+          effectivityText: document.getElementById('ot-effectivityText').value,
+          active: document.getElementById('ot-active').checked
+        };
+        if (!body.code || !body.name) {
+          errEl.textContent = 'Code and Name are required.';
+          errEl.style.display = 'block';
+          return;
+        }
+        if (!editingObtlpTemplateId) body.sections = defaultStarterSections();
+        try {
+          if (editingObtlpTemplateId) {
+            await api.updateObtlpTemplate(editingObtlpTemplateId, body);
+            ui.notify('Template Updated', `${body.code} has been saved.`);
+          } else {
+            await api.createObtlpTemplate(body);
+            ui.notify('Template Created', `${body.code} was created with a starter set of sections — use "Manage Sections" to customize it.`);
+          }
+          obtlpTemplateModal.style.display = 'none';
+          loadDepartmentsProgramsTemplates();
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not save the OBTLP template.';
+          errEl.style.display = 'block';
+        }
+      });
+
+      // ---- Manage Sections modal ----
+      const sectionsModal = document.getElementById('sections-modal-overlay');
+      let sectionsEditingTemplate = null;
+      let sectionsData = [];
+
+      const SECTION_TYPE_LABELS = {
+        staticOrgTable: 'Vision / Mission / Core Values / Graduate Attributes',
+        programOutcomes: 'Program Educational Objectives & CILO',
+        soMatrix: 'Student Outcomes Map',
+        keyvalueGrid: 'Course Information',
+        weeklyPlanTable: 'Teaching and Learning Plan',
+        referenceList: 'References',
+        gradingBreakdown: 'Grading System',
+        staticAttendanceTable: 'Attendance',
+        list: 'Simple List',
+        classPolicies: 'Class Policies',
+        richtext: 'Free Text',
+        signatureBlock: 'Approval'
+      };
+
+      function defaultSectionFor(type) {
+        const key = `${type}_${Date.now().toString(36)}`;
+        const base = { key, type, label: SECTION_TYPE_LABELS[type] || type };
+        if (type === 'soMatrix') return Object.assign(base, { columns: ['I/L', 'E/P', 'D/O'] });
+        if (type === 'keyvalueGrid') return Object.assign(base, { fields: [
+          { key: 'courseCode', label: 'Course/Subject Code' },
+          { key: 'courseTitle', label: 'Course/Subject Title' },
+          { key: 'facultyUnits', label: 'Credit Units' },
+          { key: 'prerequisite', label: 'Pre-requisite/Co-requisite' },
+          { key: 'description', label: 'Course Description', fullWidth: true }
+        ] });
+        if (type === 'weeklyPlanTable') return Object.assign(base, { columns: ['Week', 'Topics', 'Intended Learning Outcomes (ILO)', 'Teaching and Learning Activities (TLA)', 'Instructional Material', 'Assessment Tasks (AT)'] });
+        if (type === 'referenceList') return Object.assign(base, { groups: [{ key: 'textbooks', label: 'Textbooks' }, { key: 'onlineResources', label: 'Online Resources' }] });
+        if (type === 'list') return Object.assign(base, { source: 'courseRequirements' });
+        if (type === 'richtext') return Object.assign(base, { source: 'effectivityText' });
+        if (type === 'signatureBlock') return Object.assign(base, { roles: [
+          { key: 'preparedBy', label: 'Prepared by:', multiple: true },
+          { key: 'reviewedBy', label: 'Reviewed and Recommended by:', multiple: false },
+          { key: 'approvedBy', label: 'Approved by:', multiple: true }
+        ] });
+        return base;
+      }
+
+      function renderSectionsList() {
+        const container = document.getElementById('sections-list');
+        if (!sectionsData.length) {
+          container.innerHTML = '<p class="t-muted" style="font-size:0.8125rem;">No sections yet — add one below.</p>';
+          return;
+        }
+        container.innerHTML = sectionsData.map((sec, idx) => `
+          <div class="editor-card" data-sec="${idx}">
+            <div class="editor-card-head">
+              <span class="badge badge-accent">${SECTION_TYPE_LABELS[sec.type] || sec.type}</span>
+              <div class="editor-card-actions">
+                <button type="button" class="icon-btn" data-sec-move="up" data-sec-idx="${idx}" title="Move up"><i data-lucide="chevron-up" class="svg-icon"></i></button>
+                <button type="button" class="icon-btn" data-sec-move="down" data-sec-idx="${idx}" title="Move down"><i data-lucide="chevron-down" class="svg-icon"></i></button>
+                <button type="button" class="icon-btn" data-sec-remove="${idx}" title="Remove"><i data-lucide="trash-2" class="svg-icon"></i></button>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:${sec.type === 'signatureBlock' ? '0.625rem' : '0'};">
+              <label class="field-label">Label</label>
+              <input class="input" data-sec-label="${idx}" value="${escapeAttr(sec.label)}" />
+            </div>
+            ${sec.type === 'signatureBlock' ? `
+              <label class="field-label">Signatory Roles</label>
+              <div data-sec-roles="${idx}">
+                ${(sec.roles || []).map((role, ri) => `
+                  <div class="grading-item-row" style="grid-template-columns:2fr auto auto;" data-sec="${idx}" data-role="${ri}">
+                    <input class="input" data-role-label value="${escapeAttr(role.label)}" placeholder="Role label" />
+                    <label style="display:flex;align-items:center;gap:0.375rem;font-size:0.8125rem;white-space:nowrap;"><input type="checkbox" data-role-multiple ${role.multiple ? 'checked' : ''} /> Multiple</label>
+                    <button type="button" class="icon-btn" data-role-remove title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+                  </div>
+                `).join('')}
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" data-sec-add-role="${idx}" style="margin-top:0.375rem;"><i data-lucide="plus" class="svg-icon"></i> Add Role</button>
+            ` : ''}
+          </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+        wireSectionsEvents();
+      }
+
+      function wireSectionsEvents() {
+        const container = document.getElementById('sections-list');
+        container.querySelectorAll('[data-sec-label]').forEach((inp) => {
+          inp.addEventListener('input', () => { sectionsData[Number(inp.dataset.secLabel)].label = inp.value; });
+        });
+        container.querySelectorAll('[data-sec-remove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            sectionsData.splice(Number(btn.dataset.secRemove), 1);
+            renderSectionsList();
+          });
+        });
+        container.querySelectorAll('[data-sec-move]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.secIdx);
+            const dir = btn.dataset.secMove === 'up' ? -1 : 1;
+            const target = idx + dir;
+            if (target < 0 || target >= sectionsData.length) return;
+            const [item] = sectionsData.splice(idx, 1);
+            sectionsData.splice(target, 0, item);
+            renderSectionsList();
+          });
+        });
+        container.querySelectorAll('[data-sec-add-role]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.secAddRole);
+            if (!sectionsData[idx].roles) sectionsData[idx].roles = [];
+            sectionsData[idx].roles.push({ key: `role_${Date.now().toString(36)}`, label: '', multiple: false });
+            renderSectionsList();
+          });
+        });
+        container.querySelectorAll('[data-sec-roles] .grading-item-row').forEach((row) => {
+          const secIdx = Number(row.dataset.sec);
+          const roleIdx = Number(row.dataset.role);
+          const labelInp = row.querySelector('[data-role-label]');
+          const multiCb = row.querySelector('[data-role-multiple]');
+          const removeBtn = row.querySelector('[data-role-remove]');
+          labelInp.addEventListener('input', () => { sectionsData[secIdx].roles[roleIdx].label = labelInp.value; });
+          multiCb.addEventListener('change', () => { sectionsData[secIdx].roles[roleIdx].multiple = multiCb.checked; });
+          removeBtn.addEventListener('click', () => {
+            sectionsData[secIdx].roles.splice(roleIdx, 1);
+            renderSectionsList();
+          });
+        });
+      }
+
+      function openSectionsModal(tpl) {
+        if (!tpl) return;
+        sectionsEditingTemplate = tpl;
+        sectionsData = JSON.parse(JSON.stringify(tpl.sections || []));
+        document.getElementById('sections-modal-title').textContent = `Manage Sections — ${tpl.code}`;
+        document.getElementById('sections-form-error').style.display = 'none';
+        renderSectionsList();
+        sectionsModal.style.display = 'flex';
+      }
+      document.getElementById('sections-modal-close').addEventListener('click', () => sectionsModal.style.display = 'none');
+      sectionsModal.addEventListener('click', (e) => { if (e.target === sectionsModal) sectionsModal.style.display = 'none'; });
+      document.getElementById('btn-add-section').addEventListener('click', () => {
+        const type = document.getElementById('section-add-type').value;
+        sectionsData.push(defaultSectionFor(type));
+        renderSectionsList();
+      });
+      document.getElementById('sections-save-btn').addEventListener('click', async () => {
+        const errEl = document.getElementById('sections-form-error');
+        errEl.style.display = 'none';
+        if (!sectionsData.length) {
+          errEl.textContent = 'A template needs at least one section.';
+          errEl.style.display = 'block';
+          return;
+        }
+        try {
+          await api.updateObtlpTemplate(sectionsEditingTemplate.id, { sections: sectionsData });
+          ui.notify('Sections Saved', `${sectionsEditingTemplate.code}'s sections have been updated.`);
+          sectionsModal.style.display = 'none';
+          loadDepartmentsProgramsTemplates();
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not save sections.';
+          errEl.style.display = 'block';
+        }
+      });
+
+      // ---- Assign Courses modal (which course templates use this OBTLP template) ----
+      const coursesModal = document.getElementById('courses-modal-overlay');
+      let coursesEditingTemplate = null;
+
+      function renderCoursesAssignList() {
+        const container = document.getElementById('courses-assign-list');
+        if (!templatesCache.length) {
+          container.innerHTML = '<p class="t-muted" style="font-size:0.8125rem;">No course templates exist yet — create one under Course Templates first.</p>';
+          return;
+        }
+        container.innerHTML = templatesCache.map((t) => {
+          const assignedElsewhere = t.obtlpTemplateId && t.obtlpTemplateId !== coursesEditingTemplate.id;
+          const otherTpl = assignedElsewhere ? obtlpTemplatesCache.find((x) => x.id === t.obtlpTemplateId) : null;
+          return `
+            <label style="display:flex;align-items:flex-start;gap:0.625rem;padding:0.5rem 0;border-bottom:1px solid var(--border);">
+              <input type="checkbox" data-course-check="${t.id}" ${t.obtlpTemplateId === coursesEditingTemplate.id ? 'checked' : ''} style="margin-top:0.25rem;" />
+              <span style="flex:1;font-size:0.8125rem;">
+                <b>${t.courseCode}</b> — ${t.courseTitle || 'Untitled'}
+                ${otherTpl ? `<br><span class="t-muted">Currently assigned to "${otherTpl.code}" — checking this will move it here.</span>` : ''}
+              </span>
+            </label>
+          `;
+        }).join('');
+        container.querySelectorAll('[data-course-check]').forEach((cb) => {
+          cb.addEventListener('change', async () => {
+            cb.disabled = true;
+            try {
+              await api.updateCourseTemplate(cb.dataset.courseCheck, { obtlpTemplateId: cb.checked ? coursesEditingTemplate.id : '' });
+              const t = templatesCache.find((x) => x.id === cb.dataset.courseCheck);
+              if (t) t.obtlpTemplateId = cb.checked ? coursesEditingTemplate.id : '';
+              ui.notify('Updated', `${t ? t.courseCode : 'Course'} ${cb.checked ? 'now uses' : 'no longer uses'} "${coursesEditingTemplate.code}".`);
+              renderCoursesAssignList();
+            } catch (err) {
+              ui.notifyError(err);
+              cb.checked = !cb.checked;
+              cb.disabled = false;
+            }
+          });
+        });
+      }
+
+      function openCoursesModal(tpl) {
+        if (!tpl) return;
+        coursesEditingTemplate = tpl;
+        document.getElementById('courses-modal-title').textContent = `Assign Courses — ${tpl.code}`;
+        renderCoursesAssignList();
+        coursesModal.style.display = 'flex';
+      }
+      document.getElementById('courses-modal-close').addEventListener('click', () => coursesModal.style.display = 'none');
+      coursesModal.addEventListener('click', (e) => { if (e.target === coursesModal) coursesModal.style.display = 'none'; });
+
+      // ---------- Organization Profile ----------
+      let orgProfileData = {};
+      const ORG_LIST_FIELDS = ['coreValues', 'graduateAttributes', 'academicDishonestyItems'];
+      const orgListData = { coreValues: [''], graduateAttributes: [''], academicDishonestyItems: [''] };
+      let orgAttendanceRows = [];
+
+      function renderOrgList(key) {
+        const container = document.getElementById(`op-list-${key}`);
+        if (!orgListData[key].length) orgListData[key] = [''];
+        container.innerHTML = orgListData[key].map((val, i) => `
+          <div class="list-editor-row" data-idx="${i}">
+            <input class="input" data-oplist-input="${key}" data-idx="${i}" value="${escapeAttr(val)}" placeholder="Type here…" />
+            <button type="button" class="remove-row-btn" data-opremove="${key}" data-idx="${i}" title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+          </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+        container.querySelectorAll('input[data-oplist-input]').forEach((inp) => {
+          inp.addEventListener('input', () => { orgListData[key][Number(inp.dataset.idx)] = inp.value; });
+        });
+        container.querySelectorAll('[data-opremove]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            orgListData[key].splice(Number(btn.dataset.idx), 1);
+            if (!orgListData[key].length) orgListData[key] = [''];
+            renderOrgList(key);
+          });
+        });
+      }
+      document.querySelectorAll('.add-row-btn[data-oplist]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.oplist;
+          orgListData[key].push('');
+          renderOrgList(key);
+        });
+      });
+
+      function renderOrgAttendanceRows() {
+        const container = document.getElementById('op-attendance-rows');
+        if (!orgAttendanceRows.length) {
+          container.innerHTML = '<p class="t-muted" style="font-size:0.8125rem;">No rows yet.</p>';
+          return;
+        }
+        container.innerHTML = orgAttendanceRows.map((row, i) => `
+          <div class="attendance-row" data-idx="${i}">
+            <input class="input" data-att-col="0" value="${escapeAttr(row[0])}" placeholder="e.g. 5 meetings/week" />
+            <input class="input" data-att-col="1" value="${escapeAttr(row[1])}" placeholder="e.g. 17 absences max" />
+            <button type="button" class="icon-btn" data-att-remove title="Remove"><i data-lucide="x" class="svg-icon"></i></button>
+          </div>
+        `).join('');
+        if (window.lucide) lucide.createIcons();
+        container.querySelectorAll('[data-idx]').forEach((row) => {
+          const i = Number(row.dataset.idx);
+          row.querySelectorAll('[data-att-col]').forEach((inp) => {
+            inp.addEventListener('input', () => { orgAttendanceRows[i][Number(inp.dataset.attCol)] = inp.value; });
+          });
+          row.querySelector('[data-att-remove]').addEventListener('click', () => {
+            orgAttendanceRows.splice(i, 1);
+            renderOrgAttendanceRows();
+          });
+        });
+      }
+      document.getElementById('op-add-attendance-row').addEventListener('click', () => {
+        orgAttendanceRows.push(['', '']);
+        renderOrgAttendanceRows();
+      });
+
+      async function loadOrgProfile() {
+        orgProfileData = await api.getOrgProfile();
+        document.getElementById('op-vision').value = orgProfileData.vision || '';
+        document.getElementById('op-mission').value = orgProfileData.mission || '';
+        document.getElementById('op-coreValuesIntro').value = orgProfileData.coreValuesIntro || '';
+        orgListData.coreValues = (orgProfileData.coreValues && orgProfileData.coreValues.length) ? orgProfileData.coreValues.slice() : [''];
+        orgListData.graduateAttributes = (orgProfileData.graduateAttributes && orgProfileData.graduateAttributes.length) ? orgProfileData.graduateAttributes.slice() : [''];
+        ORG_LIST_FIELDS.forEach((k) => { if (k !== 'academicDishonestyItems') renderOrgList(k); });
+
+        const cp = orgProfileData.classPolicies || {};
+        document.getElementById('op-attendanceHeading').value = cp.attendanceHeading || '';
+        document.getElementById('op-attendanceText').value = cp.attendanceText || '';
+        document.getElementById('op-academicDishonestyHeading').value = cp.academicDishonestyHeading || '';
+        document.getElementById('op-academicDishonestyIntro').value = cp.academicDishonestyIntro || '';
+        orgListData.academicDishonestyItems = (cp.academicDishonestyItems && cp.academicDishonestyItems.length) ? cp.academicDishonestyItems.slice() : [''];
+        renderOrgList('academicDishonestyItems');
+        document.getElementById('op-submissionHeading').value = cp.submissionHeading || '';
+        document.getElementById('op-submissionText').value = cp.submissionText || '';
+
+        const rule = orgProfileData.attendanceRule || {};
+        document.getElementById('op-attendanceNote').value = rule.note || '';
+        orgAttendanceRows = (rule.rows && rule.rows.length) ? rule.rows.map((r) => r.slice()) : [];
+        renderOrgAttendanceRows();
+      }
+
+      document.getElementById('org-profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const successEl = document.getElementById('org-profile-success');
+        successEl.style.display = 'none';
+        const body = {
+          vision: document.getElementById('op-vision').value,
+          mission: document.getElementById('op-mission').value,
+          coreValuesIntro: document.getElementById('op-coreValuesIntro').value,
+          coreValues: orgListData.coreValues.map((s) => (s || '').trim()).filter(Boolean),
+          graduateAttributes: orgListData.graduateAttributes.map((s) => (s || '').trim()).filter(Boolean),
+          soIntensityLegend: orgProfileData.soIntensityLegend || [],
+          attendanceRule: {
+            note: document.getElementById('op-attendanceNote').value,
+            columns: (orgProfileData.attendanceRule && orgProfileData.attendanceRule.columns) || ['# of meetings per week', 'Absences should not exceed (per sem)'],
+            rows: orgAttendanceRows.map((r) => [(r[0] || '').trim(), (r[1] || '').trim()]).filter((r) => r[0] || r[1])
+          },
+          classPolicies: {
+            attendanceHeading: document.getElementById('op-attendanceHeading').value,
+            attendanceText: document.getElementById('op-attendanceText').value,
+            academicDishonestyHeading: document.getElementById('op-academicDishonestyHeading').value,
+            academicDishonestyIntro: document.getElementById('op-academicDishonestyIntro').value,
+            academicDishonestyItems: orgListData.academicDishonestyItems.map((s) => (s || '').trim()).filter(Boolean),
+            submissionHeading: document.getElementById('op-submissionHeading').value,
+            submissionText: document.getElementById('op-submissionText').value
+          }
+        };
+        try {
+          orgProfileData = await api.updateOrgProfile(body);
+          successEl.style.display = 'block';
+          ui.notify('Organization Profile Saved', 'Every OBTLP template that reuses this content will reflect the change.');
+        } catch (err) {
+          ui.notifyError(err);
+        }
+      });
+
+      try {
+        await Promise.all([loadOverview(), loadUsers(), loadSettings(), loadOrgProfile(), loadTemplates(), loadDepartmentsProgramsTemplates()]);
+      } catch (err) {
+        ui.notifyError(err);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create an Account · OBTLP Generator Report System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <button type="button" id="theme-toggle" class="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+    <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+    <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+  </button>
+
+  <div class="login-grid">
+    <div class="login-brand">
+      <div class="login-dots"></div>
+      <div class="login-blob"></div>
+      <div class="login-shard login-shard-1"></div>
+      <div class="login-shard login-shard-2"></div>
+      <div class="brand">
+        <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+        <div>
+          <p class="brand-title" style="font-size:1.25rem;">OBTLP</p>
+          <p class="brand-sub" style="letter-spacing:.2em;">Generator Report System</p>
+        </div>
+      </div>
+      <div>
+        <h1 class="login-headline">Create Your Account</h1>
+        <p class="login-lede">Register for Faculty, System Administrator, or IT Administrator access to the OBTLP system.</p>
+        <div class="login-stats">
+          <div class="login-stat"><b>RBAC</b><span>Role-based access</span></div>
+          <div class="login-stat"><b>Hashed</b><span>Encrypted passwords</span></div>
+          <div class="login-stat"><b>Audit</b><span>Activity logs</span></div>
+        </div>
+        <p class="login-copyright">© <span id="year"></span> · Institutional Records</p>
+      </div>
+    </div>
+
+    <div class="login-form-panel">
+      <div class="login-panel-header">
+        <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="login-seal" />
+        <p class="login-school-name">University of Cabuyao · Pamantasan ng Cabuyao</p>
+        <p class="login-wordmark"><span class="wm-accent">OB</span><span class="wm-rest">TLP</span></p>
+        <p class="login-wordmark-sub">Generator Report System</p>
+      </div>
+
+      <div class="login-form">
+        <h2>Create an Account</h2>
+        <p class="lede">Choose the account type for this registration.</p>
+
+        <div class="role-switch" id="reg-role-switch" role="radiogroup" aria-label="Account Type">
+          <button type="button" data-role="faculty" class="active" aria-pressed="true">Faculty</button>
+          <button type="button" data-role="admin" aria-pressed="false">System Administrator</button>
+          <button type="button" data-role="it" aria-pressed="false">IT Administrator</button>
+        </div>
+
+        <form class="form-stack" id="register-form" novalidate>
+          <div class="field">
+            <label class="field-label" for="reg-name">Full Name</label>
+            <div class="input-with-icon">
+              <i data-lucide="user" class="svg-icon"></i>
+              <input class="input" id="reg-name" type="text" placeholder="e.g. Juan Dela Cruz" autocomplete="name" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="reg-username">Email Address / Username</label>
+            <div class="input-with-icon">
+              <i data-lucide="mail" class="svg-icon"></i>
+              <input class="input" id="reg-username" type="text" placeholder="you@university.edu" autocomplete="username" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="reg-password">Password</label>
+            <div class="input-with-icon">
+              <i data-lucide="lock" class="svg-icon"></i>
+              <input class="input" id="reg-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="reg-confirm">Confirm Password</label>
+            <div class="input-with-icon">
+              <i data-lucide="lock" class="svg-icon"></i>
+              <input class="input" id="reg-confirm" type="password" placeholder="Re-enter your password" autocomplete="new-password" />
+            </div>
+          </div>
+
+          <div class="form-error" id="reg-error" style="display:none;" role="alert"></div>
+
+          <button type="submit" class="btn btn-primary w-full" id="reg-btn">Create Account</button>
+        </form>
+
+        <p class="login-foot">Already have an account? <a href="index.html" class="link-primary">Back to Sign In</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script src="db.js"></script>
+  <script>
+    lucide.createIcons();
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    const api = window.__OBTLP_API__;
+    const form = document.getElementById('register-form');
+    const errorEl = document.getElementById('reg-error');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+
+    let selectedRole = 'faculty';
+    const roleSwitch = document.getElementById('reg-role-switch');
+    roleSwitch.querySelectorAll('button[data-role]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedRole = btn.dataset.role;
+        roleSwitch.querySelectorAll('button[data-role]').forEach((b) => {
+          b.classList.toggle('active', b === btn);
+          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+        });
+      });
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.style.display = 'none';
+
+      const name = document.getElementById('reg-name').value.trim();
+      const username = document.getElementById('reg-username').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const confirmPassword = document.getElementById('reg-confirm').value;
+
+      if (!name || !username || !password || !confirmPassword) {
+        showError('Please fill in all fields.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        showError('Password and confirm password do not match.');
+        return;
+      }
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters.');
+        return;
+      }
+
+      const btn = document.getElementById('reg-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+      try {
+        await api.register({ name, username, password, confirmPassword, role: selectedRole });
+        // Registration succeeds but we send the user to sign in explicitly
+        // (rather than auto-logging them in) so the credentials they just
+        // set are confirmed to work end-to-end.
+        window.location.href = 'index.html?registered=1';
+      } catch (err) {
+        showError(err.message || 'Could not create your account. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+</body>
+</html>

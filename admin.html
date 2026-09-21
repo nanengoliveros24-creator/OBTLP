@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administrator · Review Queue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="dashboard.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav">
+        <a href="admin.html" class="nav-link active"><i data-lucide="clipboard-list" class="svg-icon"></i> Review Queue</a>
+        <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
+        <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
+      </nav>
+<div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar" id="user-avatar">–</div>
+          <div><p class="user-name" id="user-name">–</p><p class="user-role" id="user-role">Administrator</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Portfolio Review Queue</h1>
+          <p class="page-subtitle">Submissions pending administrative review and approval.</p>
+        </div>
+      </header>
+
+<section class="stats-grid">
+        <div class="stat"><div class="stat-top"><p class="stat-label">Pending</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value">0</p></div>
+        <div class="stat"><div class="stat-top"><p class="stat-label">In Review</p><i data-lucide="eye" class="svg-icon t-primary"></i></div><p class="stat-value">0</p></div>
+        <div class="stat"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="file-check-2" class="svg-icon t-success"></i></div><p class="stat-value">0</p></div>
+        <div class="stat"><div class="stat-top"><p class="stat-label">Faculty Active</p><i data-lucide="users" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-faculty">0</p></div>
+      </section>
+
+      <div class="grid-3">
+        <section class="card span-2" style="overflow:hidden;">
+          <div class="section-head">
+            <h2 class="card-title">Incoming Submissions</h2>
+            <div class="filter-tabs">
+              <button class="active" data-filter="All">All</button>
+              <button data-filter="Pending">Pending</button>
+              <button data-filter="In Review">In Review</button>
+              <button data-filter="Resubmitted">Resubmitted</button>
+            </div>
+          </div>
+          <ul class="review-list" id="review-list">
+            <li class="empty-state">Loading submissions…</li>
+          </ul>
+        </section>
+
+        <aside class="card card-pad col-flex">
+          <h3 class="card-title" style="margin-bottom:0.25rem;">Active Review</h3>
+          <p class="section-sub" style="margin-bottom:1rem;" id="active-review-label">Select a submission to review</p>
+
+          <a href="#" id="view-portfolio-link" class="btn btn-outline btn-sm" style="margin-bottom:1rem;display:none;"><i data-lucide="eye" class="svg-icon"></i> View Full Portfolio</a>
+
+          <div class="compliance">
+            <p style="font-weight:500;margin-bottom:0.25rem;">Compliance Check</p>
+            <ul id="compliance-list">
+              <li><i data-lucide="minus" class="svg-icon"></i> Select a submission to review</li>
+            </ul>
+          </div>
+
+          <label class="field-label" style="margin-bottom:0.375rem;">Comments to faculty</label>
+          <textarea class="textarea" rows="4" placeholder="Add revision notes…" style="margin-bottom:0.75rem;" id="review-comments"></textarea>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;" class="mt-auto">
+              <button class="btn btn-danger btn-sm" id="btn-request-revision" disabled><i data-lucide="message-square" class="svg-icon"></i> Request Revision</button>
+            <button class="btn btn-success btn-sm" id="btn-approve" disabled><i data-lucide="check" class="svg-icon"></i> Approve</button>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    // Render the review queue dynamically from the real server DB so that
+    // faculty submissions (submitted on the portfolio-preview page) appear here.
+    const api = window.__OBTLP_API__;
+    const ui = () => window.__OBTLP_UI__;
+    const session = api.getSession();
+    if (!session) {
+      window.location.href = 'index.html';
+    } else if (session.role !== 'admin') {
+      window.location.href = session.role === 'it' ? 'it-admin.html' : 'dashboard.html';
+    }
+    let allItems = [];
+    let activeFilter = 'All';
+    let selectedId = null;
+    let selectedPortfolio = null;
+
+    document.getElementById('user-name').textContent = session ? session.name : '—';
+    document.getElementById('user-avatar').textContent = session ? (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–' : '–';
+
+    function nameOf(users, facultyId) {
+      const u = users.find((x) => x.id === facultyId);
+      return u ? u.name : 'Faculty Member';
+    }
+
+    function statusToBucket(status) {
+      if (status === 'In Review') return 'In Review';
+      if (status === 'Pending Review') return 'Pending';
+      return null;
+    }
+
+    let latestUsers = [];
+
+    async function loadAndRenderQueue() {
+      const state = await api.getState();
+      const users = state.users || [];
+      latestUsers = users;
+      const portfolios = state.allPortfolios || [];
+
+      allItems = portfolios
+        .filter((p) => p.status === 'Pending Review' || p.status === 'In Review')
+        .map((p) => ({ p, bucket: p.resubmitted ? 'Resubmitted' : statusToBucket(p.status) }));
+
+      renderStats(portfolios, users);
+      renderList(users);
+
+      if (selectedId) {
+        const stillThere = allItems.find((it) => it.p.id === selectedId);
+        if (stillThere) selectedPortfolio = stillThere.p;
+        else resetSelection();
+      }
+    }
+
+    function renderStats(portfolios, users) {
+      const pending = portfolios.filter((p) => p.status === 'Pending Review').length;
+      const inReview = portfolios.filter((p) => p.status === 'In Review').length;
+      const approved = portfolios.filter((p) => p.status === 'Approved').length;
+      document.querySelectorAll('.stat-value')[0].textContent = pending;
+      document.querySelectorAll('.stat-value')[1].textContent = inReview;
+      document.querySelectorAll('.stat-value')[2].textContent = approved;
+      document.getElementById('stat-faculty').textContent = (users || []).filter((u) => u.role === 'faculty').length;
+    }
+
+    function renderList(users) {
+      const list = document.getElementById('review-list');
+      let items = allItems;
+      if (activeFilter === 'Pending') items = items.filter((it) => it.bucket === 'Pending');
+      if (activeFilter === 'In Review') items = items.filter((it) => it.bucket === 'In Review');
+      if (activeFilter === 'Resubmitted') items = items.filter((it) => it.bucket === 'Resubmitted');
+
+      if (items.length === 0) {
+        list.innerHTML = '<li class="empty-state">No submissions yet. When faculty submit a portfolio, it will appear here.</li>';
+        return;
+      }
+
+      list.innerHTML = items.map(({ p, bucket }) => {
+        const badgeClass = bucket === 'In Review' ? 'badge-review' : (bucket === 'Resubmitted' ? 'badge-accent' : 'badge-pending');
+        const initials = (nameOf(users, p.facultyId) || 'FM').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+        return `
+          <li>
+            <div class="avatar-sec">${initials}</div>
+            <div style="flex:1;min-width:0;"><p class="cell-strong">${p.courseCode} — ${p.courseTitle}</p><p class="cell-sub">${nameOf(users, p.facultyId)} · submitted ${new Date(p.updatedAt).toLocaleString()}</p></div>
+            <span class="badge ${badgeClass}">${bucket}</span>
+            <button class="btn btn-outline btn-sm" data-id="${p.id}">Review</button>
+          </li>
+        `;
+      }).join('');
+
+      list.querySelectorAll('button[data-id]').forEach((btn) => {
+        btn.addEventListener('click', () => selectForReview(btn.dataset.id));
+      });
+    }
+
+    function renderCompliance(p) {
+      const items = [
+        { ok: !!(p.courseCode && p.courseTitle && p.academicYear && p.description), label: 'Course data complete' },
+        { ok: (p.documents || []).length > 0, label: `${(p.documents || []).length} document${(p.documents || []).length === 1 ? '' : 's'} attached` },
+        { ok: (p.outcomes || []).length > 0, label: 'Intended learning outcomes provided' },
+        { ok: (p.objectives || []).length > 0, label: 'Course objectives provided' }
+      ];
+      document.getElementById('compliance-list').innerHTML = items.map((it) => `
+        <li><i data-lucide="${it.ok ? 'check' : 'x'}" class="svg-icon" style="color:${it.ok ? 'var(--success)' : 'var(--destructive)'};"></i> ${it.label}</li>
+      `).join('');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function selectForReview(id) {
+      selectedId = id;
+      const found = allItems.find((it) => it.p.id === id);
+      selectedPortfolio = found ? found.p : null;
+      const label = selectedPortfolio ? `${selectedPortfolio.courseCode} — ${selectedPortfolio.courseTitle}` : '';
+      const name = selectedPortfolio ? nameOf(latestUsers, selectedPortfolio.facultyId) : '';
+      document.getElementById('active-review-label').textContent = `${label} · ${name}`;
+      document.getElementById('review-comments').value = '';
+      document.getElementById('btn-approve').disabled = false;
+      document.getElementById('btn-request-revision').disabled = false;
+      const viewLink = document.getElementById('view-portfolio-link');
+      viewLink.href = `portfolio-preview.html?id=${encodeURIComponent(id)}`;
+      viewLink.style.display = 'inline-flex';
+      if (selectedPortfolio) renderCompliance(selectedPortfolio);
+    }
+
+    document.querySelectorAll('.filter-tabs button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-tabs button').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.filter;
+        loadAndRenderQueue();
+      });
+    });
+
+    document.getElementById('btn-approve').addEventListener('click', async () => {
+      if (!selectedId) return;
+      const comment = document.getElementById('review-comments').value.trim();
+      try {
+        await api.approve(selectedId, comment);
+        ui().notify('Approved', 'The portfolio has been approved and the faculty member notified.');
+        resetSelection();
+        loadAndRenderQueue();
+      } catch (err) {
+        ui().notifyError(err);
+      }
+    });
+
+    document.getElementById('btn-request-revision').addEventListener('click', async () => {
+      if (!selectedId) return;
+      const comment = document.getElementById('review-comments').value.trim();
+      if (!comment) {
+        ui().notify('Comment Required', 'Add a note so the faculty member knows what to fix.');
+        return;
+      }
+      try {
+        await api.requestRevision(selectedId, comment);
+        ui().notify('Revision Requested', 'The faculty member has been notified with your comments.');
+        resetSelection();
+        loadAndRenderQueue();
+      } catch (err) {
+        ui().notifyError(err);
+      }
+    });
+
+    function resetSelection() {
+      selectedId = null;
+      selectedPortfolio = null;
+      document.getElementById('active-review-label').textContent = 'Select a submission to review';
+      document.getElementById('review-comments').value = '';
+      document.getElementById('btn-approve').disabled = true;
+      document.getElementById('btn-request-revision').disabled = true;
+      document.getElementById('view-portfolio-link').style.display = 'none';
+      document.getElementById('compliance-list').innerHTML = '<li><i data-lucide="minus" class="svg-icon"></i> Select a submission to review</li>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    loadAndRenderQueue();
+  </script>
+</body>
+</html>
