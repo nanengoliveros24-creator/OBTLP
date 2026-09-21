@@ -586,8 +586,14 @@
       const roleLabel = { faculty: 'Faculty', admin: 'College Administrator', it: 'IT Administrator' };
 
       async function loadUsers() {
-        usersCache = await api.getUsers();
         const rows = document.getElementById('user-rows');
+        try {
+          usersCache = await api.getUsers();
+        } catch (err) {
+          ui.notifyError(err);
+          rows.innerHTML = '<tr><td colspan="4" class="t-destructive" style="padding:1.5rem;">Failed to load — try refreshing.</td></tr>';
+          return;
+        }
         if (!usersCache.length) {
           rows.innerHTML = '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No users yet.</td></tr>';
           return;
@@ -1186,31 +1192,47 @@
       });
 
       // ---------- departments / programs / OBTLP templates ----------
+      const FAILED_TO_LOAD_ROW = (colspan) =>
+        `<tr><td colspan="${colspan}" class="t-destructive" style="padding:1.5rem;">Failed to load — try refreshing.</td></tr>`;
+
       async function loadDepartmentsProgramsTemplates() {
-        const [depts, progs, tpls] = await Promise.all([
-          api.getDepartments().catch(() => []),
-          api.getPrograms().catch(() => []),
-          api.getObtlpTemplates().catch(() => [])
+        const [deptsResult, progsResult, tplsResult] = await Promise.allSettled([
+          api.getDepartments(),
+          api.getPrograms(),
+          api.getObtlpTemplates()
         ]);
-        departmentsCache = depts;
-        programsCache = progs;
-        obtlpTemplatesCache = tpls;
+        const deptsFailed = deptsResult.status === 'rejected';
+        const progsFailed = progsResult.status === 'rejected';
+        const tplsFailed = tplsResult.status === 'rejected';
+        if (deptsFailed) ui.notifyError(deptsResult.reason);
+        if (progsFailed) ui.notifyError(progsResult.reason);
+        if (tplsFailed) ui.notifyError(tplsResult.reason);
+
+        // Cache stays a plain array either way (other sections below rely on
+        // it for lookups) — the *Failed flags decide what each table renders.
+        departmentsCache = deptsFailed ? [] : deptsResult.value;
+        programsCache = progsFailed ? [] : progsResult.value;
+        obtlpTemplatesCache = tplsFailed ? [] : tplsResult.value;
 
         const deptRows = document.getElementById('department-rows');
-        deptRows.innerHTML = departmentsCache.length
-          ? departmentsCache.map((d) => `
+        deptRows.innerHTML = deptsFailed
+          ? FAILED_TO_LOAD_ROW(3)
+          : (departmentsCache.length
+            ? departmentsCache.map((d) => `
               <tr>
                 <td class="cell-strong">${d.code}</td><td class="t-muted">${d.name}</td>
                 <td><div class="row-actions"><button class="icon-btn" title="Edit" data-edit-dept="${d.id}"><i data-lucide="pencil" class="svg-icon"></i></button></div></td>
               </tr>`).join('')
-          : '<tr><td colspan="3" class="t-muted" style="padding:1.5rem;">No departments yet.</td></tr>';
+            : '<tr><td colspan="3" class="t-muted" style="padding:1.5rem;">No departments yet.</td></tr>');
         deptRows.querySelectorAll('[data-edit-dept]').forEach((btn) => {
           btn.addEventListener('click', () => openDepartmentModal(departmentsCache.find((d) => d.id === btn.dataset.editDept)));
         });
 
         const progRows = document.getElementById('program-rows');
-        progRows.innerHTML = programsCache.length
-          ? programsCache.map((p) => {
+        progRows.innerHTML = progsFailed
+          ? FAILED_TO_LOAD_ROW(4)
+          : (programsCache.length
+            ? programsCache.map((p) => {
               const dept = departmentsCache.find((d) => d.id === p.departmentId);
               return `
                 <tr>
@@ -1218,14 +1240,16 @@
                   <td><div class="row-actions"><button class="icon-btn" title="Edit" data-edit-prog="${p.id}"><i data-lucide="pencil" class="svg-icon"></i></button></div></td>
                 </tr>`;
             }).join('')
-          : '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No programs yet.</td></tr>';
+            : '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No programs yet.</td></tr>');
         progRows.querySelectorAll('[data-edit-prog]').forEach((btn) => {
           btn.addEventListener('click', () => openProgramModal(programsCache.find((p) => p.id === btn.dataset.editProg)));
         });
 
         const tplRows = document.getElementById('obtlp-template-rows');
-        tplRows.innerHTML = obtlpTemplatesCache.length
-          ? obtlpTemplatesCache.map((t) => {
+        tplRows.innerHTML = tplsFailed
+          ? FAILED_TO_LOAD_ROW(6)
+          : (obtlpTemplatesCache.length
+            ? obtlpTemplatesCache.map((t) => {
               const prog = programsCache.find((p) => p.id === t.programId);
               return `
                 <tr>
@@ -1245,7 +1269,7 @@
                 </tr>
               `;
             }).join('')
-          : '<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No OBTLP templates yet.</td></tr>';
+            : '<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No OBTLP templates yet.</td></tr>');
         if (window.lucide) lucide.createIcons();
         tplRows.querySelectorAll('[data-toggle-template]').forEach((btn) => {
           btn.addEventListener('click', async () => {

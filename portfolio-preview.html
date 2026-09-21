@@ -217,12 +217,17 @@
       }
 
       try {
+        // No per-call .catch() here on purpose: a failure means this preview
+        // can't be rendered correctly anyway (missing template/program/org
+        // data), so let it reject and fall through to the catch block below,
+        // which shows a real error instead of silently rendering incomplete
+        // or wrong content.
         const [state, settings, obtlpTemplates, programs, orgProfile] = await Promise.all([
           api.getState(),
-          api.getSettings().catch(() => ({})),
-          api.getObtlpTemplates().catch(() => []),
-          api.getPrograms().catch(() => []),
-          api.getOrgProfile().catch(() => ({}))
+          api.getSettings(),
+          api.getObtlpTemplates(),
+          api.getPrograms(),
+          api.getOrgProfile()
         ]);
         const p = (state.portfolios || []).find((x) => x.id === portfolioId);
         if (!p) {

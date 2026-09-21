@@ -3,3 +3,6 @@ uploads/*
 backups/*
 !backups/.gitkeep
 db.json
+.env
+.env.*
+node_modules/

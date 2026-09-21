@@ -1010,14 +1010,19 @@
 
       // ---------- initial load ----------
       try {
+        // No per-call .catch() here on purpose: if any of these fail, the
+        // wizard can't function correctly anyway (broken dropdowns, missing
+        // template auto-population), so let it reject and fall through to
+        // the catch block below, which shows a real error instead of
+        // silently continuing with incomplete reference data.
         const [settingsResp, catalogResp, templatesResp, deptResp, progResp, obtlpTplResp, orgProfileResp] = await Promise.all([
-          api.getSettings().catch(() => ({})),
-          api.getCatalog().catch(() => ({ courses: [], departments: [], academicYears: [] })),
-          api.getCourseTemplates().catch(() => []),
-          api.getDepartments().catch(() => []),
-          api.getPrograms().catch(() => []),
-          api.getObtlpTemplates().catch(() => []),
-          api.getOrgProfile().catch(() => ({}))
+          api.getSettings(),
+          api.getCatalog(),
+          api.getCourseTemplates(),
+          api.getDepartments(),
+          api.getPrograms(),
+          api.getObtlpTemplates(),
+          api.getOrgProfile()
         ]);
         window.__OBTLP_SETTINGS__ = settingsResp;
         catalog = catalogResp || catalog;

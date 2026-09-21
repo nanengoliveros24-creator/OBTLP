@@ -12,7 +12,11 @@
 */
 const store = require('./dbstore');
 
-const db = store.readDb();
+// readDb()/writeDb() are async (file or MongoDB backend), so the whole
+// script body runs inside this IIFE — everything below is unchanged.
+(async () => {
+
+const db = await store.readDb();
 
 let changed = false;
 
@@ -366,9 +370,13 @@ if (!catalogHasCourse) {
 }
 
 if (changed) {
-  store.writeDb(db).then(() => {
-    console.log('db.json updated.');
-  });
+  await store.writeDb(db);
+  console.log('db.json updated.');
 } else {
   console.log('Nothing to do — db.json already fully seeded.');
 }
+
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

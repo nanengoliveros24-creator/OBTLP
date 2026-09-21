@@ -3,8 +3,11 @@
   Run: node server.js
   Then open: http://localhost:3000
 
-  All reads and writes go through db.json on disk via dbstore.js, so faculty,
-  admin, and IT views (even in different browsers) see the same data.
+  All reads and writes go through dbstore.js, so faculty, admin, and IT
+  views (even in different browsers) see the same data. dbstore.js stores
+  that data either in MongoDB Atlas (set MONGODB_URI — used in production,
+  since Render's free tier disk is wiped on every redeploy/restart) or in
+  a local db.json file (no MONGODB_URI — local dev and the test suite).
 
   Authentication: token-based. Login/registration issue an opaque session
   token (see auth.js) that the client must send as
@@ -301,10 +304,10 @@ function blankStructuredFields() {
 // used on saved portfolios, so the list stays useful even before anyone
 // explicitly "creates" an entry.
 function buildCatalog(db) {
-  if (!db.catalog) db.catalog = { courses: [], departments: [], academicYears: [] };
+  const catalog = db.catalog || { courses: [], departments: [], academicYears: [] };
 
   const courseMap = new Map();
-  (db.catalog.courses || []).forEach((c) => {
+  (catalog.courses || []).forEach((c) => {
     const code = String(c.code || '').trim();
     const title = String(c.title || '').trim();
     if (!code && !title) return;
@@ -318,13 +321,13 @@ function buildCatalog(db) {
     if (!courseMap.has(key)) courseMap.set(key, { code, title });
   });
 
-  const departments = new Set((db.catalog.departments || []).map((d) => String(d || '').trim()).filter(Boolean));
+  const departments = new Set((catalog.departments || []).map((d) => String(d || '').trim()).filter(Boolean));
   (db.portfolios || []).forEach((p) => {
     const dept = String(p.facultyDepartment || '').trim();
     if (dept) departments.add(dept);
   });
 
-  const academicYears = new Set((db.catalog.academicYears || []).map((y) => String(y || '').trim()).filter(Boolean));
+  const academicYears = new Set((catalog.academicYears || []).map((y) => String(y || '').trim()).filter(Boolean));
   (db.portfolios || []).forEach((p) => {
     const year = String(p.academicYear || '').trim();
     if (year) academicYears.add(year);
@@ -1320,14 +1323,25 @@ async function handleApi(req, res, pathname, query) {
   }
 
   try {
-    const { result } = await store.transact((db) => {
+    const runHandler = (db) => {
       let ctx = null;
       if (match.route.auth) {
         ctx = requireAuth(db, req);
         if (match.route.roles) requireRole(ctx, match.route.roles);
       }
       return match.route.handler(db, ctx, query, body, match.params);
-    });
+    };
+
+    // GET handlers never mutate `db` — skip the write-back and the shared
+    // write-serialization queue entirely so a burst of read-only requests
+    // (e.g. an admin page loading several panels at once) doesn't get
+    // stuck running one-at-a-time behind each other's Mongo round-trips.
+    // Every non-GET route still goes through transact() so writes stay
+    // serialized and persisted.
+    const result = req.method === 'GET'
+      ? runHandler(await store.readDb())
+      : (await store.transact(runHandler)).result;
+
     sendJson(res, result.status, result.data);
   } catch (err) {
     if (err && err.status) {
@@ -1347,7 +1361,7 @@ async function handleDocumentDownload(req, res, pathname) {
   const portfolioId = decodeURIComponent(parts[2]);
   const docId = decodeURIComponent(parts[4]);
   try {
-    const db = store.readDb();
+    const db = await store.readDb();
     const ctx = requireAuth(db, req);
     const p = (db.portfolios || []).find((x) => x.id === portfolioId);
     if (!p) return sendJson(res, 404, { error: 'Portfolio not found.' });
@@ -1429,7 +1443,14 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`OBTLP app running at: http://localhost:${PORT}`);
-  console.log(`Open http://localhost:${PORT} in your browser to view the app.`);
-});
+store.initDbIfMissing()
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`OBTLP app running at: http://localhost:${PORT}`);
+      console.log(`Open http://localhost:${PORT} in your browser to view the app.`);
+    });
+  })
+  .catch((err) => {
+    console.error('[db] Failed to initialize the database — server not started:', err);
+    process.exit(1);
+  });
