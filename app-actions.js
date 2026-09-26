@@ -83,7 +83,14 @@
   // screenshot sidesteps that entirely, and gives full control over page
   // breaks so text is never cut off.
   function buildPortfolioPdf(jsPDFCtor, data, logoDataUrl) {
-    const doc = new jsPDFCtor({ unit: 'pt', format: 'a4' });
+    // Courses with an official OBTLP template get the full official PnC
+    // form, drawn page-by-page in A4 LANDSCAPE (see templates-render.js).
+    if (data.template && window.__OBTLP_TEMPLATE_RENDERER__ && window.__OBTLP_TEMPLATE_RENDERER__.buildOfficialPdf) {
+      return window.__OBTLP_TEMPLATE_RENDERER__.buildOfficialPdf(jsPDFCtor, data, logoDataUrl);
+    }
+    // Untemplated (legacy) portfolios: same simple layout as before, but
+    // landscape too, per the adviser's requirement that OBTLPs are landscape.
+    const doc = new jsPDFCtor({ unit: 'pt', format: 'a4', orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 48;

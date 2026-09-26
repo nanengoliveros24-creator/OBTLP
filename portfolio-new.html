@@ -381,7 +381,8 @@
         grading: { components: [] },
         courseRequirements: [],
         classPoliciesOverride: '',
-        effectivityText: ''
+        effectivityText: '',
+        officialMeta: {}
       };
       let resolvedTemplate = null;
       let resolvedProgram = null;
@@ -403,7 +404,8 @@
           grading: p.grading || { components: [] },
           courseRequirements: Array.isArray(p.courseRequirements) ? p.courseRequirements.slice() : [],
           classPoliciesOverride: p.classPoliciesOverride || '',
-          effectivityText: p.effectivityText || ''
+          effectivityText: p.effectivityText || '',
+          officialMeta: p.officialMeta || {}
         };
         resolvedTemplate = (window.__OBTLP_TEMPLATE_RENDERER__ && p.templateId)
           ? (obtlpTemplates.find((t) => t.id === p.templateId) || null)
@@ -485,10 +487,24 @@
       // are currently BLANK — an existing saved portfolio's content is never
       // silently overwritten. "Reload Official Template" is the explicit,
       // confirmed way to force-overwrite when the user really wants that.
+      // The same course code can exist in BOTH programs with different
+      // official content (e.g. CCS102, CCS107, ENT101 in BSCS and BSIT), so
+      // the selected Program decides which template applies. Returns
+      // { ambiguous: true } when the code exists in several programs and no
+      // Program has been chosen yet.
       function findTemplateFor(courseCode) {
         const code = String(courseCode || '').trim().toLowerCase();
         if (!code) return null;
-        return courseTemplates.find((t) => String(t.courseCode || '').trim().toLowerCase() === code) || null;
+        const matches = courseTemplates.filter((t) => String(t.courseCode || '').trim().toLowerCase() === code);
+        if (!matches.length) return null;
+        const programId = document.getElementById('f-programId').value;
+        if (programId) {
+          const exact = matches.find((t) => t.programId === programId);
+          if (exact) return exact;
+          return null;
+        }
+        if (matches.length === 1) return matches[0];
+        return { ambiguous: true, programs: matches.map((t) => t.programId) };
       }
 
       function showTemplateStatus(text, variant) {
@@ -534,7 +550,8 @@
           grading: tpl.grading || { components: [] },
           courseRequirements: Array.isArray(tpl.courseRequirements) ? tpl.courseRequirements.slice() : [],
           classPoliciesOverride: tpl.classPoliciesOverride || '',
-          effectivityText: tpl.effectivityText || ''
+          effectivityText: tpl.effectivityText || '',
+          officialMeta: tpl.officialMeta || {}
         };
 
         if (tpl.departmentId) {
@@ -560,7 +577,7 @@
           templateId: '', soMap: [], teachingPlan: [],
           referenceGroups: { textbooks: [], onlineResources: [] },
           grading: { components: [] }, courseRequirements: [],
-          classPoliciesOverride: '', effectivityText: ''
+          classPoliciesOverride: '', effectivityText: '', officialMeta: {}
         };
         resolvedTemplate = null;
       }
@@ -598,9 +615,9 @@
             : 'Not entered yet.';
 
           const rg = structuredData.referenceGroups || { textbooks: [], onlineResources: [] };
-          const refCount = (rg.textbooks || []).length + (rg.onlineResources || []).length;
+          const refCount = (rg.textbooks || []).length + (rg.onlineResources || []).length + (rg.journals || []).length;
           document.getElementById('official-references-summary').textContent = refCount
-            ? `${(rg.textbooks || []).length} textbook(s), ${(rg.onlineResources || []).length} online resource(s)`
+            ? `${(rg.textbooks || []).length} textbook(s), ${(rg.onlineResources || []).length} online resource(s)${(rg.journals || []).length ? `, ${rg.journals.length} journal(s)` : ''}`
             : 'Not entered yet.';
 
           document.getElementById('official-requirements-summary').textContent = structuredData.courseRequirements.length
@@ -626,6 +643,14 @@
         }
         try {
           const tpl = findTemplateFor(courseCode);
+          if (tpl && tpl.ambiguous) {
+            const names = tpl.programs.map((id) => { const pr = allPrograms.find((x) => x.id === id); return pr ? pr.code : ''; }).filter(Boolean).join(' and ');
+            showTemplateStatus(`${String(courseCode).toUpperCase()} has different official templates for ${names || 'more than one program'}. Please select the Program first, then choose the course again.`, 't-destructive');
+            reloadBtn.style.display = 'none';
+            clearStructuredTemplateData();
+            applyOfficialContentLockState();
+            return;
+          }
           if (!tpl) {
             showTemplateStatus('No template has been assigned to this course yet. You can continue with manual entry.', 't-muted');
             reloadBtn.style.display = 'none';
@@ -743,6 +768,10 @@
               const d = departments.find((x) => x.id === item.data.departmentId);
               if (d && courseDeptDD) courseDeptDD.setValue(`${d.code} — ${d.name}`);
             }
+            // Switching Program re-resolves the course's official template
+            // (CCS102 BSCS and CCS102 BSIT are different documents).
+            const selectedCode = document.getElementById('f-courseCode').value.trim();
+            if (selectedCode) loadCourseTemplateFor(selectedCode, true);
           },
           emptyText: 'No programs yet — pick a department or ask IT to add one.'
         });
@@ -837,6 +866,7 @@
         edits.courseRequirements = structuredData.courseRequirements;
         edits.classPoliciesOverride = structuredData.classPoliciesOverride;
         edits.effectivityText = structuredData.effectivityText;
+        edits.officialMeta = structuredData.officialMeta || {};
         return edits;
       }
 
@@ -877,6 +907,7 @@
           courseRequirements: edits.courseRequirements || [],
           classPoliciesOverride: edits.classPoliciesOverride || '',
           effectivityText: edits.effectivityText || '',
+          officialMeta: edits.officialMeta || {},
           program: resolvedProgram,
           orgProfile: orgProfile,
           signatories: current.signatories || { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] },

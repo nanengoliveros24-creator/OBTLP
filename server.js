@@ -186,7 +186,9 @@ function sanitizeSoMap(v) {
   if (!Array.isArray(v)) return [];
   return v.slice(0, 50).map((row) => ({
     soCode: String((row && row.soCode) || '').trim(),
-    intensity: String((row && row.intensity) || '').trim()
+    intensity: String((row && row.intensity) || '').trim(),
+    // course-specific SO wording as printed on that course's official OBTLP
+    description: String((row && row.description) || '').trim().slice(0, 2000)
   })).filter((row) => row.soCode);
 }
 
@@ -216,7 +218,45 @@ function sanitizeReferenceGroups(v) {
   const src = v && typeof v === 'object' ? v : {};
   return {
     textbooks: sanitizeStrList(src.textbooks),
-    onlineResources: sanitizeStrList(src.onlineResources)
+    onlineResources: sanitizeStrList(src.onlineResources),
+    // Journals / research articles — a separate group in the 2026-2027
+    // official PnC OBTLP templates ("Journal/Researches").
+    journals: sanitizeStrList(src.journals)
+  };
+}
+
+// Extra official-format details that differ per course in the 2026-2027
+// PnC OBTLP templates (the "Department:" line under the title, the credit
+// units cell exactly as printed, the Vision/Mission wording that version of
+// the form used, the grading intro line, and the default signatories).
+// Kept as one small, strictly-sanitized object so the rest of the data
+// model stays unchanged.
+function sanitizeSigList(arr) {
+  return (Array.isArray(arr) ? arr : []).slice(0, 10).map((s) => ({
+    name: String((s && s.name) || '').trim().slice(0, 200),
+    title: String((s && s.title) || '').trim().slice(0, 200)
+  })).filter((s) => s.name || s.title);
+}
+
+function sanitizeOfficialMeta(v) {
+  const src = v && typeof v === 'object' ? v : {};
+  const str = (k, max) => String(src[k] || '').trim().slice(0, max || 2000);
+  const sig = src.signatories && typeof src.signatories === 'object' ? src.signatories : {};
+  return {
+    departmentLabel: str('departmentLabel', 200),
+    creditUnits: str('creditUnits', 100),
+    vision: str('vision'),
+    mission: str('mission'),
+    peoIntro: str('peoIntro', 500),
+    peo: sanitizeStrList(src.peo),
+    division: str('division', 200),
+    gradingIntro: str('gradingIntro', 1000),
+    signatories: {
+      preparedBy: sanitizeSigList(sig.preparedBy),
+      reviewedBy: sanitizeSigList(sig.reviewedBy),
+      concurredBy: sanitizeSigList(sig.concurredBy),
+      approvedBy: sanitizeSigList(sig.approvedBy)
+    }
   };
 }
 
@@ -290,11 +330,12 @@ function blankStructuredFields() {
     prerequisite: '',
     soMap: [],
     teachingPlan: [],
-    referenceGroups: { textbooks: [], onlineResources: [] },
+    referenceGroups: { textbooks: [], onlineResources: [], journals: [] },
     grading: { components: [] },
     courseRequirements: [],
     classPoliciesOverride: '',
-    effectivityText: ''
+    effectivityText: '',
+    officialMeta: sanitizeOfficialMeta({})
   };
 }
 
@@ -818,8 +859,12 @@ const routes = {
       const courseCode = String(body.courseCode || '').trim();
       if (!courseCode) throw { status: 400, message: 'Course code is required.' };
       if (!db.courseTemplates) db.courseTemplates = [];
-      const dup = db.courseTemplates.some((t) => t.courseCode.toLowerCase() === courseCode.toLowerCase());
-      if (dup) throw { status: 409, message: `A template for ${courseCode} already exists. Edit it instead of creating a duplicate.` };
+      // The same course code can exist in more than one program with
+      // different content (e.g. CCS102 in both BSCS and BSIT), so a
+      // duplicate is the same code within the SAME program only.
+      const newProgramId = String(body.programId || '');
+      const dup = db.courseTemplates.some((t) => t.courseCode.toLowerCase() === courseCode.toLowerCase() && String(t.programId || '') === newProgramId);
+      if (dup) throw { status: 409, message: `A template for ${courseCode} already exists for this program. Edit it instead of creating a duplicate.` };
       assertDeptProgramLink(db, body.departmentId, body.programId);
       if (body.obtlpTemplateId && !(db.obtlpTemplates || []).some((t) => t.id === body.obtlpTemplateId)) {
         throw { status: 400, message: 'Selected OBTLP Template was not found. Please choose again.' };
@@ -847,6 +892,7 @@ const routes = {
         courseRequirements: sanitizeStrList(body.courseRequirements),
         classPoliciesOverride: String(body.classPoliciesOverride || ''),
         effectivityText: String(body.effectivityText || ''),
+        officialMeta: sanitizeOfficialMeta(body.officialMeta),
         updatedBy: ctx.user.id,
         createdAt: store.nowIso(),
         updatedAt: store.nowIso()
@@ -888,6 +934,7 @@ const routes = {
       if (body.courseRequirements !== undefined) tpl.courseRequirements = sanitizeStrList(body.courseRequirements);
       if (body.classPoliciesOverride !== undefined) tpl.classPoliciesOverride = String(body.classPoliciesOverride || '');
       if (body.effectivityText !== undefined) tpl.effectivityText = String(body.effectivityText || '');
+      if (body.officialMeta !== undefined) tpl.officialMeta = sanitizeOfficialMeta(body.officialMeta);
       tpl.updatedBy = ctx.user.id;
       tpl.updatedAt = store.nowIso();
       pushAudit(db, { actor: ctx.user.id, action: 'template-update', portfolioId: null, detail: `Updated course template for ${tpl.courseCode}` });
@@ -980,6 +1027,7 @@ const routes = {
       if (body.referenceGroups !== undefined) p.referenceGroups = sanitizeReferenceGroups(body.referenceGroups);
       if (body.grading !== undefined) p.grading = sanitizeGrading(body.grading);
       if (body.signatories !== undefined) p.signatories = sanitizeSignatories(body.signatories);
+      if (body.officialMeta !== undefined) p.officialMeta = sanitizeOfficialMeta(body.officialMeta);
       p.updatedAt = store.nowIso();
       pushAudit(db, { actor: p.facultyId, action: 'edit', portfolioId: p.id, detail: `Edited ${p.courseCode || 'portfolio'}` });
       return { status: 200, data: p };
@@ -1444,6 +1492,11 @@ const server = http.createServer((req, res) => {
 });
 
 store.initDbIfMissing()
+  // Adds/refreshes the official BS CS / BS IT 2026-2027 OBTLP templates
+  // (see seed-templates.js). Idempotent and additive — never touches
+  // users, portfolios, or templates an admin edited by hand. Runs on every
+  // boot so a git push + Render redeploy is all it takes to update MongoDB.
+  .then(() => require('./seed-templates').ensureOfficialTemplates(store))
   .then(() => {
     server.listen(PORT, () => {
       console.log(`OBTLP app running at: http://localhost:${PORT}`);
