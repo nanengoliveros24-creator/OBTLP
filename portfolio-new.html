@@ -529,6 +529,10 @@
         setIfBlankOrForce('f-description', tpl.description);
         setIfBlankOrForce('f-syllabus', tpl.syllabus);
         setIfBlankOrForce('f-prerequisite', tpl.prerequisite);
+        // Units come from the official template's Credit Units (still
+        // editable — it's in the faculty's course-offering card).
+        const units = tpl.officialMeta && tpl.officialMeta.creditUnits;
+        if (units) setIfBlankOrForce('f-facultyUnits', units);
         LIST_FIELDS.forEach((k) => {
           if (!Array.isArray(tpl[k])) return;
           const hasContent = listData[k].some((v) => v && v.trim());

@@ -1,18 +1,29 @@
 {
- "version": "2026-2027-2",
+ "version": "2026-2027-3",
  "courses": [
   {
    "courseCode": "CCS101",
    "program": "BSCS",
    "courseTitle": "Introduction to Computing",
    "prerequisite": "none",
-   "description": "This course provides an overview of the Computing Industry and Computing profession, including Research and Applications in different fields; an Appreciation of Computing in different fields such as Biology, Sociology, Environment and Gaming; an Understanding of ACM Requirements; an Appreciation of the History of computing; and Knowledge of the Key Components of Computer Systems (Organization and Architecture}, Malware, Computer Security, Internet and Internet protocols, HTML 4/5 and CSS.",
+   "description": "This course provides an overview of the Computing Industry and Computing profession, including Research and Applications in different fields; an Appreciation of Computing in different fields such as Biology, Sociology, Environment and Gaming; an Understanding of ACM Requirements; an Appreciation of the History of computing; and Knowledge of the Key Components of Computer Systems (Organization and Architecture), Malware, Computer Security, Internet and Internet protocols, HTML 4/5 and CSS.",
    "outcomes": [
     "Explain fundamentals principles, concepts, and evolution of computing systems as they relate to different fields.",
     "Expound on the recent development in the different computing knowledge areas.",
     "Analyze solutions employed by organization to address different computing issues."
    ],
-   "soMap": [],
+   "soMap": [
+    {
+     "soCode": "SO1",
+     "intensity": "I/L",
+     "description": "Apply knowledge of computing fundamentals, knowledge of a computing specialization, and mathematics, science, and domain knowledge appropriate for the computing specialization to the abstraction and conceptualization of computing models from defined problems and requirements."
+    },
+    {
+     "soCode": "SO5",
+     "intensity": "I/L",
+     "description": "Design and evaluate solutions for complex computing problems and design and evaluate systems, components or processes that meet specified needs with appropriate consideration for public health and safety, cultural, societal, and environmental considerations."
+    }
+   ],
    "teachingPlan": [
     {
      "type": "week",
@@ -1302,7 +1313,18 @@
     "Construct sound arguments in propositional and predicate logic by applying appropriate rules of inference given sample intelligent software.",
     "Construct valid mathematics proofs using mathematical induction, direct proof, and proof by contradiction to simplify programs and prove program correctness"
    ],
-   "soMap": [],
+   "soMap": [
+    {
+     "soCode": "SO1",
+     "intensity": "I/L,E/P",
+     "description": "Apply knowledge of computing fundamentals, knowledge of a computing specialization, and mathematics, science, and domain knowledge appropriate for the computing specialization to the abstraction and conceptualization of computing models from defined problems and requirements."
+    },
+    {
+     "soCode": "SO3",
+     "intensity": "I/L,E/P",
+     "description": "Apply computer science theory and software development fundamentals to produce computing-based solutions."
+    }
+   ],
    "teachingPlan": [
     {
      "type": "week",
@@ -1613,9 +1635,14 @@
    ],
    "soMap": [
     {
-     "soCode": "SO4",
+     "soCode": "SO1",
      "intensity": "E/P",
      "description": "Analyze a complex computing problem and apply principles of computing and other relevant disciplines to identify solutions."
+    },
+    {
+     "soCode": "SO4",
+     "intensity": "I/L",
+     "description": "Apply knowledge through the use of current techniques, skills, tools, and practices necessary for the IT profession."
     }
    ],
    "teachingPlan": [
@@ -2247,13 +2274,18 @@
    "soMap": [
     {
      "soCode": "SO1",
-     "intensity": "",
-     "description": "Apply knowledge of computing fundamentals, knowledge of a computing specialization, and mathematics, science, and domain knowledge appropriate for the computing specialization to the abstraction and conceptualization of computing models from defined problems and requirements"
+     "intensity": "E/P",
+     "description": "Apply knowledge of computing fundamentals, knowledge of a computing specialization, and mathematics, science, and domain knowledge appropriate for the computing specialization to the abstraction and conceptualization of computing models from defined problems and requirements."
+    },
+    {
+     "soCode": "SO3",
+     "intensity": "E/P",
+     "description": "An ability to apply mathematical foundations, algorithmic principles, and computer science theory in the modeling and design of computer-based systems in a way that demonstrates comprehension of the tradeoffs involved in design choices."
     },
     {
      "soCode": "SO5",
-     "intensity": "",
-     "description": "An ability to apply mathematical foundations, algorithmic principles, and computer science theory in the modeling and design of computer-based systems in a way __ that demonstrates comprehension of the tradeoffs involved in design choices."
+     "intensity": "E/P",
+     "description": "Design and evaluate solutions for complex computing problems and design and evaluate systems, components or processes that meet specified needs with appropriate consideration for public health and safety, cultural, societal, and environmental considerations."
     }
    ],
    "teachingPlan": [
@@ -2787,13 +2819,13 @@
    "soMap": [
     {
      "soCode": "SO1",
-     "intensity": "D/O",
+     "intensity": "E/P",
      "description": "Apply knowledge of computing fundamentals, knowledge of a computing specialization, and mathematics, science, and domain knowledge appropriate for the computing specialization to the abstraction and conceptualization of computing models from defined problems and requirements."
     },
     {
      "soCode": "SO5",
      "intensity": "E/P",
-     "description": "Design and evaluate solutions for complex computing problems and design and evaluate systems, Components or processes that meet specified needs with appropriate consideration for public health and safety, cultural, societal, and environmental considerations."
+     "description": "Design and evaluate solutions for complex computing problems and design and evaluate systems, components or processes that meet specified needs with appropriate consideration for public health and safety, cultural, societal, and environmental considerations."
     }
    ],
    "teachingPlan": [
@@ -3343,12 +3375,12 @@
     {
      "soCode": "SO8",
      "intensity": "E/P",
-     "description": ""
+     "description": "Recognize professional responsibilities and make informed judgements in computing practice based on legal and ethical principles."
     },
     {
      "soCode": "SO9",
      "intensity": "E/P",
-     "description": ""
+     "description": "Function effectively as a member or leader of a development team recognizing the different roles within a team to accomplish a common goal."
     }
    ],
    "teachingPlan": [
@@ -3745,7 +3777,7 @@
    "program": "BSIT",
    "courseTitle": "WEB TECHNOLOGIES",
    "prerequisite": "CCS101",
-   "description": "This course provides students with a foundational understanding of web development, focusing on the essential technologies used to create static websites with basic interactivity. Students will explore HTMLS for structuring content, CSS for styling and layout, and JavaScript for adding interactivity to web pages.",
+   "description": "This course provides students with a foundational understanding of web development, focusing on the essential technologies used to create static websites with basic interactivity. Students will explore HTML5 for structuring content, CSS for styling and layout, and JavaScript for adding interactivity to web pages.",
    "outcomes": [
     "Develop Web applications using HTML, HTML, XML, client-side programming and other Web GUI technologies to create and validate documents, generate contents via programming and integrate digital libraries with other media conients.",
     "Set up a web server to support server-side processing in a secure fashion and identify common server-side configuration issues that affect securing.",
@@ -4830,13 +4862,13 @@
    "soMap": [
     {
      "soCode": "SO2",
-     "intensity": "",
-     "description": ""
+     "intensity": "E/P",
+     "description": "Identify, analyze, formulate research literature, and solve complex computing problems and requirements reaching substantiated conclusions using fundamental principles of mathematics, computing sciences, and relevant domain disciplines."
     },
     {
      "soCode": "SO6",
-     "intensity": "",
-     "description": ""
+     "intensity": "E/P",
+     "description": "Create, select, adapt and apply appropriate techniques, resources, and modern computing tools to complex computing activities, with an understanding of the limitations to accomplish a common goal."
     }
    ],
    "teachingPlan": [
@@ -5252,7 +5284,48 @@
     "Game Development and Implementation Develop functional game applications by applying game engine technologies, object-oriented game design, scripting, physics, user interface design, animation, audio integration, artificial intelligence, and basic networked game systems.",
     "Game Project Design and Professional Practice Design, develop, evaluate, and present a complete game project that applies game design principles, computer graphics, gameplay mechanics, teamwork, problem-solving, and professional development practices."
    ],
-   "soMap": [],
+   "soMap": [
+    {
+     "soCode": "SO1",
+     "intensity": "I/L",
+     "description": "Analyze a complex computing problem and apply computing principles and other relevant disciplines to identify solutions."
+    },
+    {
+     "soCode": "SO2",
+     "intensity": "E/P",
+     "description": "Identify, analyze, formulate, research, and solve complex computing problems using appropriate computing principles."
+    },
+    {
+     "soCode": "SO3",
+     "intensity": "E/P",
+     "description": "Apply mathematical foundations, algorithmic principles, and computer science theory in the modeling and design of computer-based systems."
+    },
+    {
+     "soCode": "SO5",
+     "intensity": "E/P",
+     "description": "Design and evaluate solutions for complex computing problems and develop systems that meet specified needs."
+    },
+    {
+     "soCode": "SO6",
+     "intensity": "E/P",
+     "description": "Create, select, adapt, and apply appropriate techniques, resources, and modern computing tools to complex computing activities."
+    },
+    {
+     "soCode": "SO7",
+     "intensity": "E/P",
+     "description": "Function effectively as an individual and as a member or leader in diverse teams."
+    },
+    {
+     "soCode": "SO8",
+     "intensity": "E/P",
+     "description": "Communicate effectively through reports, documentation, presentations, and clear technical instructions."
+    },
+    {
+     "soCode": "SO10",
+     "intensity": "I/L",
+     "description": "Recognize the need for and engage in independent learning for continual professional development."
+    }
+   ],
    "teachingPlan": [
     {
      "type": "week",
@@ -7502,7 +7575,7 @@
    "program": "BSCS",
    "courseTitle": "Thesis 2",
    "prerequisite": "CSP111 - THESIS 1",
-   "description": "This is @ Non-Classroom learning environment that completes the thesis course. This course focuses on the implementation, testing, evaluation, documentation, and presentation of the approved thesis project. Students apply research methodologies, software development practices, and analytical techniques to complete their study and produce a final thesis manuscript, system prototype, and research presentation.",
+   "description": "This is a Non-Classroom learning environment that completes the thesis course. This course focuses on the implementation, testing, evaluation, documentation, and presentation of the approved thesis project. Students apply research methodologies, software development practices, and analytical techniques to complete their study and produce a final thesis manuscript, system prototype, and research presentation.",
    "outcomes": [
     "Formulate the research objectives, scope and limitations, and evaluation metric for a chosen topics.",
     "Collect and compare related literature on the topics.",
@@ -7538,6 +7611,11 @@
      "soCode": "SO6",
      "intensity": "D/O",
      "description": "Create, select, adapt, and apply appropriate techniques, resources, and modern computing tools to complex computing activities, with an understanding of the limitations to accomplish a common goal."
+    },
+    {
+     "soCode": "SO7",
+     "intensity": "D/O",
+     "description": "Function effectively as an individual and as a member or leader in diverse teams and in multidisciplinary settings."
     },
     {
      "soCode": "SO8",
@@ -8027,7 +8105,23 @@
     "Identify Business opportunities for successful entrepreneurs",
     "Develop a comprehensive business plan for an entrepreneurial career"
    ],
-   "soMap": [],
+   "soMap": [
+    {
+     "soCode": "SO7",
+     "intensity": "I/L",
+     "description": "Function effectively as an individual and as a member or leader in diverse teams and in multidisciplinary settings."
+    },
+    {
+     "soCode": "SO8",
+     "intensity": "I/L",
+     "description": "Communicate effectively with the computing community and with society at large about complex computing activities by being able to comprehend and write effective reports, design, documentation make effective presentations, and give and understand clear instructions."
+    },
+    {
+     "soCode": "SO10",
+     "intensity": "I/L",
+     "description": "Recognize the need and have the ability to engage in independent learning for continual development as a computing professional."
+    }
+   ],
    "teachingPlan": [
     {
      "type": "week",
@@ -9008,7 +9102,28 @@
     "Integrate architectural patterns and best practices in application development.",
     "Develop a functional Android application that demonstrates responsiveness, usability, and maintainability."
    ],
-   "soMap": [],
+   "soMap": [
+    {
+     "soCode": "SO1",
+     "intensity": "I/L",
+     "description": "Apply knowledge of computing and mathematics"
+    },
+    {
+     "soCode": "SO2",
+     "intensity": "E/P",
+     "description": "Analyze problems and define requirements"
+    },
+    {
+     "soCode": "SO3",
+     "intensity": "E/P",
+     "description": "Design and evaluate computer-based systems"
+    },
+    {
+     "soCode": "SO5",
+     "intensity": "D/O",
+     "description": "Use current techniques, skills, and modern tools for computing practice"
+    }
+   ],
    "teachingPlan": [
     {
      "type": "week",
@@ -9358,7 +9473,7 @@
    "program": "BSIT",
    "courseTitle": "System Integration and Architecture",
    "prerequisite": "ITP102",
-   "description": "This course studies the process of integrating different systems and software applications by examining current and emerging trends, strategies, and techniques for developing systems integration solutions effectively. Topics covered include but af@'fiot limited to: documenting integration requirements using business process models, designing integration solutions reusing patterns, and implementing integration solutions using service-oriented architecture. Students will extend course topics via library assignments, programming assignments, tool evaluation assignments, and other assigned activities.",
+   "description": "This course studies the process of integrating different systems and software applications by examining current and emerging trends, strategies, and techniques for developing systems integration solutions effectively. Topics covered include but are not limited to: documenting integration requirements using business process models, designing integration solutions reusing patterns, and implementing integration solutions using service-oriented architecture. Students will extend course topics via library assignments, programming assignments, tool evaluation assignments, and other assigned activities.",
    "outcomes": [
     "Analyze the appropriateness of a decision to in-source or out-source IT services in a given situation",
     "Create a testing environment and design a stress test using appropriate tools and techniques that impact system performance",
@@ -9367,18 +9482,18 @@
    "soMap": [
     {
      "soCode": "SO4",
-     "intensity": "D/O",
-     "description": "ability to Identify and analyze user needs and take them into account in the selection, creation, evaluation and administration of computer-based systems; ability to design, implement, and evaluate computer-based systems, processes, components, or programs to meet desired needs and requirements under various constraints; ability to integrate IT-based solutions into the user environment effectively;"
+     "intensity": "I/L",
+     "description": "ability to Identify and analyze user needs and take them into account in the selection, creation, evaluation and administration of computer-based systems;"
     },
     {
      "soCode": "SO5",
      "intensity": "D/O",
-     "description": "(Number of SO depends on the course)"
+     "description": "ability to design, implement, and evaluate computer-based systems, processes, components, or programs to meet desired needs and requirements under various constraints;"
     },
     {
      "soCode": "SO6",
      "intensity": "E/P",
-     "description": ""
+     "description": "ability to integrate IT-based solutions into the user environment effectively;"
     }
    ],
    "teachingPlan": [
@@ -9846,7 +9961,7 @@
     {
      "soCode": "SO8",
      "intensity": "E/P",
-     "description": ""
+     "description": "Function effectively as a member or leader of a team engaged in activities to the program's discipline"
     },
     {
      "soCode": "SO10",
@@ -10311,7 +10426,7 @@
    "program": "BSIT",
    "courseTitle": "Human Computer Interaction 2",
    "prerequisite": "CCS105 — Human-Computer Interaction 1",
-   "description": "This course is a continuation of CCS$105 —Human Interaction 1. This course provides an advanced approach to HCl as a discipline that is concerned with the design, evaluation, and implementation of interactive computing systems for human use. The emphasis is 70 train students to (1) design and evaluate user-centered systems; and (2) research and development in human-computer interaction that focuses on discovering methods and techniques that support people.",
+   "description": "This course is a continuation of CCS105 —Human Interaction 1. This course provides an advanced approach to HCI as a discipline that is concerned with the design, evaluation, and implementation of interactive computing systems for human use. The emphasis is to train students to (1) design and evaluate user-centered systems; and (2) research and development in human-computer interaction that focuses on discovering methods and techniques that support people.",
    "outcomes": [
     "Understand prototypes interface for users with specific accessibility issues.",
     "Perform usability evaluation of an existing software based on general principles used in the heuristic evaluation, usability performance, and preference metrics (learning, task time, task completion, and user satisfaction) and common usability guidelines and standards.",
@@ -10941,14 +11056,24 @@
    ],
    "soMap": [
     {
-     "soCode": "SO5",
-     "intensity": "E/P",
+     "soCode": "SO1",
+     "intensity": "I/L",
      "description": "Analyze a complex computing problem and apply principles of computing and other relevant disciplines to identify solution."
+    },
+    {
+     "soCode": "SO3",
+     "intensity": "E/P",
+     "description": "Design, implement, evaluate a computing-based solution to meet a given set of computing requirements in the context of the program's discipline under various constraints."
+    },
+    {
+     "soCode": "SO5",
+     "intensity": "D/O",
+     "description": "Understand best practices and standards and their applications."
     },
     {
      "soCode": "SO9",
      "intensity": "D/O",
-     "description": "Design, implement, evaluate a computing-based solution to meet a given set of computing requirements in the context of the program's discipline under various constraints."
+     "description": "Communicate effectively with the computing community and with society at large about complex computing activities through logical writing, presentations, and clear instructions."
     }
    ],
    "teachingPlan": [

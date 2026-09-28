@@ -96,7 +96,9 @@
 
   function creditUnits(data) {
     const meta = data.officialMeta || {};
-    return meta.creditUnits || data.facultyUnits || data.units || '';
+    // The Units field is pre-filled from the template's Credit Units and
+    // stays editable, so a value the faculty entered wins.
+    return data.facultyUnits || meta.creditUnits || data.units || '';
   }
 
   function letterheadLines(data) {
