@@ -1,5 +1,5 @@
 {
- "version": "2026-2027-1",
+ "version": "2026-2027-2",
  "courses": [
   {
    "courseCode": "CCS101",
@@ -5246,7 +5246,7 @@
    "program": "BSCS",
    "courseTitle": "Game Programming 2",
    "prerequisite": "CSEG2",
-   "description": "",
+   "description": "In this course, students will learn to plan, design, and develop games using appropriate game engine. They will experience here the different phases in game development and management base on industry setup. At the end of the course, students are required to present the game prior to aftermarket phase.",
    "outcomes": [
     "Game Development Foundations Explain the principles of game development, including the game industry, development roles, design workflows, game design concepts, and the use of modern game engines and computer graphics technologies.",
     "Game Development and Implementation Develop functional game applications by applying game engine technologies, object-oriented game design, scripting, physics, user interface design, animation, audio integration, artificial intelligence, and basic networked game systems.",
@@ -5644,7 +5644,7 @@
    "courseRequirements": [],
    "officialMeta": {
     "departmentLabel": "Computer Science",
-    "creditUnits": "",
+    "creditUnits": "3 UNITS",
     "division": "Academic Affairs Division",
     "vision": "An institution of higher learning in Region IV, developing globally-competitive and value-laden professionals and leaders instrumental to community development and nation building.",
     "mission": "An institution of higher learning committed to equip individuals with knowledge, skills and values that will enable them to achieve professional goals & provide leadership and service for national development.",

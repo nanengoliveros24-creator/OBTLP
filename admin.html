@@ -196,7 +196,12 @@
         { ok: !!(p.courseCode && p.courseTitle && p.academicYear && p.description), label: 'Course data complete' },
         { ok: (p.documents || []).length > 0, label: `${(p.documents || []).length} document${(p.documents || []).length === 1 ? '' : 's'} attached` },
         { ok: (p.outcomes || []).length > 0, label: 'Intended learning outcomes provided' },
-        { ok: (p.objectives || []).length > 0, label: 'Course objectives provided' }
+        // Official-template portfolios follow the PnC OBTLP form, which has
+        // no "Course Objectives" section; check its Teaching and Learning
+        // Plan instead. Legacy (manual) portfolios keep the old check.
+        (p.teachingPlan || []).length
+          ? { ok: (p.teachingPlan || []).some((r) => r.type === 'week'), label: 'Teaching and Learning Plan provided' }
+          : { ok: (p.objectives || []).length > 0, label: 'Course objectives provided' }
       ];
       document.getElementById('compliance-list').innerHTML = items.map((it) => `
         <li><i data-lucide="${it.ok ? 'check' : 'x'}" class="svg-icon" style="color:${it.ok ? 'var(--success)' : 'var(--destructive)'};"></i> ${it.label}</li>

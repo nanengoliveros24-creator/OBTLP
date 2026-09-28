@@ -464,15 +464,21 @@
         const programId = document.getElementById('f-programId').value;
         let list;
         if (programId) {
-          // A program is selected: offer that program's own course
-          // templates first, but still fall back to the legacy free-text
-          // catalog so nothing that already worked stops working.
+          // A program is selected: offer ONLY that program's courses.
+          // Courses that have an official template in a different program
+          // (e.g. BSCS-only courses while BSIT is selected) are hidden.
+          // Legacy free-text catalog courses that have no template in any
+          // program are still offered, so manually-created courses keep working.
           const fromProgram = courseTemplates
             .filter((t) => t.programId === programId)
             .map((t) => ({ code: t.courseCode, title: t.courseTitle }));
           const seen = new Set(fromProgram.map((c) => c.code.toLowerCase()));
-          const rest = catalog.courses.filter((c) => !seen.has(String(c.code || '').toLowerCase()));
-          list = fromProgram.concat(rest);
+          const templated = new Set(courseTemplates.map((t) => String(t.courseCode || '').toLowerCase()));
+          const rest = catalog.courses.filter((c) => {
+            const code = String(c.code || '').toLowerCase();
+            return !seen.has(code) && !templated.has(code);
+          });
+          list = fromProgram.sort((a, b) => a.code.localeCompare(b.code)).concat(rest);
         } else {
           list = catalog.courses;
         }
@@ -652,6 +658,12 @@
             return;
           }
           if (!tpl) {
+            if (force) {
+              // switched to a course with no template: drop the previous
+              // course's content so it doesn't carry over
+              ['f-description', 'f-prerequisite', 'f-syllabus'].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+              LIST_FIELDS.forEach((k) => { listData[k] = ['']; renderList(k); });
+            }
             showTemplateStatus('No template has been assigned to this course yet. You can continue with manual entry.', 't-muted');
             reloadBtn.style.display = 'none';
             clearStructuredTemplateData();
@@ -680,10 +692,30 @@
       });
 
       function applyCourseFields(course) {
+        // Picking a different course from the list is an explicit choice, so
+        // the previous course's description / pre-requisite / CILO are
+        // replaced instead of lingering (they only fill-if-blank otherwise).
+        const previousCode = document.getElementById('f-courseCode').value.trim().toLowerCase();
+        const changed = previousCode !== String(course.code || '').trim().toLowerCase();
         document.getElementById('f-courseCode').value = course.code || '';
         document.getElementById('f-courseTitle').value = course.title || '';
         if (courseDD) courseDD.setValue(course.code || course.title ? courseLabel(course) : '');
-        loadCourseTemplateFor(course.code, false);
+        loadCourseTemplateFor(course.code, changed);
+      }
+
+      // Clears the selected course and the content that came from it
+      // (used when the selected Program no longer offers that course).
+      function clearCourseSelection() {
+        ['f-courseCode', 'f-courseTitle', 'f-description', 'f-prerequisite', 'f-syllabus'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        LIST_FIELDS.forEach((k) => { listData[k] = ['']; renderList(k); });
+        if (courseDD) courseDD.setValue('');
+        clearStructuredTemplateData();
+        applyOfficialContentLockState();
+        showTemplateStatus('', null);
+        document.getElementById('reload-template-btn').style.display = 'none';
       }
 
       // Reflect the current (possibly just-loaded) field values on every
@@ -771,7 +803,13 @@
             // Switching Program re-resolves the course's official template
             // (CCS102 BSCS and CCS102 BSIT are different documents).
             const selectedCode = document.getElementById('f-courseCode').value.trim();
-            if (selectedCode) loadCourseTemplateFor(selectedCode, true);
+            if (selectedCode) {
+              const lc = selectedCode.toLowerCase();
+              const inProgram = courseTemplates.some((t) => t.programId === item.data.id && String(t.courseCode || '').toLowerCase() === lc);
+              const templatedElsewhere = courseTemplates.some((t) => String(t.courseCode || '').toLowerCase() === lc);
+              if (inProgram) loadCourseTemplateFor(selectedCode, true);
+              else if (templatedElsewhere) clearCourseSelection();
+            }
           },
           emptyText: 'No programs yet — pick a department or ask IT to add one.'
         });
