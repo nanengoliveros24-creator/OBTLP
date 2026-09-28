@@ -464,21 +464,12 @@
         const programId = document.getElementById('f-programId').value;
         let list;
         if (programId) {
-          // A program is selected: offer ONLY that program's courses.
-          // Courses that have an official template in a different program
-          // (e.g. BSCS-only courses while BSIT is selected) are hidden.
-          // Legacy free-text catalog courses that have no template in any
-          // program are still offered, so manually-created courses keep working.
-          const fromProgram = courseTemplates
+          // Only the selected program's official template courses.
+          // "+ Create New Course" is still available for anything else.
+          list = courseTemplates
             .filter((t) => t.programId === programId)
-            .map((t) => ({ code: t.courseCode, title: t.courseTitle }));
-          const seen = new Set(fromProgram.map((c) => c.code.toLowerCase()));
-          const templated = new Set(courseTemplates.map((t) => String(t.courseCode || '').toLowerCase()));
-          const rest = catalog.courses.filter((c) => {
-            const code = String(c.code || '').toLowerCase();
-            return !seen.has(code) && !templated.has(code);
-          });
-          list = fromProgram.sort((a, b) => a.code.localeCompare(b.code)).concat(rest);
+            .map((t) => ({ code: t.courseCode, title: t.courseTitle }))
+            .sort((a, b) => a.code.localeCompare(b.code));
         } else {
           list = catalog.courses;
         }
