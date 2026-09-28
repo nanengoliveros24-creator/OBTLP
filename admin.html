@@ -194,7 +194,11 @@
     function renderCompliance(p) {
       const items = [
         { ok: !!(p.courseCode && p.courseTitle && p.academicYear && p.description), label: 'Course data complete' },
-        { ok: (p.documents || []).length > 0, label: `${(p.documents || []).length} document${(p.documents || []).length === 1 ? '' : 's'} attached` },
+        // Official-template portfolios are generated automatically, so no
+        // supporting documents are required; confirm the template instead.
+        (p.teachingPlan || []).length
+          ? { ok: !!p.templateId, label: 'Official OBTLP template applied' }
+          : { ok: (p.documents || []).length > 0, label: `${(p.documents || []).length} document${(p.documents || []).length === 1 ? '' : 's'} attached` },
         { ok: (p.outcomes || []).length > 0, label: 'Intended learning outcomes provided' },
         // Official-template portfolios follow the PnC OBTLP form, which has
         // no "Course Objectives" section; check its Teaching and Learning
