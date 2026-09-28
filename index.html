@@ -97,6 +97,42 @@
         <p class="login-foot">New faculty member? <a href="register.html" class="link-primary">Create an Account</a></p>
       </div>
 
+      <!-- Sign-in step 2: email one-time code (MFA) -->
+      <div class="login-form" id="otp-form" style="display:none;">
+        <h2 id="otp-title">Check your email</h2>
+        <p class="lede" id="otp-lede">We sent a 6-digit code to your email. Enter it below to finish signing in.</p>
+
+        <form class="form-stack" id="otp-email-element" novalidate style="display:none;">
+          <div class="field">
+            <label class="field-label" for="otp-email">Email address</label>
+            <div class="input-with-icon">
+              <i data-lucide="mail" class="svg-icon"></i>
+              <input class="input" id="otp-email" type="email" placeholder="you@gmail.com" autocomplete="email" />
+            </div>
+            <p class="field-hint">Your account doesn't have an email yet. We'll send your sign-in code here and save it to your account once you confirm it.</p>
+          </div>
+          <div class="form-error" id="otp-email-error" style="display:none;" role="alert"></div>
+          <button type="submit" class="btn btn-primary w-full" id="otp-email-btn">Send code</button>
+        </form>
+
+        <form class="form-stack" id="otp-code-element" novalidate style="display:none;">
+          <div class="field">
+            <label class="field-label" for="otp-code">Verification code</label>
+            <div class="input-with-icon">
+              <i data-lucide="key-round" class="svg-icon"></i>
+              <input class="input" id="otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" style="letter-spacing:0.3em;font-weight:600;" />
+            </div>
+            <p class="field-hint">The code expires in 5 minutes. Check your Spam or Promotions folder if you don't see it.</p>
+          </div>
+          <div class="form-error" id="otp-error" style="display:none;" role="alert"></div>
+          <div class="form-success" id="otp-notice" style="display:none;"></div>
+          <button type="submit" class="btn btn-primary w-full" id="otp-btn">Verify &amp; Sign in</button>
+          <button type="button" class="btn btn-outline w-full" id="otp-resend-btn">Resend code</button>
+        </form>
+
+        <p class="login-foot"><a href="#" class="link-primary" id="otp-back">← Back to sign in</a></p>
+      </div>
+
       <!-- First-run setup: create the initial system administrator account -->
       <div class="login-form" id="setup-form" style="display:none;">
         <h2>Set Up This System</h2>
@@ -231,13 +267,157 @@
       btn.disabled = true;
       btn.textContent = 'Signing in…';
       try {
-        const { token, user } = await api.login(username, password, selectedRole);
+        const result = await api.login(username, password, selectedRole);
+        if (result.mfaRequired || result.emailRequired) {
+          showOtpStep(result);
+          btn.disabled = false;
+          btn.textContent = 'Sign in';
+          return;
+        }
+        const { token, user } = result;
         api.setSession({ token, userId: user.id, role: user.role, name: user.name });
         redirectForRole(user);
       } catch (err) {
         showError(loginError, err.message || 'Login failed. Please try again.');
         btn.disabled = false;
         btn.textContent = 'Sign in';
+      }
+    });
+
+    // ---------- Sign-in step 2: email OTP ----------
+    const otpForm = document.getElementById('otp-form');
+    const otpEmailForm = document.getElementById('otp-email-element');
+    const otpCodeForm = document.getElementById('otp-code-element');
+    const otpError = document.getElementById('otp-error');
+    const otpEmailError = document.getElementById('otp-email-error');
+    const otpNotice = document.getElementById('otp-notice');
+    const resendBtn = document.getElementById('otp-resend-btn');
+    let challengeId = null;
+    let resendTimer = null;
+
+    function startResendCooldown(seconds) {
+      clearInterval(resendTimer);
+      let left = seconds;
+      resendBtn.disabled = true;
+      resendBtn.textContent = `Resend code (${left}s)`;
+      resendTimer = setInterval(() => {
+        left -= 1;
+        if (left <= 0) {
+          clearInterval(resendTimer);
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Resend code';
+        } else {
+          resendBtn.textContent = `Resend code (${left}s)`;
+        }
+      }, 1000);
+    }
+
+    function showCodeEntry(maskedEmail) {
+      document.getElementById('otp-title').textContent = 'Check your email';
+      document.getElementById('otp-lede').textContent = `We sent a 6-digit code to ${maskedEmail}. Enter it below to finish signing in.`;
+      otpEmailForm.style.display = 'none';
+      otpCodeForm.style.display = '';
+      hideError(otpError);
+      otpNotice.style.display = 'none';
+      document.getElementById('otp-code').value = '';
+      document.getElementById('otp-code').focus();
+      startResendCooldown(60);
+    }
+
+    function showOtpStep(result) {
+      challengeId = result.challengeId;
+      document.getElementById('login-form').style.display = 'none';
+      otpForm.style.display = 'block';
+      if (result.emailRequired) {
+        document.getElementById('otp-title').textContent = 'Add your email';
+        document.getElementById('otp-lede').textContent = 'For your security, sign-in now needs a one-time code sent to your email.';
+        otpCodeForm.style.display = 'none';
+        otpEmailForm.style.display = '';
+        hideError(otpEmailError);
+        document.getElementById('otp-email').focus();
+      } else {
+        showCodeEntry(result.maskedEmail);
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function backToLogin(message) {
+      clearInterval(resendTimer);
+      challengeId = null;
+      otpForm.style.display = 'none';
+      document.getElementById('login-form').style.display = 'block';
+      document.getElementById('password').value = '';
+      if (message) showError(loginError, message);
+    }
+
+    document.getElementById('otp-back').addEventListener('click', (e) => { e.preventDefault(); backToLogin(); });
+
+    otpEmailForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError(otpEmailError);
+      const email = document.getElementById('otp-email').value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError(otpEmailError, 'Please enter a valid email address.');
+        return;
+      }
+      const btn = document.getElementById('otp-email-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      try {
+        const result = await api.loginEmail(challengeId, email);
+        showCodeEntry(result.maskedEmail);
+      } catch (err) {
+        if (/expired/i.test(err.message || '')) return backToLogin(err.message);
+        showError(otpEmailError, err.message || 'Could not send the code.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send code';
+      }
+    });
+
+    document.getElementById('otp-code').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    otpCodeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError(otpError);
+      otpNotice.style.display = 'none';
+      const code = document.getElementById('otp-code').value.trim();
+      if (code.length !== 6) {
+        showError(otpError, 'Please enter the 6-digit code from your email.');
+        return;
+      }
+      const btn = document.getElementById('otp-btn');
+      btn.disabled = true;
+      btn.textContent = 'Verifying…';
+      try {
+        const { token, user } = await api.loginVerify(challengeId, code);
+        clearInterval(resendTimer);
+        api.setSession({ token, userId: user.id, role: user.role, name: user.name });
+        redirectForRole(user);
+      } catch (err) {
+        if ((err.data && err.data.restart) || /expired|sign in again/i.test(err.message || '')) {
+          return backToLogin(err.message);
+        }
+        showError(otpError, err.message || 'Verification failed. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Verify & Sign in';
+      }
+    });
+
+    resendBtn.addEventListener('click', async () => {
+      hideError(otpError);
+      resendBtn.disabled = true;
+      try {
+        const result = await api.loginResend(challengeId);
+        otpNotice.textContent = `A new code was sent to ${result.maskedEmail}.`;
+        otpNotice.style.display = 'block';
+        startResendCooldown(60);
+      } catch (err) {
+        if (/expired|sign in again/i.test(err.message || '')) return backToLogin(err.message);
+        showError(otpError, err.message || 'Could not resend the code.');
+        resendBtn.disabled = false;
       }
     });
 

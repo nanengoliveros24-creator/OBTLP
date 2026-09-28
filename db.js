@@ -74,7 +74,7 @@
       /* no body */
     }
     if (!res.ok) {
-      if (res.status === 401 && path !== '/api/login') {
+      if (res.status === 401 && !path.startsWith('/api/login')) {
         forceSignOut();
       }
       const err = new Error((data && data.error) || `Request failed (${res.status})`);
@@ -118,6 +118,10 @@
 
     // ---- auth ----
     login: (username, password, role) => req('/api/login', { method: 'POST', body: JSON.stringify({ username, password, role }) }),
+    // Email OTP (second sign-in step)
+    loginEmail: (challengeId, email) => req('/api/login/email', { method: 'POST', body: JSON.stringify({ challengeId, email }) }),
+    loginVerify: (challengeId, code) => req('/api/login/verify', { method: 'POST', body: JSON.stringify({ challengeId, code }) }),
+    loginResend: (challengeId) => req('/api/login/resend', { method: 'POST', body: JSON.stringify({ challengeId }) }),
     register: (body) => req('/api/register', { method: 'POST', body: JSON.stringify(body) }),
     setup: (body) => req('/api/setup', { method: 'POST', body: JSON.stringify(body) }),
     setupStatus: () => req('/api/setup-status'),

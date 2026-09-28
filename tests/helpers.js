@@ -23,7 +23,8 @@ function freshTmpDir(prefix) {
 // Starts server.js as a child process with an isolated DB/uploads/backups
 // dir and a random port. Resolves once the server has logged its "running
 // at" line (or rejects on timeout/early exit).
-function startServer() {
+function startServer(opts) {
+  opts = opts || {};
   const dir = freshTmpDir('obtlp-test-');
   const dbPath = path.join(dir, 'db.json');
   fs.writeFileSync(dbPath, JSON.stringify({ users: [], portfolios: [], sessions: [] }, null, 2));
@@ -39,7 +40,13 @@ function startServer() {
       PORT: String(port),
       OBTLP_DB_PATH: dbPath,
       OBTLP_UPLOADS_DIR: uploadsDir,
-      OBTLP_BACKUPS_DIR: backupsDir
+      OBTLP_BACKUPS_DIR: backupsDir,
+      // Email OTP is off in tests unless a test opts in (see mfa test);
+      // this also keeps a developer's own BREVO_* env vars from leaking in.
+      MFA_DISABLED: opts.mfa ? '' : '1',
+      MFA_DEV_LOG: opts.mfa ? '1' : '',
+      BREVO_API_KEY: '',
+      MAIL_FROM: ''
     }),
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -50,7 +57,9 @@ function startServer() {
       if (!settled) { settled = true; reject(new Error('Server did not start in time')); }
     }, 5000);
 
+    let output = '';
     child.stdout.on('data', (chunk) => {
+      output += chunk.toString();
       if (settled) return;
       if (chunk.toString().includes('running at')) {
         settled = true;
@@ -58,6 +67,7 @@ function startServer() {
         resolve({
           baseUrl: `http://localhost:${port}`,
           dir,
+          output: () => output,
           stop: () => new Promise((res) => {
             child.once('exit', res);
             child.kill();

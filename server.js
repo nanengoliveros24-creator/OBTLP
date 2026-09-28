@@ -21,6 +21,8 @@ const fs = require('fs');
 const path = require('path');
 const store = require('./dbstore');
 const auth = require('./auth');
+const crypto = require('crypto');
+const mailer = require('./mailer');
 
 const ROOT = __dirname;
 // Same override pattern as dbstore.js: lets tests use throwaway folders
@@ -126,6 +128,80 @@ function stripPassword(u) {
   const copy = Object.assign({}, u);
   delete copy.passwordHash;
   return copy;
+}
+
+// ---------- Email OTP (multi-factor sign-in) ----------
+// After a correct password, the server emails a one-time 6-digit code to
+// the account's address and only issues a session once that code is
+// entered. Active whenever email delivery is configured (BREVO_API_KEY +
+// MAIL_FROM, or MFA_DEV_LOG=1 locally); MFA_DISABLED=1 is an emergency
+// off-switch. With neither configured (e.g. the test suite) sign-in works
+// exactly as before.
+const OTP_TTL_MS = 5 * 60 * 1000;          // a code is valid for 5 minutes
+const OTP_CHALLENGE_TTL_MS = 15 * 60 * 1000; // the whole sign-in attempt
+const OTP_MAX_ATTEMPTS = 5;                  // wrong codes before starting over
+const OTP_MAX_SENDS = 5;                     // emails per sign-in attempt
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function mfaActive() {
+  if (process.env.MFA_DISABLED === '1') return false;
+  return mailer.brevoConfigured() || mailer.devLogMode();
+}
+
+function isEmail(v) {
+  return EMAIL_RE.test(String(v || '').trim());
+}
+
+function userEmail(u) {
+  if (u && isEmail(u.email)) return String(u.email).trim().toLowerCase();
+  if (u && isEmail(u.username)) return String(u.username).trim().toLowerCase();
+  return '';
+}
+
+function maskEmail(email) {
+  const [local, domain] = String(email).split('@');
+  if (!domain) return email;
+  const shown = local.length <= 2 ? local.slice(0, 1) : local.slice(0, 2);
+  return `${shown}${'*'.repeat(Math.max(1, local.length - shown.length))}@${domain}`;
+}
+
+function hashOtp(challengeId, code) {
+  return crypto.createHash('sha256').update(`${challengeId}:${code}`).digest('hex');
+}
+
+function pruneChallenges(db) {
+  const now = Date.now();
+  db.mfaChallenges = (db.mfaChallenges || []).filter((c) => new Date(c.expiresAt).getTime() > now);
+}
+
+function findChallenge(db, id) {
+  pruneChallenges(db);
+  const c = db.mfaChallenges.find((x) => x.id === String(id || ''));
+  if (!c) throw { status: 400, message: 'This sign-in attempt has expired. Please sign in again.' };
+  return c;
+}
+
+// Generates a fresh code on the challenge and returns a function that
+// emails it — run only after the database write has been committed.
+function issueOtp(challenge, user) {
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  challenge.codeHash = hashOtp(challenge.id, code);
+  challenge.codeExpiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString();
+  challenge.attempts = 0;
+  challenge.sends = (challenge.sends || 0) + 1;
+  challenge.lastSentAt = new Date().toISOString();
+  const to = challenge.email;
+  return () => mailer.sendOtpEmail(to, user.name, code, Math.round(OTP_TTL_MS / 60000));
+}
+
+function startSession(db, user) {
+  if (!db.sessions) db.sessions = [];
+  db.sessions = db.sessions.filter((s) => !auth.isExpired(s));
+  const session = auth.newSession(user.id);
+  db.sessions.push(session);
+  pushAudit(db, { actor: user.id, action: 'login', portfolioId: null, detail: `${user.name} signed in` });
+  return { status: 200, data: { token: session.token, user: stripPassword(user) } };
 }
 
 function findUserByUsername(db, username) {
@@ -457,6 +533,7 @@ const routes = {
         role,
         passwordHash: auth.hashPassword(password)
       };
+      if (isEmail(username)) user.email = username.toLowerCase();
       if (!db.users) db.users = [];
       db.users.push(user);
       const roleLabel = { faculty: 'faculty', admin: 'System Administrator', it: 'IT Administrator' }[role];
@@ -494,13 +571,105 @@ const routes = {
       if (selectedRole && user.role !== selectedRole) {
         throw { status: 401, message: 'Incorrect username or password.' };
       }
-      if (!db.sessions) db.sessions = [];
-      // Housekeeping: drop expired sessions.
-      db.sessions = db.sessions.filter((s) => !auth.isExpired(s));
-      const session = auth.newSession(user.id);
-      db.sessions.push(session);
-      pushAudit(db, { actor: user.id, action: 'login', portfolioId: null, detail: `${user.name} signed in` });
-      return { status: 200, data: { token: session.token, user: stripPassword(user) } };
+      if (!mfaActive()) return startSession(db, user);
+
+      // Second factor: email a one-time code instead of signing in now.
+      pruneChallenges(db);
+      db.mfaChallenges = db.mfaChallenges.filter((c) => c.userId !== user.id);
+      const challenge = {
+        id: auth.makeToken(),
+        userId: user.id,
+        email: userEmail(user),
+        expiresAt: new Date(Date.now() + OTP_CHALLENGE_TTL_MS).toISOString(),
+        sends: 0
+      };
+      db.mfaChallenges.push(challenge);
+      if (!challenge.email) {
+        // Older accounts whose username isn't an email: ask for one first.
+        return { status: 200, data: { emailRequired: true, challengeId: challenge.id } };
+      }
+      const send = issueOtp(challenge, user);
+      return {
+        status: 200,
+        data: { mfaRequired: true, challengeId: challenge.id, maskedEmail: maskEmail(challenge.email) },
+        afterCommit: send
+      };
+    }
+  },
+
+  // Accounts without an email on file give one during sign-in; it is only
+  // saved to the account after a code sent to it is entered correctly.
+  'POST /api/login/email': {
+    auth: false,
+    handler: (db, ctx, query, body) => {
+      const challenge = findChallenge(db, body.challengeId);
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!isEmail(email)) throw { status: 400, message: 'Please enter a valid email address.' };
+      const user = (db.users || []).find((u) => u.id === challenge.userId);
+      if (!user) throw { status: 400, message: 'This sign-in attempt has expired. Please sign in again.' };
+      if ((db.users || []).some((u) => u.id !== user.id && userEmail(u) === email)) {
+        throw { status: 409, message: 'That email is already used by another account.' };
+      }
+      if ((challenge.sends || 0) >= OTP_MAX_SENDS) {
+        throw { status: 429, message: 'Too many codes sent. Please sign in again later.' };
+      }
+      challenge.email = email;
+      challenge.pendingEmail = true;
+      const send = issueOtp(challenge, user);
+      return {
+        status: 200,
+        data: { mfaRequired: true, challengeId: challenge.id, maskedEmail: maskEmail(email) },
+        afterCommit: send
+      };
+    }
+  },
+
+  'POST /api/login/verify': {
+    auth: false,
+    handler: (db, ctx, query, body) => {
+      const challenge = findChallenge(db, body.challengeId);
+      const code = String(body.code || '').replace(/\D/g, '');
+      if (!challenge.codeHash) throw { status: 400, message: 'Please request a verification code first.' };
+      if (new Date(challenge.codeExpiresAt).getTime() < Date.now()) {
+        throw { status: 400, message: 'This code has expired. Tap "Resend code" to get a new one.' };
+      }
+      const ok = code.length === 6 && crypto.timingSafeEqual(
+        Buffer.from(hashOtp(challenge.id, code), 'hex'),
+        Buffer.from(challenge.codeHash, 'hex')
+      );
+      if (!ok) {
+        challenge.attempts = (challenge.attempts || 0) + 1;
+        if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
+          db.mfaChallenges = db.mfaChallenges.filter((c) => c.id !== challenge.id);
+          // Still a normal 400 (not a thrown error) so the attempt count and
+          // removal are saved.
+          return { status: 400, data: { error: 'Too many incorrect codes. Please sign in again.', restart: true } };
+        }
+        const left = OTP_MAX_ATTEMPTS - challenge.attempts;
+        return { status: 400, data: { error: `Incorrect code. ${left} attempt${left === 1 ? '' : 's'} left.` } };
+      }
+      const user = (db.users || []).find((u) => u.id === challenge.userId);
+      db.mfaChallenges = db.mfaChallenges.filter((c) => c.id !== challenge.id);
+      if (!user) throw { status: 400, message: 'This sign-in attempt has expired. Please sign in again.' };
+      if (challenge.pendingEmail) user.email = challenge.email;
+      return startSession(db, user);
+    }
+  },
+
+  'POST /api/login/resend': {
+    auth: false,
+    handler: (db, ctx, query, body) => {
+      const challenge = findChallenge(db, body.challengeId);
+      if (!challenge.email) throw { status: 400, message: 'Please enter your email address first.' };
+      const user = (db.users || []).find((u) => u.id === challenge.userId);
+      if (!user) throw { status: 400, message: 'This sign-in attempt has expired. Please sign in again.' };
+      if ((challenge.sends || 0) >= OTP_MAX_SENDS) {
+        throw { status: 429, message: 'Too many codes sent. Please sign in again later.' };
+      }
+      const wait = OTP_RESEND_COOLDOWN_MS - (Date.now() - new Date(challenge.lastSentAt || 0).getTime());
+      if (wait > 0) throw { status: 429, message: `Please wait ${Math.ceil(wait / 1000)} seconds before requesting a new code.` };
+      const send = issueOtp(challenge, user);
+      return { status: 200, data: { ok: true, maskedEmail: maskEmail(challenge.email) }, afterCommit: send };
     }
   },
 
@@ -1263,6 +1432,7 @@ const routes = {
         passwordHash: auth.hashPassword(password)
       };
       if (!db.users) db.users = [];
+      if (isEmail(username)) user.email = username.toLowerCase();
       db.users.push(user);
       pushAudit(db, { actor: ctx.user.id, action: 'user-create', portfolioId: null, detail: `Created user ${user.username} (${user.role})` });
       return { status: 201, data: Object.assign(stripPassword(user), body.password ? {} : { temporaryPassword: password }) };
@@ -1390,6 +1560,9 @@ async function handleApi(req, res, pathname, query) {
       ? runHandler(await store.readDb())
       : (await store.transact(runHandler)).result;
 
+    // Side effects that must only happen once the write is saved (e.g.
+    // emailing a sign-in code) run here; if one fails, its error is sent.
+    if (result.afterCommit) await result.afterCommit();
     sendJson(res, result.status, result.data);
   } catch (err) {
     if (err && err.status) {

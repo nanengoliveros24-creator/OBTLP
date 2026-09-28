@@ -1,5 +1,5 @@
 {
- "version": "2026-2027-3",
+ "version": "2026-2027-4",
  "courses": [
   {
    "courseCode": "CCS101",
@@ -332,25 +332,31 @@
    ],
    "referenceGroups": {
     "textbooks": [
+     "Besueña, J. S. (2019) Introduction to Information Technology Computer Fundamentals. Unlimited Books",
+     "Carey, P. (2019) New Perspectives on HTML, CSS and JavaScript. Cengage Publishing",
+     "Maynard, P. (2020) Principles of Computer Science. Larsen and Keller Education",
+     "Revano, T. F, (2019) Computer System Organization with Assembly. Mindshapers Co., Inc.",
      "Tayuan, Ronina R. C. (2019) Living in The Information Technology Era. C&E Publishing Inc"
     ],
     "onlineResources": [
-     "W3Schools. (2022) HTML Tutorials. Retrieved August 8, 2023, from httos://www.w3schools.com/ntmi/himl! intro.asp",
-     "W3Schools. (2022) CSS Tutorials. Retrieved August 8, 2023, from https://www.w3schools.com/css/default.aso",
-     "Javatpoint. (2021). MS Word Tutorial. Retrieved August 5, 2023, from https://www.javatpoint.com/ ms-word-tutorial",
-     "Javatpoint. (2021). MS Powerpoint Tutorial. Retrieved August 5, 2023, from https://www.javatpoint.com/ ms-powerpoint- tutorial",
-     "E-Journal Subscription (https://link.gale.com/apps/menu?u=phpnc)",
-     "Electronic Journal of Computer Science and Information Technology (eJCSIT)",
-     "Information Technology and Libraries"
+     "W3Schools. (2022) HTML Tutorials. Retrieved August 8, 2023, from https://www.w3schools.com/html/html_intro.asp",
+     "W3Schools. (2022) CSS Tutorials. Retrieved August 8, 2023, from https://www.w3schools.com/css/default.asp",
+     "Javatpoint. (2021). MS Word Tutorial. Retrieved August 5, 2023, from https://www.javatpoint.com/ms-word-tutorial",
+     "Javatpoint. (2021). MS Powerpoint Tutorial. Retrieved August 5, 2023, from https://www.javatpoint.com/ms-powerpoint-tutorial",
+     "E-Journal Subscription (https://link.gale.com/apps/menu?u=phpnc)"
     ],
-    "journals": []
+    "journals": [
+     "Electronic Journal of Computer Science and Information Technology (eJCSIT)",
+     "Information Technology and Libraries",
+     "Journal of Computer Science & Technology"
+    ]
    },
    "grading": {
     "components": [
      {
       "name": "Lecture",
       "weightPct": 60,
-      "weightNote": "",
+      "weightNote": "to be computed with Laboratory grade; 100% for purely lecture classes only",
       "items": [
        {
         "item": "Quizzes",
@@ -393,7 +399,12 @@
      }
     ]
    },
-   "courseRequirements": [],
+   "courseRequirements": [
+    "Class Participation",
+    "Research Project/Case Study",
+    "Quiz",
+    "Exam"
+   ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
     "creditUnits": "2 UNITS LEC — 1 UNIT LAB",
@@ -808,7 +819,12 @@
        },
        {
         "item": "Other Requirements",
-        "source": "Exam",
+        "source": "Group Research/ Project Rubrics",
+        "pct": 20
+       },
+       {
+        "item": "Exam",
+        "source": "Periodical Examination Scores",
         "pct": 50
        }
       ]
@@ -819,9 +835,14 @@
       "weightNote": "",
       "items": [
        {
+        "item": "Laboratory Exercises",
+        "source": "Hands-on Coding Exercises Rubrics",
+        "pct": 40
+       },
+       {
         "item": "Laboratory Examination",
-        "source": "Total ;",
-        "pct": 100
+        "source": "Laboratory Examination Rubrics",
+        "pct": 60
        }
       ]
      }
@@ -831,7 +852,6 @@
     "Written Quizzes",
     "Hands-on Coding Exercises",
     "Laboratory Examinations",
-    "get cen me regen Se Ta ees",
     "Periodical Examinations",
     "Group Research/ Projects",
     "Course Portfolio"
@@ -1254,12 +1274,22 @@
       "items": [
        {
         "item": "Quizzes",
-        "source": "Class Participation",
+        "source": "Written Quiz Scores",
         "pct": 20
        },
        {
+        "item": "Class Participation",
+        "source": "Recitation Scores/ Attendance Record",
+        "pct": 10
+       },
+       {
         "item": "Other Requirements",
-        "source": "Exam",
+        "source": "Group Research/ Project Rubrics",
+        "pct": 20
+       },
+       {
+        "item": "Exam",
+        "source": "Periodical Examination Scores",
         "pct": 50
        }
       ]
@@ -1270,9 +1300,14 @@
       "weightNote": "",
       "items": [
        {
+        "item": "Laboratory Exercises",
+        "source": "Hands-on Coding Exercises Rubrics",
+        "pct": 40
+       },
+       {
         "item": "Laboratory Examination",
-        "source": "Total",
-        "pct": 100
+        "source": "Laboratory Examination Rubrics",
+        "pct": 60
        }
       ]
      }
@@ -2229,8 +2264,8 @@
        },
        {
         "item": "Practical Exam",
-        "source": "Total",
-        "pct": 100
+        "source": "Practical Exam Grading Rubric",
+        "pct": 60
        }
       ]
      }
@@ -2774,8 +2809,25 @@
        },
        {
         "item": "Exam",
-        "source": "Total",
-        "pct": 100
+        "source": "Periodical Exam Scores",
+        "pct": 50
+       }
+      ]
+     },
+     {
+      "name": "Laboratory",
+      "weightPct": 40,
+      "weightNote": "",
+      "items": [
+       {
+        "item": "Programming Exercise",
+        "source": "Programming Exercise Grading Rubric",
+        "pct": 40
+       },
+       {
+        "item": "Practical Exam",
+        "source": "Practical Exam Grading Rubric",
+        "pct": 60
        }
       ]
      }
@@ -3262,10 +3314,15 @@
    ],
    "referenceGroups": {
     "textbooks": [
-     "* Bidgoli, Hossein, MIS(10th ed.). Cengage Learning. 2021 * Crosby, Natalia, Principles of Database Development. Clanrye International. 2020 ¢ Abante, Marmelo V, D.C., Arvin, MySQL..S&A Local. 2019"
+     "Bidgoli, Hossein, MIS (10th ed.). Cengage Learning. 2021",
+     "Crosby, Natalia, Principles of Database Development. Clanrye International. 2020",
+     "Abante, Marmelo V, D.C., Arvin, MySQL..S&A Local. 2019"
     ],
     "onlineResources": [
-     "* mysaltutorial. (n.d.). MySQL Tutorial for Developers. Retrieved August 15, 2022, from https://www.mysaltutorial.org/ * w&schools. (n.d.). DBMS Tutorial. Retrieved August 26, 2022, from https://www.w3schools.in/dbms * MySalTutorial. (n.d.}. MySQL Tutorial. Retrieved September 7, 2022, from https://www.mysaltutorial.ora/ * dev.mysal. (n.d.). MySQL 8.0 Reference Manual. Retrieved September 7, 2022, from https://dev.mysal.com/doc/refman/8.0/en/"
+     "mysqltutorial. (n.d.). MySQL Tutorial for Developers. Retrieved August 15, 2022, from https://www.mysqltutorial.org/",
+     "w3schools. (n.d.). DBMS Tutorial. Retrieved August 26, 2022, from https://www.w3schools.in/dbms",
+     "MySqlTutorial. (n.d.). MySQL Tutorial. Retrieved September 7, 2022, from https://www.mysqltutorial.org/",
+     "dev.mysql. (n.d.). MySQL 8.0 Reference Manual. Retrieved September 7, 2022, from https://dev.mysql.com/doc/refman/8.0/en/"
     ],
     "journals": []
    },
@@ -3317,7 +3374,14 @@
      }
     ]
    },
-   "courseRequirements": [],
+   "courseRequirements": [
+    "Written Quizzes",
+    "Hands-On Exercises / Activity",
+    "Laboratory Examination",
+    "Periodical Examination",
+    "Group Project",
+    "Course Portfolio"
+   ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
     "creditUnits": "3",
@@ -3733,6 +3797,33 @@
       "items": [
        {
         "item": "Quizzes",
+        "source": "Written Quizzes",
+        "pct": 20
+       },
+       {
+        "item": "Class Participation",
+        "source": "Seatwork and Recitation",
+        "pct": 10
+       },
+       {
+        "item": "Other Requirements",
+        "source": "Case Studies",
+        "pct": 20
+       },
+       {
+        "item": "Exam",
+        "source": "Written Periodical Exams",
+        "pct": 50
+       }
+      ]
+     },
+     {
+      "name": "Laboratory",
+      "weightPct": 40,
+      "weightNote": "",
+      "items": [
+       {
+        "item": "Quizzes",
         "source": "Laboratory Exercises",
         "pct": 40
        },
@@ -3746,15 +3837,15 @@
     ]
    },
    "courseRequirements": [
-    "In order to pass the course: the students are expected to:",
-    "e Attend the face to face meetings when called for;",
-    "e Take and pass all the quizzes and examination with proper permit for major examination,",
-    "e Complete and submit in due time assigned tasks, projects and researches;",
-    "e Final Project.",
-    "e Student Portfolio",
-    "e Abide by the student's ethical role and character values in and out of the class;",
-    "e Participate and join in all the activities of the College of Computing Studies and the University; and",
-    "e Observe the Cabuyao University Core values at all time."
+    "In order to pass the course, the students are expected to:",
+    "• Attend the face to face meetings when called for;",
+    "• Take and pass all the quizzes and examination with proper permit for major examination;",
+    "• Complete and submit in due time assigned tasks, projects and researches;",
+    "• Final Project.",
+    "• Student Portfolio",
+    "• Abide by the student's ethical role and character values in and out of the class;",
+    "• Participate and join in all the activities of the College of Computing Studies and the University; and",
+    "• Observe the Cabuyao University Core values at all times."
    ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
@@ -4065,8 +4156,8 @@
     "components": [
      {
       "name": "Lecture",
-      "weightPct": 100,
-      "weightNote": "",
+      "weightPct": 60,
+      "weightNote": "to be computed with Laboratory grade; 100% for purely lecture classes only",
       "items": [
        {
         "item": "Quizzes",
@@ -4087,7 +4178,14 @@
         "item": "Exam",
         "source": "Written Examination",
         "pct": 50
-       },
+       }
+      ]
+     },
+     {
+      "name": "Laboratory",
+      "weightPct": 40,
+      "weightNote": "",
+      "items": [
        {
         "item": "Quizzes",
         "source": "Laboratory Exercises",
@@ -4103,12 +4201,12 @@
     ]
    },
    "courseRequirements": [
-    "- Written Quizzes",
-    "- Laboratory Exercises",
-    "- Laboratory Examinations",
-    "- Periodical Examinations",
-    "- Group Research/ Projects",
-    "- Course Portfolio"
+    "Written Quizzes",
+    "Laboratory Exercises",
+    "Laboratory Examinations",
+    "Periodical Examinations",
+    "Group Research/ Projects",
+    "Course Portfolio"
    ],
    "officialMeta": {
     "departmentLabel": "Information Technology",
@@ -4504,12 +4602,41 @@
     ]
    },
    "grading": {
-    "components": []
+    "components": [
+     {
+      "name": "Lecture",
+      "weightPct": 100,
+      "weightNote": "",
+      "items": [
+       {
+        "item": "Quizzes",
+        "source": "Written Quiz Scores",
+        "pct": 20
+       },
+       {
+        "item": "Class Participation",
+        "source": "Recitation Scores, Attendance Record",
+        "pct": 10
+       },
+       {
+        "item": "Other Requirements",
+        "source": "Assessment Task/Exercises",
+        "pct": 20
+       },
+       {
+        "item": "Exam",
+        "source": "Periodical Exam Scores",
+        "pct": 50
+       }
+      ]
+     }
+    ]
    },
    "courseRequirements": [
     "Written Quizzes",
     "Periodical Exam",
-    "Assessment Task/Exercises Course Portfolio"
+    "Assessment Task/Exercises",
+    "Course Portfolio"
    ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
@@ -4829,9 +4956,42 @@
     ]
    },
    "grading": {
-    "components": []
+    "components": [
+     {
+      "name": "Lecture",
+      "weightPct": 100,
+      "weightNote": "",
+      "items": [
+       {
+        "item": "Quizzes",
+        "source": "Written Quiz Scores",
+        "pct": 20
+       },
+       {
+        "item": "Class Participation",
+        "source": "Recitation Scores, Attendance Record",
+        "pct": 10
+       },
+       {
+        "item": "Other Requirements",
+        "source": "Assessment Task/Exercises",
+        "pct": 20
+       },
+       {
+        "item": "Exam",
+        "source": "Periodical Exam Scores",
+        "pct": 50
+       }
+      ]
+     }
+    ]
    },
-   "courseRequirements": [],
+   "courseRequirements": [
+    "Written Quizzes",
+    "Periodical Exam",
+    "Assessment Task/Exercises",
+    "Course Portfolio"
+   ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
     "creditUnits": "3",
@@ -5256,7 +5416,13 @@
      }
     ]
    },
-   "courseRequirements": [],
+   "courseRequirements": [
+    "Written Quizzes",
+    "Periodical Examinations",
+    "Class Participation",
+    "Group Research/ Projects",
+    "Course Portfolio"
+   ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
     "creditUnits": "3 UNITS",
@@ -5669,29 +5835,24 @@
       "weightNote": "",
       "items": [
        {
-        "item": "Written Quiz Scores",
-        "source": "",
+        "item": "Quizzes",
+        "source": "Written Quiz Scores",
         "pct": 20
        },
        {
-        "item": "Recitation Scores/ Attendance",
-        "source": "",
+        "item": "Class Participation",
+        "source": "Recitation Scores/ Attendance",
         "pct": 10
        },
        {
-        "item": "Group Research/ Project Rubrics",
-        "source": "",
+        "item": "Other Requirements",
+        "source": "Group Research/ Project Rubrics",
         "pct": 20
        },
        {
-        "item": "Periodical Examination Scores",
-        "source": "",
+        "item": "Exam",
+        "source": "Periodical Examination Scores",
         "pct": 50
-       },
-       {
-        "item": "we e-tng gsi arp mine nt epg nee ee ee EN NRE Sas Rend it nein MARES AEE Ae So ie fantnn SEMRES RLO S a ee re",
-        "source": "",
-        "pct": 100
        }
       ]
      },
@@ -5701,8 +5862,8 @@
       "weightNote": "",
       "items": [
        {
-        "item": "Laboratory Exercises",
-        "source": "",
+        "item": "Quizzes",
+        "source": "Laboratory Exercises",
         "pct": 40
        },
        {
@@ -5714,7 +5875,13 @@
      }
     ]
    },
-   "courseRequirements": [],
+   "courseRequirements": [
+    "Written Quizzes",
+    "Periodical Examinations",
+    "Class Participation",
+    "Group Research/ Projects",
+    "Course Portfolio"
+   ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
     "creditUnits": "3 UNITS",
@@ -6146,7 +6313,12 @@
      }
     ]
    },
-   "courseRequirements": [],
+   "courseRequirements": [
+    "Written Quizzes",
+    "Periodical Exam",
+    "Assessment Task/Exercises",
+    "Course Portfolio"
+   ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
     "creditUnits": "3",
@@ -6665,8 +6837,13 @@
      {
       "name": "Lecture",
       "weightPct": 60,
-      "weightNote": "",
+      "weightNote": "to be computed with Laboratory grade; 100% for purely lecture classes only",
       "items": [
+       {
+        "item": "Quizzes",
+        "source": "Written Quizzes",
+        "pct": 20
+       },
        {
         "item": "Class Participation",
         "source": "Recitation/Class Discussion",
@@ -6674,8 +6851,13 @@
        },
        {
         "item": "Other Requirements",
-        "source": "Exam",
+        "source": "Activities/Project/Seatworks",
         "pct": 20
+       },
+       {
+        "item": "Exam",
+        "source": "Periodical Examination",
+        "pct": 50
        }
       ]
      },
@@ -6685,9 +6867,14 @@
       "weightNote": "",
       "items": [
        {
+        "item": "Quizzes",
+        "source": "Laboratory Exercises",
+        "pct": 40
+       },
+       {
         "item": "Exam",
-        "source": "| Total",
-        "pct": 100
+        "source": "Laboratory Exam",
+        "pct": 60
        }
       ]
      }
@@ -8070,12 +8257,48 @@
     }
    ],
    "referenceGroups": {
-    "textbooks": [],
-    "onlineResources": [],
-    "journals": []
+    "textbooks": [
+     "3G E-Learning. (2020). Software Testing and User Experience. 3G E-Learning.",
+     "Schwalbe. (2019). Information Technology Project Management 9th Edition.",
+     "Reynolds, George W. (2019). Ethics in Information Technology. 6e.",
+     "Kaul, Neha. (2020). Software security: building secure software applications.",
+     "Massingham, Peter. (2020). Knowledge Management: Theory in Practice.",
+     "3G E-Learning. (2020). Data Structure and Algorithm, 2e",
+     "Malik, D.S. (2019). C++ programming including data structure.",
+     "McFadden, Mark. (2020). Introduction to Human-Computer Interaction"
+    ],
+    "onlineResources": [
+     "E-Books Subscription (https://bookshelf.vitalsource.com)",
+     "E-Journal Subscription (https://link.gale.com/apps/menu?u=phpnc)",
+     "Electronic Journal of Computer Science and Information Technology (eJCSIT)",
+     "Information Technology and Libraries",
+     "Journal of Computer Science & Technology"
+    ],
+    "journals": [
+     "M.S.M. Rizwan., & A.R. Fahmitah Nass. (2022). Factors Affecting Undergraduates' Difficulties in Writing Thesis. https://doi.org/10.55248/gengpi.2022.3.10.14",
+     "Khasanova Zarina Muhammadolimovna. (2023). Methods of Developing Academic Writing Skills of Students. American Journal of Pedagogical and Educational Research, 8, 149–154. Retrieved from https://www.americanjournal.org/index.php/ajper/article/view/374"
+    ]
    },
    "grading": {
-    "components": []
+    "components": [
+     {
+      "name": "Course Grade",
+      "weightPct": 100,
+      "weightNote": "",
+      "items": [
+       {
+        "item": "Requirements Submission",
+        "source": "Weekly submission of research requirements",
+        "pct": 30
+       },
+       {
+        "item": "Oral Defense",
+        "source": "Research presentation and oral defense",
+        "pct": 70
+       }
+      ]
+     }
+    ]
    },
    "courseRequirements": [],
    "officialMeta": {
@@ -8561,8 +8784,8 @@
       "weightNote": "",
       "items": [
        {
-        "item": "Written Quizzes",
-        "source": "",
+        "item": "Quizzes",
+        "source": "Written Quizzes",
         "pct": 20
        },
        {
@@ -8585,7 +8808,12 @@
     ]
    },
    "courseRequirements": [
-    "Written Quiz, Recitation, Group Discussion, Presentation of Case Study, Periodical Examination,Course Portfolio"
+    "Written Quiz",
+    "Recitation",
+    "Group Discussion",
+    "Presentation of Case Study",
+    "Periodical Examination",
+    "Course Portfolio"
    ],
    "officialMeta": {
     "departmentLabel": "Computer Science",
@@ -9057,13 +9285,13 @@
         "pct": 10
        },
        {
-        "item": "ie | | |",
-        "source": "Other Requirements",
+        "item": "Other Requirements",
+        "source": "Case Study, Presentation",
         "pct": 20
        },
        {
-        "item": "Written Periodical Exams",
-        "source": "",
+        "item": "Exam",
+        "source": "Written Periodical Exams",
         "pct": 50
        }
       ]
@@ -9071,7 +9299,12 @@
     ]
    },
    "courseRequirements": [
-    "Written Quiz, Recitation, Group Discussion, Presentation of Case Study, Periodical Examination,Course Portfolio"
+    "Written Quiz",
+    "Recitation",
+    "Group Discussion",
+    "Presentation of Case Study",
+    "Periodical Examination",
+    "Course Portfolio"
    ],
    "officialMeta": {
     "departmentLabel": "Information Technology",
@@ -9378,14 +9611,13 @@
     ],
     "onlineResources": [],
     "journals": [
-     "Arif, M., Aslam, M., & Hussain, M. (2019). Performance evaluation of Android applications using mobile cloud computing. International Journal of Advanced Computer Science and Applications (IJACSA), 10(5), 242-249. https://doi.org/10.14569/IJACSA.2019.0100532",
-     "Bhandari, R., & Kaur, G. (2021). Developing secure Android applications: Issues and best practices. International Journal of Computer Applications, 483(23), 17-23. https://doi.org/10.5120/jca2021921493",
-     "Banuri, S. H., & Bhatti, A. (2020). Impact of Android architecture components on mobile app development productivity. Journal of Mobile Computing and Application (JMCA), 5(2), 55-62.",
-     "Shah, N., & Patel, R. (2020). Comparative study of networking libraries in Android application development. International Journal of Scientific & Technology",
-     "Suri, B., & Chaudhary, R. (2018). Android app development: An empirical analysis on app performance and user experience. International Journal of Computer Sciences and Engineering, 6(12), 435-440. https://doi.org/10.26438/ijcse/v6i12.435440 oo hie tape ee ae eer ee Be : — ot ae ; : i ae : i : ' - 4 Re a se",
-     "Sharma, A., & Singh, S. (2022). A study on testing approaches and automation tools for Android applications. International Journal of Innovative Technology and Exploring Engineering (IJITEE), 11(5), 92-96. https://doi.org/10.35940/ijitee.E3312.0211522",
-     "Panda, P., & Ray, A. (2021). Use of Kotlin for modern Android development: Performance and developer experience. International Journal of Emerging Trends in Engineering Research, 9(4), 404409. https://doi.org/10.30534/ijeter/2021/04942021",
-     "bo ee NS ec Ses a a = a ste ae: —— SC _"
+     "Arif, M., Aslam, M., & Hussain, M. (2019). Performance evaluation of Android applications using mobile cloud computing. International Journal of Advanced Computer Science and Applications (IJACSA), 10(5), 242–249. https://doi.org/10.14569/IJACSA.2019.0100532",
+     "Bhandari, R., & Kaur, G. (2021). Developing secure Android applications: Issues and best practices. International Journal of Computer Applications, 183(23), 17–23. https://doi.org/10.5120/ijca2021921493",
+     "Banuri, S. H., & Bhatti, A. (2020). Impact of Android architecture components on mobile app development productivity. Journal of Mobile Computing and Application (JMCA), 5(2), 55–62.",
+     "Shah, N., & Patel, R. (2020). Comparative study of networking libraries in Android application development. International Journal of Scientific & Technology Research, 9(4), 1192–1195.",
+     "Suri, B., & Chaudhary, R. (2018). Android app development: An empirical analysis on app performance and user experience. International Journal of Computer Sciences and Engineering, 6(12), 435–440. https://doi.org/10.26438/ijcse/v6i12.435440",
+     "Sharma, A., & Singh, S. (2022). A study on testing approaches and automation tools for Android applications. International Journal of Innovative Technology and Exploring Engineering (IJITEE), 11(5), 92–96. https://doi.org/10.35940/ijitee.E3312.0211522",
+     "Panda, P., & Ray, A. (2021). Use of Kotlin for modern Android development: Performance and developer experience. International Journal of Emerging Trends in Engineering Research, 9(4), 404–409. https://doi.org/10.30534/ijeter/2021/04942021"
     ]
    },
    "grading": {
@@ -9395,11 +9627,6 @@
       "weightPct": 60,
       "weightNote": "",
       "items": [
-       {
-        "item": "ae ee | i | Ee * 4 : oo | Eo.. of Bec 8 ed ie ad",
-        "source": "",
-        "pct": 60
-       },
        {
         "item": "Quizzes",
         "source": "Written Quizzes",
@@ -9442,15 +9669,15 @@
     ]
    },
    "courseRequirements": [
-    "In order to pass the course: the students are expected to:",
-    "e Attend the face to face meetings when called for;",
-    "e Take and pass all the quizzes and examination with proper permit for major examination;",
-    "e Complete and submit in due time assigned tasks, projects and researches;",
-    "e Final Project.",
-    "e Student Portfolio",
-    "e Abide by the student's ethical role and character values in and out of the class;",
-    "e Participate and join in all the activities of the College of Computing Studies and the University; and",
-    "e Observe the Cabuyao University Core values at all time."
+    "In order to pass the course, the students are expected to:",
+    "• Attend the face to face meetings when called for;",
+    "• Take and pass all the quizzes and examination with proper permit for major examination;",
+    "• Complete and submit in due time assigned tasks, projects and researches;",
+    "• Final Project.",
+    "• Student Portfolio",
+    "• Abide by the student's ethical role and character values in and out of the class;",
+    "• Participate and join in all the activities of the College of Computing Studies and the University; and",
+    "• Observe the Cabuyao University Core values at all times."
    ],
    "officialMeta": {
     "departmentLabel": "Information Technology",
@@ -9849,23 +10076,39 @@
    "referenceGroups": {
     "textbooks": [
      "3G E-learning (2022). Computer systems and architecture. 3G E-learning LLC.",
-     "Bidgoli, H. (2021). MIS 10 Ed., MA., Cengage Learning.",
+     "Bidgoli, H. (2021). MIS 10th Ed., MA., Cengage Learning.",
      "Panek, C. (2020). Security fundamentals.",
-     "Revere, S. (2020). Cloud computing: concepts and technology."
+     "Revere, S. (2020). Cloud computing: concepts and technology.",
+     "Schwalbe, K. (2019) Information technology project management."
     ],
-    "onlineResources": [],
-    "journals": []
+    "onlineResources": [
+     "Adepoju, A. H., Eweje, A., Collins, A., & Austin-Gabriel, B. (2024). Framework for migrating legacy systems to next-generation data architectures while ensuring seamless integration and scalability. International Journal of Multidisciplinary Research and Growth Evaluation, 5(6), 1462-1474.",
+     "Hassan, M. U., Rehmani, M. H., & Chen, J. (2019). Privacy preservation in blockchain based IoT systems: Integration issues, prospects, challenges, and future research directions. Future Generation Computer Systems, 97, 512-529.",
+     "Aldoseri, A., Al-Khalifa, K. N., & Hamouda, A. M. (2023). Re-thinking data strategy and integration for artificial intelligence: concepts, opportunities, and challenges. Applied Sciences, 13(12), 7082.",
+     "Boy, G. A. (2023). Human-Systems Integration. In The Palgrave Encyclopedia of the Possible (pp. 675-685). Cham: Springer International Publishing.",
+     "Kong, L., Li, W., Zhang, T., Ma, H., Cao, Y., Wang, K., ... & Huang, W. (2024). Wireless technologies in flexible and wearable sensing: from materials design, system integration to applications. Advanced Materials, 36(27), 2400333.",
+     "Mulaydinov, F. M. (2024). Integrated information systems in industrial enterprises and business activities. University Research Base.",
+     "Odionu, C. S., Adepoju, P. A., Ikwuanusi, U. F., Azubuike, C., & Sule, A. K. (2024). The role of enterprise architecture in enhancing digital integration and security in higher education. International Journal of Engineering Research and Development, 20(12), 392-398.",
+     "Shobhana, N. (2024). AI-powered supply chains towards greater efficiency. In Complex AI dynamics and interactions in management (pp. 229-249). IGI Global Scientific Publishing.",
+     "Solano, M. C., & Cruz, J. C. (2024). Integrating analytics in enterprise systems: A systematic literature review of impacts and innovations. Administrative Sciences, 14(7), 138.",
+     "Yammanur, V. (2025). Integrated Enterprise Systems: Leveraging ERP, EDI, and AI for Enhanced US Business Competitiveness. International Journal of Computer Engineering and Technology, 16, 454-466."
+    ],
+    "journals": [
+     "Kunduru, A. R. (2023). Blockchain Technology for ERP Systems: A Review. American Journal of Engineering, Mechanics and Architecture, 1(7), 56-63.",
+     "Vellela, S. S., Reddy, B. V., Chaitanya, K. K., & Rao, M. V. (2023, January). An integrated approach to improve e-healthcare system using dynamic cloud computing platform. In 2023 5th International Conference on Smart Systems and Inventive Technology (ICSSIT) (pp. 776-782). IEEE.",
+     "Dela Cruz, R. Z., & Ortega-Dela Cruz, R. A. (2021). Addressing facility management issues and challenges common among public health care institutions in a developing country. International Journal of Healthcare Management, 14(1), 107-113."
+    ]
    },
    "grading": {
     "components": [
      {
       "name": "Lecture",
       "weightPct": 60,
-      "weightNote": "",
+      "weightNote": "to be computed with Laboratory grade; 100% for purely lecture classes only",
       "items": [
        {
         "item": "Quizzes",
-        "source": "Assessment item",
+        "source": "Laboratory Exercise Rubrics",
         "pct": 20
        },
        {
@@ -10336,16 +10579,18 @@
    ],
    "referenceGroups": {
     "textbooks": [
-     "West, ComptiA Cloud+ Guide to Cloud Computing Ist Edition. Cengage Learning. 2020",
+     "West. CompTIA Cloud+ Guide to Cloud Computing 1st Edition. Cengage Learning. 2020",
      "Friedrichsen, Lisa... et al., Concepts of Database Management (MindTap Course List) 10th Edition. Cengage Learning. 2020",
-     "Revere, Sam, Cloud Computing: Concepts and Technology. Larsen and Keller Education, 2020",
-     "Abante, Marmelo...et al., MySQL.. Mindshapers. 2019",
+     "Revere, Sam, Cloud Computing: Concepts and Technology. Larsen and Keller Education. 2020",
+     "Abante, Marmelo...et al., MySQL. Mindshapers. 2019",
      "Pomperada, Jakew R., Introduction to C# programming. Mindshapers. 2018"
     ],
     "onlineResources": [
-     "Khan, Wisal, et al., SQL and NoSQL Database Software Architecture Performance Analysis and Assessment—A Systematic Literature Review. Retrieved August 28, 2023, from https://www.mdpi.com/2504-2289/7/2/97",
-     "mysaltutorial. MySQL Tutorial for Developers. Retrieved August 17, 2023, from https:/ /www.mysaqitutorial.org/ w3schools. DBMS Tutorial. Retrieved August 17, 2023, from https://www.w3schools.in/doms",
-     "dev.mysql. MySQL 8.0 Reference Manual. Retrieved August 17, 2023, from https://dev.mysql.com/doc/refman/8.0/en/ mongodb. What is NoSQL?. Retrieved August 17, 2023, https://www.mongodb.com/nosql-explained/"
+     "Khan, Wisal, et al., SQL and NoSQL Database Software Architecture Performance Analysis and Assessments—A Systematic Literature Review. Retrieved August 28, 2023, from https://www.mdpi.com/2504-2289/7/2/97",
+     "mysqltutorial. MySQL Tutorial for Developers. Retrieved August 17, 2023, from https://www.mysqltutorial.org/",
+     "w3schools. DBMS Tutorial. Retrieved August 17, 2023, from https://www.w3schools.in/dbms",
+     "dev.mysql. MySQL 8.0 Reference Manual. Retrieved August 17, 2023, from https://dev.mysql.com/doc/refman/8.0/en/",
+     "mongodb. What is NoSQL?. Retrieved August 17, 2023, https://www.mongodb.com/nosql-explained/"
     ],
     "journals": []
    },
@@ -10354,13 +10599,8 @@
      {
       "name": "Lecture",
       "weightPct": 60,
-      "weightNote": "",
+      "weightNote": "to be computed with Laboratory grade; 100% for purely lecture classes only",
       "items": [
-       {
-        "item": "ER Se RR Ae a | REM Uees aeons een Ase gs Neal De eas ccorates ony rth tae a ik aic koe beeticc Cha AN aes eer tere ee | | Witenes w arte cece tcc Aeon Sats a eas Wp sheer hes Ae ie arene on oe ee rae ei Ls pa Nt See a ae ee ee re NON CHC AF coe Dis eet ie Ma bee aes gee eae z | | RUSE? TeV Ua cs SRE gaat pee, oe Fos coed eu caon nous | Fs ah eer oe ee cclae ECe hCcar pareae B Ma eit Oban ta needs nec Sea Peer Orn t Meise a eerie Spas Se oe etd BE OES eR eee RL, are He co BEN eS Sirens 5 ptt meee ee | A a eg eee ties Het Spica wora Noe E RietbeemeniCtc nigtsacouh uit cms name es wet Ae) aie eae tactic cance: aeteec anne Pasay | eae esha be Sait i ulsnaay | peatira eae acne Spicy Sbeapras “g0Sayy eae ge Neonat yy eagle | PRs SL aces tind ce nae easton eats | were eases ees, Sapeatee eLenL on ‘cinder cr aa amen may gesice, er eet MUSA ha Se ia a et area 3 ee eer nr 1 Rae ane EE Ey GUA SME z | | EMME RAL A SM BEY A y's cots pt Weasel State, Seer Rae eter Sausage ag tht fete eater rd oe VS eat oon ab Cer bea eee e Oe Qe are S| PCN ya eee ae erica a | chen aoa ico One ena ne anne a is | eB eRe ne RR LAMM mit Aree Ec Mest cuir fry She ene geh yee Webi ake ae on ing | NSO Seay Seis naych hate gee ae UB ARCOM say Sime eats ele era ase 7 & 4 Piped SNS Sgt Se gens shes suka hl ga comet Soy MMW Cre Oke es ees eae ad [eRe ODEN atte ee ee need LR TRA SIGs ret eB) Meaar diel itd re ay hie Geese eras taae eee Ry teenn ea ty ttn Fob REE rp te ae see Narada Maw meat pes tt os oy BE SSO eerie NON ary eS heey AES SE ke CS a ates SR AS eT ca at eta Pk Raia ‘Aepeeaer Ss poeta ck tatu Sey See Ror sare ae esl een ee tiie a Ba NRE Sorina, Stage cei eres MOND Bigs Vay tLe ean eae «oa eae ee S| DAPSONE C ho ek Manian ecnier mn nen tet et SHI ORS AL esd ROU al ROE S0 7a OO ER ee Ea PRR cei OR Samy Spee ee | | Beare a sh lactate is asain a Mg ich eta ein Si e ah Pape Neen Bak PCRS Bec aaa cath Sere eM ana e Sg ta Ls Sta tet yee se te cs i Fae R ieee ai Tae eRe aD ouce aarti ie Fa CC coe cnn eat eel Hehe re ESN a orl aeRO Reve parietal a eS Geeta aie MeN viltar NL sia peel gee Cesar a ot ee BSS arent ask Cobie oh aia turn t oar ue eae heater | RRP eae 1 AHEN OES aU iio ere SE RET i ad UR RPRRES de aR a eae aa et kg | 1 Rioters Sota eer | Aba trenie en ciai PRBS Once eee Ae were, eas BEE Noes) Bae Naecr i iat gg adevr a ES ck cone enema rar | Be ae ep AEN SS Nia inet, PSO ENC SR san Beeson; poe cueneu Cans | Become, tind een Ra eee Maren d Bere ae eR EN Ae ‘Becker cate ae RSet esc cg. See ee as ga pate oR eet ee) ice pete ee Ber Senso MLR ie erage Sead eee RE Gee ee EN. I EPS SCALG Ad a haa a Oa Uae Slatin ee pi, ules eagea nat ASSN eS UE Sag Res th ALO Sh LORIE EE AM",
-        "source": "Assessment Grade Source Percentage item Quizzes Written Quizzes 20% Class Recitation 10% Participation Other Research Project/Case 20% Requirements Studies Exam Written Examination 50% Total 100% Laboratory (40%) Assessment Grade Source Percenta item ge Quizzes Laboratory 40% Exercises Exam Laboratory 60% Exam Total 100% Attendance will be considered as basis for dropping students. Below is the table showing the maximum number of absences against number of meetings per week.",
-        "pct": 20
-       },
        {
         "item": "Quizzes",
         "source": "Written Quizzes",
@@ -11795,14 +12035,56 @@
     }
    ],
    "referenceGroups": {
-    "textbooks": [],
-    "onlineResources": [],
-    "journals": []
+    "textbooks": [
+     "3G E-Learning. (2020). Software Testing and User Experience. 3G E-Learning.",
+     "Kaul, Neha. (2020). Software security: building secure software applications.",
+     "Massingham, Peter. (2020). Knowledge Management: Theory in Practice.",
+     "McFadden, Mark. (2020). Introduction to Human-Computer Interaction"
+    ],
+    "onlineResources": [
+     "E-Books Subscription (https://bookshelf.vitalsource.com)",
+     "E-Journal Subscription (https://link.gale.com/apps/menu?u=phpnc)",
+     "Electronic Journal of Computer Science and Information Technology (eJCSIT)",
+     "Information Technology and Libraries",
+     "Journal of Computer Science & Technology"
+    ],
+    "journals": [
+     "M.S.M. Rizwan., & A.R. Fahmitah Nass. (2022). Factors Affecting Undergraduates' Difficulties in Writing Thesis. https://doi.org/10.55248/gengpi.2022.3.10.14",
+     "Khasanova Zarina Muhammadolimovna. (2023). Methods of Developing Academic Writing Skills of Students. American Journal of Pedagogical and Educational Research, 8, 149–154. Retrieved from https://www.americanjournal.org/index.php/ajper/article/view/374"
+    ]
    },
    "grading": {
-    "components": []
+    "components": [
+     {
+      "name": "Course Grade",
+      "weightPct": 100,
+      "weightNote": "",
+      "items": [
+       {
+        "item": "Requirements Submission",
+        "source": "Weekly Submission of Research Requirements",
+        "pct": 30
+       },
+       {
+        "item": "Class Participation",
+        "source": "Recitation Scores/ Attendance Record",
+        "pct": 10
+       },
+       {
+        "item": "Oral Defense",
+        "source": "Oral Presentation and Defense",
+        "pct": 60
+       }
+      ]
+     }
+    ]
    },
-   "courseRequirements": [],
+   "courseRequirements": [
+    "Manuscript (Soft and Hard Copy: Hard Bound / Soft Bound)",
+    "Software / Application Installer",
+    "User's Manual",
+    "Fillable Forms and Letters"
+   ],
    "officialMeta": {
     "departmentLabel": "Information Technology",
     "creditUnits": "3 UNITS",

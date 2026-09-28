@@ -376,7 +376,10 @@
         } else if (s.type === 'staticAttendanceTable') {
           body = htmlAttendance(data);
         } else if (s.type === 'list') {
-          body = (data[s.source] || []).map((v) => `<p>${escapeHtml(v)}</p>`).join('') || '<p class="t-muted">None listed yet.</p>';
+          // Some official forms have no such row (e.g. Course Requirements
+          // in CSP114/ITP103) — leave it out instead of printing a blank row.
+          if (!(data[s.source] || []).length) continue;
+          body = (data[s.source] || []).map((v) => `<p>${escapeHtml(v)}</p>`).join('');
         } else if (s.type === 'classPolicies') {
           const cp = get(data, 'orgProfile.classPolicies', {});
           body = `<p class="oo-sub">${escapeHtml(cp.attendanceHeading || 'Class Attendance')}</p><p>${escapeHtml(cp.attendanceText || '')}</p>
@@ -758,6 +761,7 @@
           innerTable(rule.columns || [], rule.rows || [], [150, 180]);
         });
       } else if (s.type === 'list') {
+        if (!(data[s.source] || []).length) continue;
         block(bottomLabel(s), () => {
           const items = data[s.source] || [];
           lines(items.length ? items.map((v) => P(v)) : [P('None listed yet.')]);
