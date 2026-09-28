@@ -178,11 +178,21 @@ function applyOfficialTemplates(db, data, store) {
       id: store.nextId('tpl'), code: 'CCS-OBTLP-V1', name: 'CCS OBTLP (College of Computing Studies)',
       departmentId: dept.id, programId: '', version: '1',
       formCode: 'PNC:AA-FO-06 rev.2 08182023', effectivityText: EFFECTIVITY,
-      active: true, sections: TEMPLATE_SECTIONS, createdAt: now, updatedAt: now
+      active: true, madeDepartmentWide: true, sections: TEMPLATE_SECTIONS, createdAt: now, updatedAt: now
     };
     db.obtlpTemplates.push(tpl); changed = true; log('OBTLP template CCS-OBTLP-V1 created');
-  } else if (!tpl.formCode) {
-    tpl.formCode = 'PNC:AA-FO-06 rev.2 08182023'; changed = true;
+  } else {
+    if (!tpl.formCode) { tpl.formCode = 'PNC:AA-FO-06 rev.2 08182023'; changed = true; }
+    // The first CCS101 seed pinned this form to BSIT only. It is the same
+    // official PnC form for every CCS course, so make it department-wide
+    // (once — an admin can still pin it to a program afterwards).
+    if (!tpl.madeDepartmentWide) {
+      tpl.programId = '';
+      tpl.departmentId = tpl.departmentId || dept.id;
+      tpl.madeDepartmentWide = true;
+      tpl.updatedAt = now;
+      changed = true; log('OBTLP template CCS-OBTLP-V1 now applies to all CCS programs');
+    }
   }
 
   // --- course templates -----------------------------------------------------

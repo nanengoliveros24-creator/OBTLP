@@ -1255,7 +1255,7 @@
                 <tr>
                   <td class="cell-strong">${t.code}</td>
                   <td class="t-muted">${t.name}</td>
-                  <td class="t-muted">${prog ? prog.code : '—'}</td>
+                  <td class="t-muted">${prog ? prog.code : (t.departmentId ? 'All programs' : '—')}</td>
                   <td class="t-muted">${t.version || '—'}</td>
                   <td><button type="button" class="badge ${t.active ? 'badge-approved' : 'badge-draft'}" data-toggle-template="${t.id}" style="cursor:pointer;border:none;">${t.active ? 'Active' : 'Inactive'}</button></td>
                   <td>
