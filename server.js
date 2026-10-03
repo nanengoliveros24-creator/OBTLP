@@ -204,6 +204,42 @@ function startSession(db, user) {
   return { status: 200, data: { token: session.token, user: stripPassword(user) } };
 }
 
+// What each role may see about OTHER accounts. Your own record is always
+// returned in full (the Profile page needs it). IT Administrators manage
+// accounts, so they see usernames/emails; College Administrators only need
+// a name to show who submitted a portfolio; faculty see no one else.
+function visibleUsers(db, me) {
+  const users = db.users || [];
+  if (me.role === 'it') return users.map(stripPassword);
+  if (me.role === 'admin') {
+    return users.map((u) => (u.id === me.id ? stripPassword(u) : { id: u.id, name: u.name, role: u.role }));
+  }
+  return [stripPassword(me)];
+}
+
+function countIt(db) {
+  return (db.users || []).filter((u) => u.role === 'it').length;
+}
+
+// The account created from DEFAULT_IT_EMAIL is the system's built-in IT
+// Administrator. Other IT Administrators can't delete it, demote it, or
+// reset its password — only its owner can change it (from Profile).
+function assertNotProtected(target, ctx, what) {
+  if (target.isDefaultAdmin && target.id !== ctx.user.id) {
+    throw { status: 403, message: `The default IT Administrator account can't be ${what} by another user.` };
+  }
+}
+
+// Emails a short security notice (account removed, password reset). Never
+// fails the request: the change is already saved, and email may be off
+// (local dev / tests) — then it's just skipped.
+function accountNotice(user, subject, lines) {
+  const to = userEmail(user);
+  if (!to || (!mailer.brevoConfigured() && !mailer.devLogMode())) return null;
+  return () => mailer.sendNoticeEmail(to, user.name, subject, lines)
+    .catch((e) => console.error('[mailer] notice not sent:', (e && e.message) || e));
+}
+
 function findUserByUsername(db, username) {
   const needle = String(username || '').trim().toLowerCase();
   return (db.users || []).find((u) => String(u.username || '').toLowerCase() === needle);
@@ -491,8 +527,10 @@ const routes = {
         name,
         username,
         role,
+        createdVia: 'setup',
         passwordHash: auth.hashPassword(password)
       };
+      if (isEmail(username)) user.email = username.toLowerCase();
       db.users = [user];
       pushAudit(db, { actor: user.id, action: 'user-create', portfolioId: null, detail: `Created initial ${user.role} account ${user.username}` });
       const session = auth.newSession(user.id);
@@ -518,26 +556,30 @@ const routes = {
       if (password.length < 6) {
         throw { status: 400, message: 'Password must be at least 6 characters.' };
       }
-      if (findUserByUsername(db, username)) {
-        throw { status: 409, message: 'An account with that email/username already exists.' };
+      // Sign-in codes are emailed, so every new account needs a real email.
+      if (!isEmail(username)) {
+        throw { status: 400, message: 'Please use your email address (e.g. your Gmail) — sign-in codes are sent there.' };
       }
-      // Public self-registration creates an account with the requested role
-      // (Faculty, System Administrator, or IT Administrator); anything
-      // outside those three falls back to Faculty.
-      const requestedRole = String(body.role || '').toLowerCase();
-      const role = isRole(requestedRole) ? requestedRole : 'faculty';
+      if (findUserByUsername(db, username) || (db.users || []).some((u) => userEmail(u) === username.toLowerCase())) {
+        throw { status: 409, message: 'An account with that email already exists.' };
+      }
+      // Public sign-up is for faculty only. College Administrator and IT
+      // Administrator accounts are created by an IT Administrator from the
+      // User Accounts page (and the first IT Administrator comes from the
+      // DEFAULT_IT_* settings — see ensureDefaultItAdmin). Any role sent
+      // here is ignored, so nobody can give themselves admin rights.
       const user = {
         id: store.nextId('u'),
         name,
         username,
-        role,
+        email: username.toLowerCase(),
+        role: 'faculty',
+        createdVia: 'register',
         passwordHash: auth.hashPassword(password)
       };
-      if (isEmail(username)) user.email = username.toLowerCase();
       if (!db.users) db.users = [];
       db.users.push(user);
-      const roleLabel = { faculty: 'faculty', admin: 'System Administrator', it: 'IT Administrator' }[role];
-      pushAudit(db, { actor: user.id, action: 'user-create', portfolioId: null, detail: `Registered new ${roleLabel} account ${user.username}` });
+      pushAudit(db, { actor: user.id, action: 'user-create', portfolioId: null, detail: `Registered new faculty account ${user.username}` });
       const session = auth.newSession(user.id);
       if (!db.sessions) db.sessions = [];
       db.sessions.push(session);
@@ -702,7 +744,8 @@ const routes = {
         throw { status: 400, message: 'Current and new password are required.' };
       }
       if (!auth.verifyPassword(currentPassword, ctx.user.passwordHash)) {
-        throw { status: 401, message: 'Your current password is incorrect.' };
+        // 403, not 401: the browser treats 401 as "session expired" and signs out.
+        throw { status: 403, message: 'Your current password is incorrect.' };
       }
       if (newPassword.length < 6) {
         throw { status: 400, message: 'New password must be at least 6 characters.' };
@@ -728,7 +771,7 @@ const routes = {
       return {
         status: 200,
         data: {
-          users: isStaff ? (db.users || []).map(stripPassword) : [stripPassword(ctx.user)],
+          users: visibleUsers(db, ctx.user),
           portfolios,
           allPortfolios: isStaff ? (db.portfolios || []) : [],
           notifications,
@@ -1422,17 +1465,21 @@ const routes = {
         throw { status: 400, message: 'Name, username, and role are required.' };
       }
       if (!isRole(body.role)) throw { status: 400, message: 'Role must be one of: faculty, admin, it.' };
-      if (findUserByUsername(db, username)) throw { status: 409, message: 'A user with that username already exists.' };
+      if (!isEmail(username)) throw { status: 400, message: 'Use the person\'s email address as the username — sign-in codes are sent there.' };
+      if (findUserByUsername(db, username) || (db.users || []).some((u) => userEmail(u) === username.toLowerCase())) {
+        throw { status: 409, message: 'A user with that email already exists.' };
+      }
       const password = body.password && String(body.password).length >= 6 ? String(body.password) : auth.makeToken().slice(0, 12);
       const user = {
         id: store.nextId('u'),
         name,
         username,
         role: String(body.role).toLowerCase(),
+        email: username.toLowerCase(),
+        createdVia: 'it-admin',
         passwordHash: auth.hashPassword(password)
       };
       if (!db.users) db.users = [];
-      if (isEmail(username)) user.email = username.toLowerCase();
       db.users.push(user);
       pushAudit(db, { actor: ctx.user.id, action: 'user-create', portfolioId: null, detail: `Created user ${user.username} (${user.role})` });
       return { status: 201, data: Object.assign(stripPassword(user), body.password ? {} : { temporaryPassword: password }) };
@@ -1452,14 +1499,39 @@ const routes = {
         const existing = findUserByUsername(db, body.username);
         if (existing && existing.id !== u.id) throw { status: 409, message: 'A user with that username already exists.' };
       }
-      ['name', 'username', 'role'].forEach((k) => {
-        if (body[k] !== undefined) u[k] = k === 'role' ? String(body[k]).toLowerCase() : String(body[k]);
+      if (body.username !== undefined && String(body.username).trim().toLowerCase() !== String(u.username).toLowerCase()) {
+        assertNotProtected(u, ctx, 'renamed');
+      }
+      const newRole = body.role !== undefined ? String(body.role).toLowerCase() : u.role;
+      if (newRole !== u.role) {
+        assertNotProtected(u, ctx, 'changed to another role');
+        if (u.id === ctx.user.id) throw { status: 400, message: 'You can\'t change your own role.' };
+        if (u.role === 'it' && countIt(db) <= 1) {
+          throw { status: 400, message: 'This is the only IT Administrator. Add another one before changing this role.' };
+        }
+      }
+      const oldRole = u.role;
+      ['name', 'username'].forEach((k) => {
+        if (body[k] !== undefined) u[k] = String(body[k]);
       });
-      pushAudit(db, { actor: ctx.user.id, action: 'user-update', portfolioId: null, detail: `Updated user ${u.username}` });
+      u.role = newRole;
+      if (newRole !== oldRole) {
+        // New permissions take effect on their next sign-in.
+        db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);
+      }
+      pushAudit(db, {
+        actor: ctx.user.id,
+        action: 'user-update',
+        portfolioId: null,
+        detail: newRole !== oldRole ? `Changed ${u.username}'s role from ${oldRole} to ${newRole}` : `Updated user ${u.username}`
+      });
       return { status: 200, data: stripPassword(u) };
     }
   },
 
+  // Removing an account is deliberate: the IT Administrator must re-enter
+  // their own password and type the account's username, and the removed
+  // person gets an email saying so. Their portfolios stay for the record.
   'DELETE /api/users/:id': {
     auth: true,
     roles: ['it'],
@@ -1467,10 +1539,38 @@ const routes = {
       if (params.id === ctx.user.id) throw { status: 400, message: 'You cannot delete your own account while signed in.' };
       const idx = (db.users || []).findIndex((x) => x.id === params.id);
       if (idx === -1) throw { status: 404, message: 'User not found.' };
-      const [removed] = db.users.splice(idx, 1);
+      const target = db.users[idx];
+      assertNotProtected(target, ctx, 'deleted');
+      if (target.role === 'it' && countIt(db) <= 1) {
+        throw { status: 400, message: 'You can\'t delete the only IT Administrator.' };
+      }
+      if (String(body.confirmUsername || '').trim().toLowerCase() !== String(target.username).toLowerCase()) {
+        throw { status: 400, message: `Type "${target.username}" exactly to confirm.` };
+      }
+      if (!body.password || !auth.verifyPassword(String(body.password), ctx.user.passwordHash)) {
+        // 403, not 401: a 401 would sign the IT Administrator out.
+        throw { status: 403, message: 'Your password is incorrect. The account was not deleted.' };
+      }
+      db.users.splice(idx, 1);
+      const removed = target;
       db.sessions = (db.sessions || []).filter((s) => s.userId !== removed.id);
-      pushAudit(db, { actor: ctx.user.id, action: 'user-delete', portfolioId: null, detail: `Removed user ${removed.username}` });
-      return { status: 200, data: { ok: true } };
+      db.mfaChallenges = (db.mfaChallenges || []).filter((c) => c.userId !== removed.id);
+      const kept = (db.portfolios || []).filter((p) => p.facultyId === removed.id).length;
+      pushAudit(db, {
+        actor: ctx.user.id,
+        action: 'user-delete',
+        portfolioId: null,
+        detail: `Removed user ${removed.username} (${removed.role})${kept ? ` — ${kept} portfolio${kept === 1 ? '' : 's'} kept for records` : ''}`
+      });
+      return {
+        status: 200,
+        data: { ok: true, emailed: !!userEmail(removed) && (mailer.brevoConfigured() || mailer.devLogMode()) },
+        afterCommit: accountNotice(removed, 'Your OBTLP account was removed', [
+          `Your OBTLP Generator System account (${removed.username}) was removed by an IT Administrator (${ctx.user.name}) on ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}.`,
+          'You can no longer sign in with it.',
+          'If you think this was a mistake, please contact your college\'s IT Administrator.'
+        ])
+      };
     }
   },
 
@@ -1480,13 +1580,22 @@ const routes = {
     handler: (db, ctx, query, body, params) => {
       const u = (db.users || []).find((x) => x.id === params.id);
       if (!u) throw { status: 404, message: 'User not found.' };
+      assertNotProtected(u, ctx, 'given a new password');
       if (!body.newPassword || String(body.newPassword).length < 6) {
         throw { status: 400, message: 'Password must be at least 6 characters.' };
       }
       u.passwordHash = auth.hashPassword(String(body.newPassword));
       db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);
       pushAudit(db, { actor: ctx.user.id, action: 'password-change', portfolioId: null, detail: `Changed password for ${u.username}` });
-      return { status: 200, data: { ok: true } };
+      return {
+        status: 200,
+        data: { ok: true },
+        afterCommit: u.id === ctx.user.id ? null : accountNotice(u, 'Your OBTLP password was reset', [
+          `An IT Administrator (${ctx.user.name}) set a new password for your OBTLP Generator System account (${u.username}) on ${new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}.`,
+          'Ask them for the new password, then change it from your Profile page after signing in.',
+          'If you did not ask for this, contact your college\'s IT Administrator right away.'
+        ])
+      };
     }
   },
 
@@ -1670,6 +1779,9 @@ store.initDbIfMissing()
   // users, portfolios, or templates an admin edited by hand. Runs on every
   // boot so a git push + Render redeploy is all it takes to update MongoDB.
   .then(() => require('./seed-templates').ensureOfficialTemplates(store))
+  // Built-in IT Administrator from DEFAULT_IT_EMAIL / DEFAULT_IT_PASSWORD
+  // (see seed-admin.js) — public sign-up only creates Faculty accounts.
+  .then(() => require('./seed-admin').ensureDefaultItAdmin(store))
   .then(() => {
     server.listen(PORT, () => {
       console.log(`OBTLP app running at: http://localhost:${PORT}`);

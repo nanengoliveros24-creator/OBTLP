@@ -46,8 +46,10 @@ function startServer(opts) {
       MFA_DISABLED: opts.mfa ? '' : '1',
       MFA_DEV_LOG: opts.mfa ? '1' : '',
       BREVO_API_KEY: '',
-      MAIL_FROM: ''
-    }),
+      MAIL_FROM: '',
+      DEFAULT_IT_EMAIL: '',
+      DEFAULT_IT_PASSWORD: ''
+    }, opts.env || {}),
     stdio: ['ignore', 'pipe', 'pipe']
   });
 

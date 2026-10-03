@@ -54,27 +54,27 @@ test('an unauthenticated request to a protected route is rejected', async () => 
 test('login rejects a correct password paired with the wrong selected role', async () => {
   // register a faculty account first
   await client.post('/api/register', {
-    name: 'Faculty A', username: 'faculty-a', password: 'facultypass1', confirmPassword: 'facultypass1'
+    name: 'Faculty A', username: 'faculty-a@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1'
   });
-  const res = await client.post('/api/login', { username: 'faculty-a', password: 'facultypass1', role: 'admin' });
+  const res = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'facultypass1', role: 'admin' });
   assert.equal(res.status, 401, 'a role mismatch must fail the same way a wrong password does');
 });
 
 test('login works with the correct role and returns a usable token', async () => {
-  const res = await client.post('/api/login', { username: 'faculty-a', password: 'facultypass1', role: 'faculty' });
+  const res = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'facultypass1', role: 'faculty' });
   assert.equal(res.status, 200);
   assert.ok(res.data.token);
 });
 
 test('a faculty account cannot access IT-only routes (server-side, not just hidden UI)', async () => {
-  const login = await client.post('/api/login', { username: 'faculty-a', password: 'facultypass1' });
+  const login = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'facultypass1' });
   client.setToken(login.data.token);
   const res = await client.get('/api/users');
   assert.equal(res.status, 403);
 });
 
 test('a faculty account cannot approve portfolios (admin-only action)', async () => {
-  const login = await client.post('/api/login', { username: 'faculty-a', password: 'facultypass1' });
+  const login = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'facultypass1' });
   client.setToken(login.data.token);
   const created = await client.post('/api/portfolios', {});
   const res = await client.post(`/api/portfolios/${created.data.id}/actions`, { action: 'approve' });
@@ -83,15 +83,15 @@ test('a faculty account cannot approve portfolios (admin-only action)', async ()
 
 test('one faculty member cannot view or edit another faculty member\'s portfolio', async () => {
   await client.post('/api/register', {
-    name: 'Faculty B', username: 'faculty-b', password: 'facultypass1', confirmPassword: 'facultypass1'
+    name: 'Faculty B', username: 'faculty-b@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1'
   });
 
-  const loginA = await client.post('/api/login', { username: 'faculty-a', password: 'facultypass1' });
+  const loginA = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'facultypass1' });
   client.setToken(loginA.data.token);
   const created = await client.post('/api/portfolios', {});
   const portfolioId = created.data.id;
 
-  const loginB = await client.post('/api/login', { username: 'faculty-b', password: 'facultypass1' });
+  const loginB = await client.post('/api/login', { username: 'faculty-b@test.edu', password: 'facultypass1' });
   client.setToken(loginB.data.token);
 
   const editAttempt = await client.put(`/api/portfolios/${portfolioId}`, { courseCode: 'HACKED101' });
@@ -103,7 +103,7 @@ test('one faculty member cannot view or edit another faculty member\'s portfolio
 });
 
 test('a client-supplied role/userId in the request body is ignored — identity comes from the token', async () => {
-  const loginB = await client.post('/api/login', { username: 'faculty-b', password: 'facultypass1' });
+  const loginB = await client.post('/api/login', { username: 'faculty-b@test.edu', password: 'facultypass1' });
   client.setToken(loginB.data.token);
   // Try to smuggle an elevated role/identity in the body.
   const res = await client.get('/api/users');

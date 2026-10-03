@@ -766,3 +766,31 @@ table.data tbody tr:hover { background: color-mix(in oklch, var(--secondary) 40%
 /* ---------- IT admin tabs ---------- */
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
+
+/* ---------- account safety (IT Admin delete modal, role picker) ---------- */
+.btn-danger-solid { border-color: var(--destructive); background: var(--destructive); color: var(--destructive-foreground); }
+.btn-danger-solid:hover:not(:disabled) { background: color-mix(in oklch, var(--destructive) 88%, black); }
+.btn-danger-solid:disabled { opacity: 0.45; cursor: not-allowed; }
+.danger-callout {
+  border: 1px solid color-mix(in oklch, var(--destructive) 35%, transparent);
+  background: color-mix(in oklch, var(--destructive) 7%, transparent);
+  border-radius: 0.625rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+}
+.danger-callout p { margin: 0 0 0.5rem; color: var(--destructive); }
+.danger-callout ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.25rem; }
+.input.input-sm { height: 2.1rem; padding-top: 0.25rem; padding-bottom: 0.25rem; font-size: 0.8125rem; max-width: 13rem; }
+
+/* ---------- "Create New Portfolio": continue a draft first ---------- */
+.draft-chooser { max-width: 46rem; }
+.draft-list { list-style: none; margin: 0 0 1.25rem; padding: 0; display: grid; gap: 0.5rem; }
+.draft-item {
+  display: flex; align-items: center; gap: 0.875rem;
+  padding: 0.875rem 1rem; border: 1px solid var(--border); border-radius: 0.75rem;
+  color: inherit; text-decoration: none; background: var(--card);
+}
+.draft-item:hover { border-color: color-mix(in oklch, var(--primary) 45%, var(--border)); background: var(--secondary); }
+.draft-item .draft-main { flex: 1; min-width: 0; }
+.draft-item .draft-main p { margin: 0; }
+.draft-item .svg-icon { flex: none; }

@@ -47,13 +47,25 @@
           <h1 class="page-title" id="page-title">Create Portfolio</h1>
           <p class="page-subtitle" id="page-subtitle">Complete each step, then submit for administrative review.</p>
         </div>
-        <div class="header-actions">
+        <div class="header-actions" id="wizard-header-actions">
           <button class="btn btn-outline" data-action="download-pdf"><i data-lucide="download" class="svg-icon"></i> Download PDF</button>
           <button class="btn btn-outline" data-action="save-draft" id="save-draft-btn"><i data-lucide="save" class="svg-icon"></i> Save Draft</button>
         </div>
       </header>
 
       <div id="loading-state" class="empty-state"><span class="spinner"></span><span>Loading portfolio…</span></div>
+
+      <!-- Shown by "Create New Portfolio" when the faculty member already has
+           unfinished work, so they can pick it up instead of starting over. -->
+      <section id="draft-chooser" class="card card-pad draft-chooser" style="display:none;">
+        <h2 class="card-title" style="margin-bottom:0.25rem;">Continue where you left off?</h2>
+        <p class="section-sub" style="margin-bottom:1rem;">You have unfinished portfolios. Open one to keep editing, or start a new one.</p>
+        <ul class="draft-list" id="draft-list"></ul>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <a href="portfolio-new.html?new=1" class="btn btn-primary" id="start-new-btn"><i data-lucide="file-plus-2" class="svg-icon"></i> Start a New Portfolio</a>
+          <a href="my-portfolios.html" class="btn btn-outline"><i data-lucide="folder-open" class="svg-icon"></i> See All My Portfolios</a>
+        </div>
+      </section>
 
       <div id="wizard-root" style="display:none;">
         <!-- Stepper -->
@@ -1071,6 +1083,73 @@
       window.__OBTLP_AFTER_SAVE__ = function () {
         if (step === 2 || step === 3) renderPreview();
       };
+
+      // ---------- "Create New Portfolio": offer unfinished drafts first ----------
+      // Opening this page without an id used to create a brand-new draft
+      // every time, leaving a trail of empty drafts. Now it lists the
+      // faculty member's unfinished portfolios to continue; "Start a New
+      // Portfolio" (?new=1) creates one — reusing an untouched blank draft
+      // if there already is one.
+      const UNFINISHED = ['Draft', 'Revision Required'];
+      function isBlankDraft(p) {
+        return p.status === 'Draft' && !p.courseCode && !p.courseTitle && !p.description
+          && !(p.teachingPlan || []).length && !(p.documents || []).length && !p.notes;
+      }
+      function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+      function editedWhen(iso) {
+        if (!iso) return '';
+        const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins} min ago`;
+        const hrs = Math.round(mins / 60);
+        if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+        const days = Math.round(hrs / 24);
+        if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+        return new Date(iso).toLocaleDateString();
+      }
+      if (!portfolioId) {
+        try {
+          const st = await api.getState();
+          const mine = (st.portfolios || []).filter((p) => p.facultyId === session.userId && UNFINISHED.includes(p.status));
+          const blank = mine.find(isBlankDraft);
+          if (params.get('new') === '1') {
+            if (blank) {
+              window.location.replace(`portfolio-new.html?id=${encodeURIComponent(blank.id)}`);
+              return;
+            }
+          } else {
+            const resumable = mine.filter((p) => !isBlankDraft(p))
+              .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+            if (resumable.length) {
+              document.getElementById('draft-list').innerHTML = resumable.slice(0, 8).map((p) => `
+                <li>
+                  <a class="draft-item" href="portfolio-new.html?id=${encodeURIComponent(p.id)}">
+                    <i data-lucide="file-pen-line" class="svg-icon t-primary"></i>
+                    <div class="draft-main">
+                      <p class="cell-strong">${escHtml(p.courseCode || 'Untitled')}${p.courseTitle ? ' — ' + escHtml(p.courseTitle) : ''}</p>
+                      <p class="cell-sub">${escHtml([p.semester, p.academicYear].filter(Boolean).join(' · '))}${p.semester || p.academicYear ? ' · ' : ''}last edited ${editedWhen(p.updatedAt)}</p>
+                    </div>
+                    <span class="badge ${p.status === 'Revision Required' ? 'badge-revision' : 'badge-draft'}">${escHtml(p.status)}</span>
+                    <i data-lucide="chevron-right" class="svg-icon t-muted"></i>
+                  </a>
+                </li>`).join('');
+              document.getElementById('page-title').textContent = 'Create New Portfolio';
+              document.getElementById('page-subtitle').textContent = 'Pick up an unfinished portfolio, or start a new one.';
+              document.getElementById('wizard-header-actions').style.display = 'none';
+              document.getElementById('loading-state').style.display = 'none';
+              document.getElementById('draft-chooser').style.display = 'block';
+              if (window.lucide) lucide.createIcons();
+              return;
+            }
+            if (blank) {
+              window.location.replace(`portfolio-new.html?id=${encodeURIComponent(blank.id)}`);
+              return;
+            }
+          }
+        } catch (err) {
+          // If the check fails, fall through to the normal flow below.
+        }
+      }
 
       // ---------- initial load ----------
       try {

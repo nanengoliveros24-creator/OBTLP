@@ -18,9 +18,9 @@ before(async () => {
   client = makeClient(server.baseUrl);
 
   await client.post('/api/setup', { name: 'Root Admin', username: 'root-admin', password: 'adminpass1', role: 'admin' });
-  await client.post('/api/register', { name: 'Prof One', username: 'prof-one', password: 'facultypass1', confirmPassword: 'facultypass1' });
+  await client.post('/api/register', { name: 'Prof One', username: 'prof-one@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1' });
 
-  const facultyLogin = await client.post('/api/login', { username: 'prof-one', password: 'facultypass1' });
+  const facultyLogin = await client.post('/api/login', { username: 'prof-one@test.edu', password: 'facultypass1' });
   facultyToken = facultyLogin.data.token;
 
   const adminLogin = await client.post('/api/login', { username: 'root-admin', password: 'adminpass1' });

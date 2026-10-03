@@ -51,13 +51,8 @@
 
       <div class="login-form">
         <h2>Create an Account</h2>
-        <p class="lede">Choose the account type for this registration.</p>
-
-        <div class="role-switch" id="reg-role-switch" role="radiogroup" aria-label="Account Type">
-          <button type="button" data-role="faculty" class="active" aria-pressed="true">Faculty</button>
-          <button type="button" data-role="admin" aria-pressed="false">System Administrator</button>
-          <button type="button" data-role="it" aria-pressed="false">IT Administrator</button>
-        </div>
+        <p class="lede">Sign up as a faculty member to prepare and submit your OBTLP portfolios.</p>
+        <p class="section-sub" style="margin:-0.25rem 0 1rem;">College Administrator and IT Administrator accounts are created by your IT Administrator.</p>
 
         <form class="form-stack" id="register-form" novalidate>
           <div class="field">
@@ -69,11 +64,12 @@
           </div>
 
           <div class="field">
-            <label class="field-label" for="reg-username">Email Address / Username</label>
+            <label class="field-label" for="reg-username">Email Address</label>
             <div class="input-with-icon">
               <i data-lucide="mail" class="svg-icon"></i>
-              <input class="input" id="reg-username" type="text" placeholder="you@university.edu" autocomplete="username" />
+              <input class="input" id="reg-username" type="email" placeholder="you@gmail.com" autocomplete="email" />
             </div>
+            <p class="section-sub" style="margin-top:0.35rem;">Use an email you can open — a sign-in code is sent there each time you log in.</p>
           </div>
 
           <div class="field">
@@ -118,18 +114,6 @@
       errorEl.style.display = 'block';
     }
 
-    let selectedRole = 'faculty';
-    const roleSwitch = document.getElementById('reg-role-switch');
-    roleSwitch.querySelectorAll('button[data-role]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        selectedRole = btn.dataset.role;
-        roleSwitch.querySelectorAll('button[data-role]').forEach((b) => {
-          b.classList.toggle('active', b === btn);
-          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
-        });
-      });
-    });
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorEl.style.display = 'none';
@@ -141,6 +125,10 @@
 
       if (!name || !username || !password || !confirmPassword) {
         showError('Please fill in all fields.');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
+        showError('Please enter a valid email address.');
         return;
       }
       if (password !== confirmPassword) {
@@ -156,7 +144,7 @@
       btn.disabled = true;
       btn.textContent = 'Creating account…';
       try {
-        await api.register({ name, username, password, confirmPassword, role: selectedRole });
+        await api.register({ name, username, password, confirmPassword });
         // Registration succeeds but we send the user to sign in explicitly
         // (rather than auto-logging them in) so the credentials they just
         // set are confirmed to work end-to-end.

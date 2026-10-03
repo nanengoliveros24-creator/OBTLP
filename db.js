@@ -191,7 +191,7 @@
     // ---- users (IT admin) ----
     createUser: (body) => req('/api/users', { method: 'POST', body: JSON.stringify(body) }),
     updateUser: (id, body) => req(`/api/users/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }),
-    deleteUser: (id) => req(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    deleteUser: (id, body) => req(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify(body || {}) }),
     changePassword: (id, newPassword) =>
       req(`/api/users/${encodeURIComponent(id)}/password`, { method: 'POST', body: JSON.stringify({ newPassword }) }),
 

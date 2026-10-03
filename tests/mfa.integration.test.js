@@ -5,6 +5,9 @@
 */
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const auth = require('../auth');
 const { startServer, makeClient } = require('./helpers');
 
 let server;
@@ -63,7 +66,12 @@ test('too many wrong codes ends the sign-in attempt', async () => {
 
 test('accounts without an email add one, verified by a code, before signing in', async () => {
   const c = makeClient(server.baseUrl);
-  await c.post('/api/register', { name: 'No Mail', username: 'nomail', password: 'secret1', confirmPassword: 'secret1', role: 'faculty' });
+  // Sign-up now requires an email, so plant an older-style account
+  // (username that isn't an email) straight into the test database.
+  const dbFile = path.join(server.dir, 'db.json');
+  const db = JSON.parse(fs.readFileSync(dbFile, 'utf8'));
+  db.users.push({ id: 'u_legacy', name: 'No Mail', username: 'nomail', role: 'faculty', passwordHash: auth.hashPassword('secret1') });
+  fs.writeFileSync(dbFile, JSON.stringify(db, null, 2));
   const step1 = await c.post('/api/login', { username: 'nomail', password: 'secret1' });
   assert.equal(step1.data.emailRequired, true);
 

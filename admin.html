@@ -118,6 +118,7 @@
     document.getElementById('user-name').textContent = session ? session.name : '—';
     document.getElementById('user-avatar').textContent = session ? (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–' : '–';
 
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
     function nameOf(users, facultyId) {
       const u = users.find((x) => x.id === facultyId);
       return u ? u.name : 'Faculty Member';
@@ -179,7 +180,7 @@
         return `
           <li>
             <div class="avatar-sec">${initials}</div>
-            <div style="flex:1;min-width:0;"><p class="cell-strong">${p.courseCode} — ${p.courseTitle}</p><p class="cell-sub">${nameOf(users, p.facultyId)} · submitted ${new Date(p.updatedAt).toLocaleString()}</p></div>
+            <div style="flex:1;min-width:0;"><p class="cell-strong">${esc(p.courseCode)} — ${esc(p.courseTitle)}</p><p class="cell-sub">${esc(nameOf(users, p.facultyId))} · submitted ${new Date(p.updatedAt).toLocaleString()}</p></div>
             <span class="badge ${badgeClass}">${bucket}</span>
             <button class="btn btn-outline btn-sm" data-id="${p.id}">Review</button>
           </li>

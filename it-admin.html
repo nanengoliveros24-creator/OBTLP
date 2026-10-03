@@ -88,7 +88,7 @@
         <header class="page-header">
           <div>
             <h1 class="page-title">User Accounts</h1>
-            <p class="page-subtitle">Create and manage Faculty, Administrator, and IT Administrator accounts.</p>
+            <p class="page-subtitle">Faculty sign up on their own. College Administrator and IT Administrator accounts are created and assigned here.</p>
           </div>
           <div class="header-actions">
             <button class="btn btn-primary" id="btn-new-user"><i data-lucide="user-plus" class="svg-icon"></i> New User</button>
@@ -250,7 +250,7 @@
       </div>
       <form id="user-form" class="form-stack">
         <div class="field"><label class="field-label">Full Name</label><input class="input" id="u-name" required /></div>
-        <div class="field"><label class="field-label">Username / Email</label><input class="input" id="u-username" required /></div>
+        <div class="field"><label class="field-label">Email Address</label><input class="input" id="u-username" type="email" placeholder="name@gmail.com" required /><p class="section-sub" style="margin-top:0.35rem;">This is their username, and where sign-in codes are sent.</p></div>
         <div class="field">
           <label class="field-label">Role</label>
           <select class="input select" id="u-role">
@@ -278,6 +278,40 @@
         <div class="field"><label class="field-label">New Password</label><input class="input" id="pw-new" type="text" placeholder="At least 6 characters" required /></div>
         <div class="form-error" id="pw-form-error" style="display:none;"></div>
         <button type="submit" class="btn btn-primary w-full">Set New Password</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete user modal: a deliberate, two-step confirmation -->
+  <div class="modal-overlay" id="del-modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title">Delete Account</h3>
+        <button type="button" class="modal-close" id="del-modal-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="del-form" class="form-stack">
+        <div class="danger-callout">
+          <p><b>You are about to permanently delete <span id="del-name"></span>'s account.</b></p>
+          <ul>
+            <li>They will be signed out right away and can no longer sign in.</li>
+            <li>This cannot be undone. To give access again you must create a new account.</li>
+            <li id="del-portfolios-line">Their portfolios stay in the system for records.</li>
+            <li>They will receive an email saying their account was removed.</li>
+          </ul>
+        </div>
+        <div class="field">
+          <label class="field-label" for="del-confirm">Type <b id="del-username"></b> to confirm</label>
+          <input class="input" id="del-confirm" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="del-password">Your password</label>
+          <input class="input" id="del-password" type="password" autocomplete="current-password" />
+        </div>
+        <div class="form-error" id="del-form-error" style="display:none;"></div>
+        <div style="display:flex;gap:0.5rem;">
+          <button type="button" class="btn btn-outline" id="del-cancel" style="flex:1;">Cancel</button>
+          <button type="submit" class="btn btn-danger-solid" id="del-submit" style="flex:1;" disabled>Delete Account</button>
+        </div>
       </form>
     </div>
   </div>
@@ -574,7 +608,7 @@
         list.innerHTML = logs.map((l) => `
           <li>
             <span class="dot ${dotFor[l.action] || 'dot-muted'}"></span>
-            <p><b>${nameOf(l.actor)}</b> <span class="t-muted">— ${l.detail}</span></p>
+            <p><b>${esc(nameOf(l.actor))}</b> <span class="t-muted">— ${esc(l.detail)}</span></p>
             <span class="section-sub">${fmtWhen(l.at)}</span>
           </li>
         `).join('');
@@ -583,6 +617,7 @@
       // ---------- users ----------
       let usersCache = [];
       function initials(name) { return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–'; }
+      function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
       const roleLabel = { faculty: 'Faculty', admin: 'College Administrator', it: 'IT Administrator' };
 
       async function loadUsers() {
@@ -598,36 +633,124 @@
           rows.innerHTML = '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No users yet.</td></tr>';
           return;
         }
-        rows.innerHTML = usersCache.map((u) => `
+        const itCount = usersCache.filter((u) => u.role === 'it').length;
+        rows.innerHTML = usersCache.map((u) => {
+          const isMe = u.id === session.userId;
+          const locked = u.isDefaultAdmin && !isMe;
+          const lastIt = u.role === 'it' && itCount <= 1;
+          const roleCell = (isMe || locked || lastIt)
+            ? `<span class="badge badge-accent">${roleLabel[u.role] || u.role}</span>`
+            : `<select class="input select input-sm" data-role-for="${u.id}" aria-label="Role for ${esc(u.name)}">
+                 ${Object.keys(roleLabel).map((r) => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${roleLabel[r]}</option>`).join('')}
+               </select>`;
+          const tags = [
+            u.isDefaultAdmin ? '<span class="badge badge-approved" title="Built-in account — other IT Administrators can\'t delete it, change its role, or reset its password">Default</span>' : '',
+            isMe ? '<span class="badge badge-draft">You</span>' : ''
+          ].join(' ');
+          const deleteTitle = isMe ? 'You can\'t delete your own account' : locked ? 'The default IT Administrator can\'t be deleted' : lastIt ? 'The only IT Administrator can\'t be deleted' : 'Delete';
+          return `
           <tr>
-            <td><div style="display:flex;align-items:center;gap:0.625rem;"><div class="avatar-sec" style="height:2rem;width:2rem;font-size:0.75rem;">${initials(u.name)}</div><span class="cell-strong">${u.name}</span></div></td>
-            <td class="t-muted">${u.username}</td>
-            <td><span class="badge badge-accent">${roleLabel[u.role] || u.role}</span></td>
+            <td><div style="display:flex;align-items:center;gap:0.625rem;"><div class="avatar-sec" style="height:2rem;width:2rem;font-size:0.75rem;">${initials(u.name)}</div><span class="cell-strong">${esc(u.name)}</span> ${tags}</div></td>
+            <td class="t-muted">${esc(u.username)}</td>
+            <td>${roleCell}</td>
             <td>
               <div class="row-actions">
-                <button class="icon-btn" title="Reset Password" data-reset="${u.id}" data-name="${u.name}"><i data-lucide="key-round" class="svg-icon"></i></button>
-                <button class="icon-btn" title="Delete" data-delete="${u.id}" data-name="${u.name}" ${u.id === session.userId ? 'disabled' : ''}><i data-lucide="trash-2" class="svg-icon"></i></button>
+                <button class="icon-btn" title="${locked ? 'Only the owner can change this password (from Profile)' : 'Reset Password'}" data-reset="${u.id}" data-name="${esc(u.name)}" ${locked ? 'disabled' : ''}><i data-lucide="key-round" class="svg-icon"></i></button>
+                <button class="icon-btn" title="${deleteTitle}" data-delete="${u.id}" ${(isMe || locked || lastIt) ? 'disabled' : ''}><i data-lucide="trash-2" class="svg-icon"></i></button>
               </div>
             </td>
-          </tr>
-        `).join('');
+          </tr>`;
+        }).join('');
         if (window.lucide) lucide.createIcons();
 
         rows.querySelectorAll('[data-delete]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            if (!confirm(`Remove ${btn.dataset.name}'s account? This cannot be undone.`)) return;
-            try {
-              await api.deleteUser(btn.dataset.delete);
-              ui.notify('User Removed', `${btn.dataset.name}'s account has been removed.`);
-              loadUsers();
-              loadOverview();
-            } catch (err) { ui.notifyError(err); }
-          });
+          btn.addEventListener('click', () => openDeleteModal(btn.dataset.delete));
         });
         rows.querySelectorAll('[data-reset]').forEach((btn) => {
           btn.addEventListener('click', () => openPasswordModal(btn.dataset.reset, btn.dataset.name));
         });
+        rows.querySelectorAll('[data-role-for]').forEach((sel) => {
+          sel.addEventListener('change', async () => {
+            const u = usersCache.find((x) => x.id === sel.dataset.roleFor);
+            const to = sel.value;
+            if (!u) return;
+            if (!confirm(`Change ${u.name}'s role from ${roleLabel[u.role]} to ${roleLabel[to]}?\n\nThey will be signed out and get the new access on their next sign-in.`)) {
+              sel.value = u.role;
+              return;
+            }
+            try {
+              await api.updateUser(u.id, { role: to });
+              ui.notify('Role Updated', `${u.name} is now ${roleLabel[to]}.`);
+              loadUsers();
+              loadOverview();
+            } catch (err) {
+              sel.value = u.role;
+              ui.notifyError(err);
+            }
+          });
+        });
       }
+
+      // Delete user modal
+      const delModal = document.getElementById('del-modal-overlay');
+      const delConfirm = document.getElementById('del-confirm');
+      const delPassword = document.getElementById('del-password');
+      const delSubmit = document.getElementById('del-submit');
+      let delTarget = null;
+      async function openDeleteModal(id) {
+        delTarget = usersCache.find((x) => x.id === id);
+        if (!delTarget) return;
+        document.getElementById('del-name').textContent = delTarget.name;
+        document.getElementById('del-username').textContent = delTarget.username;
+        delConfirm.value = '';
+        delPassword.value = '';
+        delSubmit.disabled = true;
+        document.getElementById('del-form-error').style.display = 'none';
+        const line = document.getElementById('del-portfolios-line');
+        line.textContent = 'Their portfolios stay in the system for records.';
+        try {
+          const state = await api.getState();
+          const n = (state.allPortfolios || []).filter((p) => p.facultyId === id).length;
+          line.textContent = n
+            ? `They have ${n} portfolio${n === 1 ? '' : 's'}. ${n === 1 ? 'It stays' : 'These stay'} in the system for records.`
+            : 'They have no portfolios.';
+        } catch (e) { /* keep the generic line */ }
+        delModal.style.display = 'flex';
+        delConfirm.focus();
+      }
+      function closeDeleteModal() { delModal.style.display = 'none'; delTarget = null; }
+      function updateDeleteButton() {
+        delSubmit.disabled = !delTarget
+          || delConfirm.value.trim().toLowerCase() !== String(delTarget.username).toLowerCase()
+          || !delPassword.value;
+      }
+      delConfirm.addEventListener('input', updateDeleteButton);
+      delPassword.addEventListener('input', updateDeleteButton);
+      document.getElementById('del-modal-close').addEventListener('click', closeDeleteModal);
+      document.getElementById('del-cancel').addEventListener('click', closeDeleteModal);
+      delModal.addEventListener('click', (e) => { if (e.target === delModal) closeDeleteModal(); });
+      document.getElementById('del-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!delTarget || delSubmit.disabled) return;
+        const errEl = document.getElementById('del-form-error');
+        errEl.style.display = 'none';
+        delSubmit.disabled = true;
+        delSubmit.textContent = 'Deleting…';
+        try {
+          const res = await api.deleteUser(delTarget.id, { confirmUsername: delConfirm.value.trim(), password: delPassword.value });
+          const name = delTarget.name;
+          closeDeleteModal();
+          ui.notify('Account Deleted', `${name}'s account was deleted.${res && res.emailed ? ' They were notified by email.' : ''}`);
+          loadUsers();
+          loadOverview();
+        } catch (err) {
+          errEl.textContent = err.message || 'Could not delete the account.';
+          errEl.style.display = 'block';
+          updateDeleteButton();
+        } finally {
+          delSubmit.textContent = 'Delete Account';
+        }
+      });
 
       // New user modal
       const userModal = document.getElementById('user-modal-overlay');
