@@ -285,11 +285,24 @@ function visibleUsers(db, me) {
     const inDept = scope
       ? new Set((db.portfolios || []).filter((p) => inAdminScope(db, me, p)).map((p) => p.facultyId))
       : null;
+    // Faculty are listed under their own department; a faculty member who
+    // hasn't chosen one yet falls back to where their portfolios are.
+    const inMyDept = (u) => (u.departmentId && findDepartment(db, u.departmentId)
+      ? u.departmentId === scope
+      : inDept.has(u.id));
+    // Owners of portfolios in this department are included so their names
+    // show in the review queue; only the department's own faculty are
+    // flagged inDepartment (the Faculty list and "Active Faculty").
     return users
-      .filter((u) => u.id === me.id || !inDept || (u.role === 'faculty' && inDept.has(u.id)))
+      .filter((u) => u.id === me.id || !inDept || (u.role === 'faculty' && (inMyDept(u) || inDept.has(u.id))))
       .map((u) => (u.id === me.id
         ? stripPassword(u)
-        : { id: u.id, name: u.name, role: u.role, lastActiveAt: u.lastLoginAt || lastLoginFromLog[u.id] || null }));
+        : {
+          id: u.id, name: u.name, role: u.role,
+          lastActiveAt: u.lastLoginAt || lastLoginFromLog[u.id] || null,
+          departmentId: u.departmentId || null,
+          inDepartment: !inDept || (u.role === 'faculty' && inMyDept(u))
+        }));
   }
   return [stripPassword(me)];
 }
@@ -699,6 +712,16 @@ const routes = {
       if (findUserByUsername(db, username) || (db.users || []).some((u) => userEmail(u) === username.toLowerCase())) {
         throw { status: 409, message: 'An account with that email already exists.' };
       }
+      // Each faculty member belongs to one college (their College
+      // Administrator sees them in the Faculty list).
+      // Accepts the department's id or its code (e.g. "CCS").
+      const raw = String(body.departmentId || '').trim();
+      const dep = findDepartment(db, raw)
+        || (db.departments || []).find((d) => String(d.code || '').toLowerCase() === raw.toLowerCase());
+      if (!raw || !dep) {
+        throw { status: 400, message: 'Please choose your department.' };
+      }
+      const departmentId = dep.id;
       // Public sign-up is for faculty only. College Administrator and IT
       // Administrator accounts are created by an IT Administrator from the
       // User Accounts page (and the first IT Administrator comes from the
@@ -710,6 +733,7 @@ const routes = {
         username,
         email: username.toLowerCase(),
         role: 'faculty',
+        departmentId,
         createdVia: 'register',
         passwordHash: auth.hashPassword(password)
       };
@@ -884,6 +908,13 @@ const routes = {
       const name = String(body.name || '').trim();
       if (!name) throw { status: 400, message: 'Name is required.' };
       ctx.user.name = name;
+      // Faculty choose their own department; a College Administrator's is
+      // assigned by the IT Administrator.
+      if (body.departmentId !== undefined && ctx.user.role === 'faculty') {
+        const next = String(body.departmentId || '');
+        if (next && !findDepartment(db, next)) throw { status: 400, message: 'Selected department was not found.' };
+        if (next) ctx.user.departmentId = next; else delete ctx.user.departmentId;
+      }
       pushAudit(db, { actor: ctx.user.id, action: 'user-update', portfolioId: null, detail: `${ctx.user.username} updated their profile` });
       return { status: 200, data: stripPassword(ctx.user) };
     }
@@ -1011,6 +1042,16 @@ const routes = {
   },
 
   // ---- departments (Phase 1: Department -> Program -> Course -> Template) ----
+  // The sign-up page needs the list of colleges before anyone is signed in.
+  'GET /api/public/departments': {
+    auth: false,
+    handler: (db) => ({
+      status: 200,
+      data: (db.departments || []).map((d) => ({ id: d.id, code: d.code, name: d.name }))
+        .sort((a, b) => String(a.code).localeCompare(String(b.code)))
+    })
+  },
+
   'GET /api/departments': {
     auth: true,
     handler: (db) => ({ status: 200, data: (db.departments || []) })
@@ -1705,7 +1746,7 @@ const routes = {
         createdVia: 'it-admin',
         passwordHash: auth.hashPassword(password)
       };
-      if (user.role === 'admin' && body.departmentId) {
+      if (['admin', 'faculty'].includes(user.role) && body.departmentId) {
         if (!findDepartment(db, String(body.departmentId))) throw { status: 400, message: 'Selected department was not found.' };
         user.departmentId = String(body.departmentId);
       }
@@ -1753,7 +1794,7 @@ const routes = {
         if ((u.departmentId || '') !== next) { deptChanged = true; }
         if (next) u.departmentId = next; else delete u.departmentId;
       }
-      if (newRole !== 'admin' && u.departmentId) { delete u.departmentId; }
+      if (newRole === 'it' && u.departmentId) { delete u.departmentId; }
       if (newRole !== oldRole) {
         // New permissions take effect on their next sign-in.
         db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);

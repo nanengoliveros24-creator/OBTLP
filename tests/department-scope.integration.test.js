@@ -38,8 +38,8 @@ test('a CCS admin sees only CCS portfolios, a COED admin only COED ones', async 
   assert.equal((await it.post('/api/users', { name: 'All Dean', username: 'all.dean@test.edu', role: 'admin', password: 'adminpass1' })).status, 201);
 
   const pub = makeClient(server.baseUrl);
-  await pub.post('/api/register', { name: 'CS Prof', username: 'cs.prof@test.edu', password: 'secret1', confirmPassword: 'secret1' });
-  await pub.post('/api/register', { name: 'Ed Prof', username: 'ed.prof@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  await pub.post('/api/register', { name: 'CS Prof', username: 'cs.prof@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
+  await pub.post('/api/register', { name: 'Ed Prof', username: 'ed.prof@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'COED' });
   const { c: csProf } = await signIn('cs.prof@test.edu', 'secret1');
   const { c: edProf } = await signIn('ed.prof@test.edu', 'secret1');
 
@@ -70,6 +70,9 @@ test('a CCS admin sees only CCS portfolios, a COED admin only COED ones', async 
   const { c: coedAdmin } = await signIn('coed.dean@test.edu', 'adminpass1');
   const coedState = (await coedAdmin.get('/api/state')).data;
   assert.deepEqual(coedState.allPortfolios.map((p) => p.id), [edId]);
+  const edInCoed = coedState.users.find((u) => u.name === 'Ed Prof');
+  assert.equal(edInCoed.inDepartment, true, 'COED faculty are in the COED Faculty list');
+  assert.ok(!coedState.users.some((u) => u.name === 'CS Prof'), 'CCS faculty without COED portfolios are not listed');
 
   // Not assigned yet = sees every department (and the page says so).
   const { c: allAdmin } = await signIn('all.dean@test.edu', 'adminpass1');
@@ -89,4 +92,31 @@ test('the IT Administrator can assign or clear a College Administrator\'s depart
   assert.equal((await it.put(`/api/users/${allDean.id}`, { departmentId: 'nope' })).status, 400);
   const cleared = await it.put(`/api/users/${allDean.id}`, { departmentId: '' });
   assert.equal(cleared.data.departmentId, undefined);
+});
+
+test('faculty pick a department at sign-up and only their college lists them', async () => {
+  const pub = makeClient(server.baseUrl);
+  const noDept = await pub.post('/api/register', { name: 'No Dept', username: 'nodept@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  assert.equal(noDept.status, 400);
+  const list = await pub.get('/api/public/departments');
+  assert.equal(list.status, 200);
+  assert.ok(list.data.some((d) => d.code === 'CHAS'));
+
+  // A CCS faculty member who submits a COED course: their name shows in the
+  // COED queue, but they are not counted as COED faculty.
+  const { c: csProf } = await signIn('cs.prof@test.edu', 'secret1');
+  const depts = list.data;
+  const coed = depts.find((d) => d.code === 'COED');
+  const p = (await csProf.post('/api/portfolios')).data;
+  await csProf.put(`/api/portfolios/${p.id}`, { courseCode: 'READ100', courseTitle: 'Reading', academicYear: '2026-2027', departmentId: coed.id });
+  await csProf.post(`/api/portfolios/${p.id}/actions`, { action: 'submit' });
+  const { c: coedAdmin } = await signIn('coed.dean@test.edu', 'adminpass1');
+  const st = (await coedAdmin.get('/api/state')).data;
+  const cs = st.users.find((u) => u.name === 'CS Prof');
+  assert.ok(cs, 'name is available for the review queue');
+  assert.equal(cs.inDepartment, false, 'but not listed as COED faculty');
+
+  // Faculty can set their own department from Profile.
+  const me = await csProf.put('/api/me', { name: 'CS Prof', departmentId: coed.id });
+  assert.equal(me.data.departmentId, coed.id);
 });

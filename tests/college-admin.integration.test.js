@@ -25,7 +25,7 @@ test('a College Administrator can delete a submission only with the typed course
   const { c: it } = await signIn(IT_EMAIL, IT_PASS);
   await it.post('/api/users', { name: 'Dean', username: 'dean@test.edu', role: 'admin', password: 'deanpass1' });
   const pub = makeClient(server.baseUrl);
-  await pub.post('/api/register', { name: 'Grace T', username: 'grace@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  await pub.post('/api/register', { name: 'Grace T', username: 'grace@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
 
   const { c: fac, user: facUser } = await signIn('grace@test.edu', 'secret1');
   const draft = await fac.post('/api/portfolios');

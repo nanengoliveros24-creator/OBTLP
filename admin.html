@@ -114,7 +114,7 @@
         <header class="page-header">
           <div>
             <h1 class="page-title">Faculty</h1>
-            <p class="page-subtitle">Who is active, and where each faculty member's portfolios stand.</p>
+            <p class="page-subtitle" id="faculty-subtitle">Who is active, and where each faculty member's portfolios stand.</p>
           </div>
         </header>
         <section class="card" style="overflow:hidden;">
@@ -253,6 +253,9 @@
         chip.style.display = 'none';
         document.getElementById('dept-notice').style.display = '';
       }
+      document.getElementById('faculty-subtitle').textContent = dept
+        ? `${dept.name} faculty: who is active, and where their portfolios stand.`
+        : 'Who is active, and where each faculty member\'s portfolios stand.';
       document.getElementById('user-role').textContent = dept ? `College Administrator · ${dept.code}` : 'College Administrator';
       allItems = latestPortfolios
         .map((p) => ({ p, bucket: bucketOf(p) }))
@@ -275,7 +278,7 @@
       document.getElementById('stat-pending').textContent = count('Pending');
       document.getElementById('stat-revision').textContent = count('Revision');
       document.getElementById('stat-approved').textContent = count('Approved');
-      document.getElementById('stat-faculty').textContent = latestUsers.filter((u) => u.role === 'faculty' && isActive(u)).length;
+      document.getElementById('stat-faculty').textContent = latestUsers.filter((u) => u.role === 'faculty' && u.inDepartment !== false && isActive(u)).length;
       ['Pending', 'Resubmitted', 'Revision', 'Approved', 'All'].forEach((t) => {
         const n = count(t);
         document.getElementById(`count-${t}`).textContent = n ? `(${n})` : '';
@@ -321,7 +324,9 @@
 
     function renderFaculty() {
       const rows = document.getElementById('faculty-rows');
-      const faculty = latestUsers.filter((u) => u.role === 'faculty')
+      // Only this department's own faculty (faculty from other colleges who
+      // submitted a course here still show by name in the review queue).
+      const faculty = latestUsers.filter((u) => u.role === 'faculty' && u.inDepartment !== false)
         .sort((a, b) => String(b.lastActiveAt || '').localeCompare(String(a.lastActiveAt || '')) || a.name.localeCompare(b.name));
       if (!faculty.length) {
         rows.innerHTML = '<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No faculty accounts yet.</td></tr>';

@@ -58,6 +58,11 @@
               <label class="field-label" for="p-role">Role</label>
               <input class="input" id="p-role" disabled />
             </div>
+            <div class="field" id="p-department-field" style="display:none;">
+              <label class="field-label" for="p-department">Department</label>
+              <select class="input select" id="p-department"><option value="">Select your college…</option></select>
+              <p class="section-sub" style="margin-top:0.35rem;" id="p-department-hint">Your college's administrator sees you in their Faculty list.</p>
+            </div>
             <div class="form-error" id="profile-error" style="display:none;" role="alert"></div>
             <div class="form-success" id="profile-success" style="display:none;">Profile updated.</div>
             <button type="submit" class="btn btn-primary" id="profile-save-btn">Save Changes</button>
@@ -156,6 +161,22 @@
         const me = (state.users || []).find((u) => u.id === session.userId) || {};
         document.getElementById('p-username').value = me.username || '';
         myUsername = me.username || '';
+        // Faculty pick their own college; an administrator's is assigned by IT.
+        if (session.role === 'faculty' || (session.role === 'admin' && me.departmentId)) {
+          const depts = await fetch('/api/public/departments').then((r) => r.json()).catch(() => []);
+          const sel = document.getElementById('p-department');
+          (Array.isArray(depts) ? depts : []).forEach((d) => {
+            const o = document.createElement('option');
+            o.value = d.id; o.textContent = `${d.code} — ${d.name}`;
+            sel.appendChild(o);
+          });
+          sel.value = me.departmentId || '';
+          if (session.role !== 'faculty') {
+            sel.disabled = true;
+            document.getElementById('p-department-hint').textContent = 'Assigned by the IT Administrator. You review portfolios from this college only.';
+          }
+          document.getElementById('p-department-field').style.display = '';
+        }
       } catch (err) {
         ui.notifyError(err);
       }
@@ -214,13 +235,15 @@
       const btn = document.getElementById('profile-save-btn');
       btn.disabled = true;
       try {
-        const updated = await api.updateMe({ name });
+        const body = { name };
+        if (session.role === 'faculty') body.departmentId = document.getElementById('p-department').value;
+        const updated = await api.updateMe(body);
         const current = api.getSession();
         api.setSession(Object.assign({}, current, { name: updated.name }));
         document.getElementById('user-name').textContent = updated.name;
         document.getElementById('user-avatar').textContent = initials(updated.name);
         okEl.style.display = 'block';
-        ui.notify('Profile Updated', 'Your name has been updated.');
+        ui.notify('Profile Updated', 'Your profile has been updated.');
       } catch (err) {
         errEl.textContent = err.message || 'Could not update profile.';
         errEl.style.display = 'block';

@@ -262,7 +262,7 @@
         <div class="field" id="u-department-field" style="display:none;">
           <label class="field-label" for="u-department">Department</label>
           <select class="input select" id="u-department"></select>
-          <p class="section-sub" style="margin-top:0.35rem;">A College Administrator only sees and reviews portfolios from this department.</p>
+          <p class="section-sub" style="margin-top:0.35rem;">Faculty are listed under this college; a College Administrator only sees and reviews its portfolios.</p>
         </div>
         <div class="field"><label class="field-label">Temporary Password (optional)</label><input class="input" id="u-password" placeholder="Leave blank to auto-generate" /></div>
         <div class="form-error" id="user-form-error" style="display:none;"></div>
@@ -666,8 +666,8 @@
             <td><div style="display:flex;align-items:center;gap:0.625rem;"><div class="avatar-sec" style="height:2rem;width:2rem;font-size:0.75rem;">${initials(u.name)}</div><span class="cell-strong">${esc(u.name)}</span> ${tags}</div></td>
             <td class="t-muted">${esc(u.username)}</td>
             <td>${roleCell}</td>
-            <td>${u.role === 'admin'
-              ? `<select class="input select input-sm" style="max-width:19rem;" data-dept-for="${u.id}" aria-label="Department for ${esc(u.name)}">${deptOptions(u.departmentId || '', 'Not assigned (sees all)')}</select>`
+            <td>${u.role === 'admin' || u.role === 'faculty'
+              ? `<select class="input select input-sm" style="max-width:19rem;" data-dept-for="${u.id}" aria-label="Department for ${esc(u.name)}">${deptOptions(u.departmentId || '', u.role === 'admin' ? 'Not assigned (sees all)' : 'Not set')}</select>`
               : '<span class="t-muted">—</span>'}</td>
             <td>
               <div class="row-actions">
@@ -692,7 +692,9 @@
             const d = deptCache.find((x) => x.id === sel.value);
             try {
               await api.updateUser(u.id, { departmentId: sel.value });
-              ui.notify('Department Updated', d ? `${u.name} now reviews ${d.name} portfolios only.` : `${u.name} now sees every department.`);
+              ui.notify('Department Updated', u.role === 'faculty'
+                ? (d ? `${u.name} is now listed under ${d.name}.` : `${u.name} has no department set.`)
+                : (d ? `${u.name} now reviews ${d.name} portfolios only.` : `${u.name} now sees every department.`));
               loadUsers();
             } catch (err) {
               sel.value = u.departmentId || '';
@@ -787,7 +789,7 @@
       const userModal = document.getElementById('user-modal-overlay');
       const roleSelect = document.getElementById('u-role');
       function syncDepartmentField() {
-        document.getElementById('u-department-field').style.display = roleSelect.value === 'admin' ? '' : 'none';
+        document.getElementById('u-department-field').style.display = roleSelect.value === 'it' ? 'none' : '';
       }
       roleSelect.addEventListener('change', syncDepartmentField);
       document.getElementById('btn-new-user').addEventListener('click', () => {
@@ -811,7 +813,7 @@
         try {
           const body = { name, username, role };
           if (password) body.password = password;
-          if (role === 'admin' && document.getElementById('u-department').value) body.departmentId = document.getElementById('u-department').value;
+          if (role !== 'it' && document.getElementById('u-department').value) body.departmentId = document.getElementById('u-department').value;
           const created = await api.createUser(body);
           userModal.style.display = 'none';
           ui.notify('User Created', created.temporaryPassword ? `Temporary password: ${created.temporaryPassword}` : `${name}'s account is ready.`);

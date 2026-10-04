@@ -14,7 +14,7 @@ after(async () => { if (server) await server.stop(); });
 
 test('COED department, program, Course Outline template and READ100 are available', async () => {
   const c = makeClient(server.baseUrl);
-  await c.post('/api/register', { name: 'Coed Prof', username: 'coed.prof@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  await c.post('/api/register', { name: 'Coed Prof', username: 'coed.prof@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
   const login = await c.post('/api/login', { username: 'coed.prof@test.edu', password: 'secret1' });
   c.setToken(login.data.token);
 

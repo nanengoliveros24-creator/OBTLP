@@ -37,24 +37,24 @@ test('the default IT Administrator exists and can sign in as IT', async () => {
 
 test('sign-up only makes faculty accounts and needs an email', async () => {
   const c = makeClient(server.baseUrl);
-  const sneaky = await c.post('/api/register', { name: 'Wants IT', username: 'wants.it@test.edu', password: 'secret1', confirmPassword: 'secret1', role: 'it' });
+  const sneaky = await c.post('/api/register', { name: 'Wants IT', username: 'wants.it@test.edu', password: 'secret1', confirmPassword: 'secret1', role: 'it', departmentId: 'CCS' });
   assert.equal(sneaky.status, 201);
   assert.equal(sneaky.data.user.role, 'faculty', 'a requested role is ignored');
 
   const asAdmin = await c.post('/api/login', { username: 'wants.it@test.edu', password: 'secret1', role: 'it' });
   assert.equal(asAdmin.status, 401);
 
-  const noEmail = await c.post('/api/register', { name: 'No Email', username: 'justname', password: 'secret1', confirmPassword: 'secret1' });
+  const noEmail = await c.post('/api/register', { name: 'No Email', username: 'justname', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
   assert.equal(noEmail.status, 400);
 
-  const dupe = await c.post('/api/register', { name: 'Dupe', username: 'WANTS.IT@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  const dupe = await c.post('/api/register', { name: 'Dupe', username: 'WANTS.IT@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
   assert.equal(dupe.status, 409);
 });
 
 test('deleting an account needs the typed username and the IT password', async () => {
   const { c: it } = await signIn(IT_EMAIL, IT_PASS);
   const pub = makeClient(server.baseUrl);
-  const reg = await pub.post('/api/register', { name: 'Leaving Soon', username: 'leaving@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  const reg = await pub.post('/api/register', { name: 'Leaving Soon', username: 'leaving@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
   const victimId = reg.data.user.id;
   const { c: victim } = await signIn('leaving@test.edu', 'secret1');
   await victim.post('/api/portfolios');
@@ -120,7 +120,7 @@ test('a College Administrator sees only names of other users, not their accounts
   const others = state.data.users.filter((u) => u.id !== user.id);
   assert.ok(others.length > 0);
   others.forEach((u) => {
-    assert.deepEqual(Object.keys(u).sort(), ['id', 'lastActiveAt', 'name', 'role']);
+    assert.deepEqual(Object.keys(u).sort(), ['departmentId', 'id', 'inDepartment', 'lastActiveAt', 'name', 'role']);
   });
   const me = state.data.users.find((u) => u.id === user.id);
   assert.equal(me.username, 'dean@test.edu', 'own profile is still complete');

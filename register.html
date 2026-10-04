@@ -73,6 +73,13 @@
           </div>
 
           <div class="field">
+            <label class="field-label" for="reg-department">Department</label>
+            <select class="input select" id="reg-department">
+              <option value="">Select your college…</option>
+            </select>
+          </div>
+
+          <div class="field">
             <label class="field-label" for="reg-password">Password</label>
             <div class="input-with-icon">
               <i data-lucide="lock" class="svg-icon"></i>
@@ -114,6 +121,17 @@
       errorEl.style.display = 'block';
     }
 
+    // Colleges for the Department picker (public list — no sign-in needed).
+    fetch('/api/public/departments').then((r) => r.json()).then((list) => {
+      const sel = document.getElementById('reg-department');
+      (Array.isArray(list) ? list : []).forEach((d) => {
+        const o = document.createElement('option');
+        o.value = d.id;
+        o.textContent = `${d.code} — ${d.name}`;
+        sel.appendChild(o);
+      });
+    }).catch(() => {});
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorEl.style.display = 'none';
@@ -122,6 +140,7 @@
       const username = document.getElementById('reg-username').value.trim();
       const password = document.getElementById('reg-password').value;
       const confirmPassword = document.getElementById('reg-confirm').value;
+      const departmentId = document.getElementById('reg-department').value;
 
       if (!name || !username || !password || !confirmPassword) {
         showError('Please fill in all fields.');
@@ -129,6 +148,10 @@
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(username)) {
         showError('Please enter a valid email address.');
+        return;
+      }
+      if (!departmentId) {
+        showError('Please choose your department.');
         return;
       }
       if (password !== confirmPassword) {
@@ -144,7 +167,7 @@
       btn.disabled = true;
       btn.textContent = 'Creating account…';
       try {
-        await api.register({ name, username, password, confirmPassword });
+        await api.register({ name, username, password, confirmPassword, departmentId });
         // Registration succeeds but we send the user to sign in explicitly
         // (rather than auto-logging them in) so the credentials they just
         // set are confirmed to work end-to-end.

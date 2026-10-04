@@ -59,6 +59,10 @@
         </div>
       </header>
 
+      <div class="dept-notice" id="dept-missing" style="display:none;">
+        Please choose your <b>department</b> in <a href="profile.html" class="link-primary">Profile</a> so your college's administrator sees you in their Faculty list.
+      </div>
+
       <!-- Stats -->
       <section class="stats-grid">
         <div class="stat stat-link active" data-status-filter="All" role="button" tabindex="0" title="Show all portfolios"><div class="stat-top"><p class="stat-label">Total Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-total">0</p></div>
@@ -268,6 +272,8 @@
 
         const state = await api.getState();
         allPortfolios = state.portfolios || [];
+        const me = (state.users || []).find((u) => u.id === session.userId) || {};
+        document.getElementById('dept-missing').style.display = me.departmentId ? 'none' : '';
 
         updateStats();
         setStatusFilter(new URLSearchParams(window.location.search).get('show') || 'All');

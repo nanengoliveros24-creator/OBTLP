@@ -54,7 +54,7 @@ test('an unauthenticated request to a protected route is rejected', async () => 
 test('login rejects a correct password paired with the wrong selected role', async () => {
   // register a faculty account first
   await client.post('/api/register', {
-    name: 'Faculty A', username: 'faculty-a@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1'
+    name: 'Faculty A', username: 'faculty-a@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1', departmentId: 'CCS'
   });
   const res = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'facultypass1', role: 'admin' });
   assert.equal(res.status, 401, 'a role mismatch must fail the same way a wrong password does');
@@ -83,7 +83,7 @@ test('a faculty account cannot approve portfolios (admin-only action)', async ()
 
 test('one faculty member cannot view or edit another faculty member\'s portfolio', async () => {
   await client.post('/api/register', {
-    name: 'Faculty B', username: 'faculty-b@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1'
+    name: 'Faculty B', username: 'faculty-b@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1', departmentId: 'CCS'
   });
 
   const loginA = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'facultypass1' });

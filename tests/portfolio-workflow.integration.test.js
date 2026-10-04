@@ -18,7 +18,7 @@ before(async () => {
   client = makeClient(server.baseUrl);
 
   await client.post('/api/setup', { name: 'Root Admin', username: 'root-admin', password: 'adminpass1', role: 'admin' });
-  await client.post('/api/register', { name: 'Prof One', username: 'prof-one@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1' });
+  await client.post('/api/register', { name: 'Prof One', username: 'prof-one@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1', departmentId: 'CCS' });
 
   const facultyLogin = await client.post('/api/login', { username: 'prof-one@test.edu', password: 'facultypass1' });
   facultyToken = facultyLogin.data.token;
@@ -119,7 +119,7 @@ test('admin can request revision, and the faculty member can then edit and resub
 
 test('faculty see their own portfolio activity, not anyone else\'s', async () => {
   const other = makeClient(server.baseUrl);
-  await other.post('/api/register', { name: 'Prof Two', username: 'prof-two@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1' });
+  await other.post('/api/register', { name: 'Prof Two', username: 'prof-two@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1', departmentId: 'CCS' });
   const login = await other.post('/api/login', { username: 'prof-two@test.edu', password: 'facultypass1' });
   other.setToken(login.data.token);
   const mine = await other.post('/api/portfolios');

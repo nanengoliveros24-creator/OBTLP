@@ -34,7 +34,7 @@ async function signInWithCode(c, email, password, trustDevice, deviceToken) {
 
 test('a trusted device skips the code but still needs the password', async () => {
   const c = makeClient(server.baseUrl);
-  await c.post('/api/register', { name: 'Trusty', username: 'trusty@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  await c.post('/api/register', { name: 'Trusty', username: 'trusty@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
 
   const first = await signInWithCode(c, 'trusty@test.edu', 'secret1', true);
   assert.ok(first.deviceToken, 'a device token is issued when trust is ticked');
@@ -53,14 +53,14 @@ test('a trusted device skips the code but still needs the password', async () =>
   assert.equal(otherBrowser.data.mfaRequired, true, 'an unknown device still gets a code');
 
   // Another account can't use this account's device token.
-  await c.post('/api/register', { name: 'Other', username: 'other@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  await c.post('/api/register', { name: 'Other', username: 'other@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
   const borrowed = await c.post('/api/login', { username: 'other@test.edu', password: 'secret1', deviceToken: first.deviceToken });
   assert.equal(borrowed.data.mfaRequired, true);
 });
 
 test('not ticking "trust" issues no device token', async () => {
   const c = makeClient(server.baseUrl);
-  await c.post('/api/register', { name: 'Careful', username: 'careful@test.edu', password: 'secret1', confirmPassword: 'secret1' });
+  await c.post('/api/register', { name: 'Careful', username: 'careful@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
   const r = await signInWithCode(c, 'careful@test.edu', 'secret1', false);
   assert.equal(r.deviceToken, undefined);
 });

@@ -31,7 +31,7 @@ async function waitForCode(email) {
 
 test('password alone no longer signs in; the emailed code does', async () => {
   const c = makeClient(server.baseUrl);
-  await c.post('/api/register', { name: 'Mfa User', username: 'mfa.user@gmail.com', password: 'secret1', confirmPassword: 'secret1', role: 'faculty' });
+  await c.post('/api/register', { name: 'Mfa User', username: 'mfa.user@gmail.com', password: 'secret1', confirmPassword: 'secret1', role: 'faculty', departmentId: 'CCS' });
 
   const step1 = await c.post('/api/login', { username: 'mfa.user@gmail.com', password: 'secret1', role: 'faculty' });
   assert.equal(step1.status, 200);
