@@ -100,12 +100,13 @@ function pushAudit(db, entry) {
   db.auditLogs = db.auditLogs.slice(0, 500);
 }
 
-function pushNotification(db, { userId, role, title, message, portfolioId }) {
+function pushNotification(db, { userId, role, departmentId, title, message, portfolioId }) {
   if (!db.notifications) db.notifications = [];
   db.notifications.unshift({
     id: store.nextId('note'),
     userId: userId || null,
     role: role || null,
+    departmentId: departmentId || null,
     title,
     message,
     portfolioId: portfolioId || null,
@@ -278,9 +279,17 @@ function visibleUsers(db, me) {
     (db.auditLogs || []).forEach((l) => {
       if (l.action === 'login' && l.actor && !lastLoginFromLog[l.actor]) lastLoginFromLog[l.actor] = l.at;
     });
-    return users.map((u) => (u.id === me.id
-      ? stripPassword(u)
-      : { id: u.id, name: u.name, role: u.role, lastActiveAt: u.lastLoginAt || lastLoginFromLog[u.id] || null }));
+    // A department-scoped administrator only sees the faculty who have a
+    // portfolio in their department.
+    const scope = adminDepartmentId(db, me);
+    const inDept = scope
+      ? new Set((db.portfolios || []).filter((p) => inAdminScope(db, me, p)).map((p) => p.facultyId))
+      : null;
+    return users
+      .filter((u) => u.id === me.id || !inDept || (u.role === 'faculty' && inDept.has(u.id)))
+      .map((u) => (u.id === me.id
+        ? stripPassword(u)
+        : { id: u.id, name: u.name, role: u.role, lastActiveAt: u.lastLoginAt || lastLoginFromLog[u.id] || null }));
   }
   return [stripPassword(me)];
 }
@@ -345,7 +354,47 @@ function ownedPortfolio(db, id, ctx) {
   if (p.facultyId !== ctx.user.id && !['admin', 'it'].includes(ctx.user.role)) {
     throw { status: 403, message: 'You do not have access to this portfolio.' };
   }
+  // A College Administrator only handles their own department's portfolios;
+  // another department's look exactly like ones that don't exist.
+  if (p.facultyId !== ctx.user.id && !inAdminScope(db, ctx.user, p)) {
+    throw { status: 404, message: 'Portfolio not found.' };
+  }
   return p;
+}
+
+// ---------- department scoping for College Administrators ----------
+// Each College Administrator can be assigned one department (CCS, COED,
+// CAS, CHAS, COE, CBAA, …) by the IT Administrator. Once assigned, they see
+// and act on that department's portfolios only. An administrator with no
+// department assigned keeps seeing every department (the old behaviour),
+// and the page tells them to ask the IT Administrator to assign one.
+function findDepartment(db, id) {
+  return (db.departments || []).find((d) => d.id === id) || null;
+}
+
+function portfolioDepartmentId(db, p) {
+  if (p.departmentId && findDepartment(db, p.departmentId)) return p.departmentId;
+  if (p.templateId) {
+    const tpl = (db.obtlpTemplates || []).find((t) => t.id === p.templateId);
+    if (tpl && tpl.departmentId && findDepartment(db, tpl.departmentId)) return tpl.departmentId;
+  }
+  const label = String(p.facultyDepartment || '').trim().toLowerCase();
+  if (label) {
+    const d = (db.departments || []).find((x) => String(x.name || '').trim().toLowerCase() === label
+      || String(x.code || '').trim().toLowerCase() === label);
+    if (d) return d.id;
+  }
+  return '';
+}
+
+function adminDepartmentId(db, user) {
+  if (!user || user.role !== 'admin' || !user.departmentId) return '';
+  return findDepartment(db, user.departmentId) ? user.departmentId : '';
+}
+
+function inAdminScope(db, user, p) {
+  const scope = adminDepartmentId(db, user);
+  return !scope || portfolioDepartmentId(db, p) === scope;
 }
 
 function sanitizeStrList(v) {
@@ -889,21 +938,32 @@ const routes = {
     auth: true,
     handler: (db, ctx) => {
       const isStaff = ['admin', 'it'].includes(ctx.user.role);
-      const portfolios = isStaff ? (db.portfolios || []) : (db.portfolios || []).filter((p) => p.facultyId === ctx.user.id);
+      const scope = adminDepartmentId(db, ctx.user);
+      const portfolios = isStaff
+        ? (db.portfolios || []).filter((p) => inAdminScope(db, ctx.user, p))
+        : (db.portfolios || []).filter((p) => p.facultyId === ctx.user.id);
       const notifications = (db.notifications || []).filter(
-        (n) => n.userId === ctx.user.id || n.role === ctx.user.role
+        (n) => n.userId === ctx.user.id
+          || (n.role === ctx.user.role && (!scope || !n.departmentId || n.departmentId === scope))
       );
+      const scopedIds = scope ? new Set(portfolios.map((p) => p.id)) : null;
+      const dept = scope ? findDepartment(db, scope) : null;
       return {
         status: 200,
         data: {
           users: visibleUsers(db, ctx.user),
           portfolios,
-          allPortfolios: isStaff ? (db.portfolios || []) : [],
+          allPortfolios: isStaff ? portfolios : [],
+          // The department this College Administrator is assigned to (null =
+          // not assigned yet, so every department is shown).
+          myDepartment: ctx.user.role === 'admin' ? (dept ? { id: dept.id, code: dept.code, name: dept.name } : null) : undefined,
           notifications,
           // Faculty get only their own activity (their sign-ins/edits and what
           // happened to their portfolios) for the dashboard timeline.
           auditLogs: isStaff
-            ? (db.auditLogs || []).slice(0, 50)
+            ? (scopedIds
+              ? (db.auditLogs || []).filter((l) => l.actor === ctx.user.id || (l.portfolioId && scopedIds.has(l.portfolioId))).slice(0, 50)
+              : (db.auditLogs || []).slice(0, 50))
             : (db.auditLogs || []).filter((l) => l.actor === ctx.user.id || (l.portfolioId && portfolios.some((p) => p.id === l.portfolioId))).slice(0, 20),
           settings: db.settings || {}
         }
@@ -1431,6 +1491,9 @@ const routes = {
     handler: (db, ctx, query, body, params) => {
       const p = (db.portfolios || []).find((x) => x.id === params.id);
       if (!p) throw { status: 404, message: 'Portfolio not found.' };
+      if (ctx.user.role === 'admin' && !inAdminScope(db, ctx.user, p)) {
+        throw { status: 404, message: 'Portfolio not found.' };
+      }
       const action = body.action;
       const comment = String(body.comment || '').trim();
 
@@ -1464,6 +1527,7 @@ const routes = {
         });
         pushNotification(db, {
           role: 'admin',
+          departmentId: portfolioDepartmentId(db, p),
           title: 'New Submission',
           message: `${ctx.user.name} submitted ${p.courseCode} for review.`,
           portfolioId: p.id
@@ -1641,6 +1705,10 @@ const routes = {
         createdVia: 'it-admin',
         passwordHash: auth.hashPassword(password)
       };
+      if (user.role === 'admin' && body.departmentId) {
+        if (!findDepartment(db, String(body.departmentId))) throw { status: 400, message: 'Selected department was not found.' };
+        user.departmentId = String(body.departmentId);
+      }
       if (!db.users) db.users = [];
       db.users.push(user);
       pushAudit(db, { actor: ctx.user.id, action: 'user-create', portfolioId: null, detail: `Created user ${user.username} (${user.role})` });
@@ -1677,6 +1745,15 @@ const routes = {
         if (body[k] !== undefined) u[k] = String(body[k]);
       });
       u.role = newRole;
+      // College Administrators are assigned one department ('' = all).
+      let deptChanged = false;
+      if (body.departmentId !== undefined) {
+        const next = String(body.departmentId || '');
+        if (next && !findDepartment(db, next)) throw { status: 400, message: 'Selected department was not found.' };
+        if ((u.departmentId || '') !== next) { deptChanged = true; }
+        if (next) u.departmentId = next; else delete u.departmentId;
+      }
+      if (newRole !== 'admin' && u.departmentId) { delete u.departmentId; }
       if (newRole !== oldRole) {
         // New permissions take effect on their next sign-in.
         db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);
@@ -1685,7 +1762,11 @@ const routes = {
         actor: ctx.user.id,
         action: 'user-update',
         portfolioId: null,
-        detail: newRole !== oldRole ? `Changed ${u.username}'s role from ${oldRole} to ${newRole}` : `Updated user ${u.username}`
+        detail: newRole !== oldRole
+          ? `Changed ${u.username}'s role from ${oldRole} to ${newRole}`
+          : deptChanged
+            ? `Assigned ${u.username} to ${u.departmentId ? (findDepartment(db, u.departmentId) || {}).name : 'all departments'}`
+            : `Updated user ${u.username}`
       });
       return { status: 200, data: stripPassword(u) };
     }
@@ -1861,6 +1942,9 @@ async function handleDocumentDownload(req, res, pathname) {
     if (p.facultyId !== ctx.user.id && !['admin', 'it'].includes(ctx.user.role)) {
       return sendJson(res, 403, { error: 'You do not have access to this document.' });
     }
+    if (p.facultyId !== ctx.user.id && !inAdminScope(db, ctx.user, p)) {
+      return sendJson(res, 404, { error: 'Portfolio not found.' });
+    }
     const doc = (p.documents || []).find((d) => d.id === docId);
     if (!doc) return sendJson(res, 404, { error: 'Document not found.' });
     const filePath = path.join(UPLOADS_DIR, doc.storedName);
@@ -1944,6 +2028,8 @@ store.initDbIfMissing()
   .then(() => require('./seed-templates').ensureOfficialTemplates(store))
   // College of Education Course Outline (PNC:AA-FO-44) — see seed-coed.js.
   .then(() => require('./seed-coed').ensureCoedTemplates(store))
+  // The six colleges (CCS, COED, CAS, CHAS, COE, CBAA) — see seed-departments.js.
+  .then(() => require('./seed-departments').ensureDepartments(store))
   // Built-in IT Administrator from DEFAULT_IT_EMAIL / DEFAULT_IT_PASSWORD
   // (see seed-admin.js) — public sign-up only creates Faculty accounts.
   .then(() => require('./seed-admin').ensureDefaultItAdmin(store))

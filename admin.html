@@ -49,7 +49,11 @@
             <h1 class="page-title">Portfolio Review Queue</h1>
             <p class="page-subtitle">Review submissions, and keep track of what you sent back for revision and what you approved.</p>
           </div>
+          <span class="dept-chip" id="dept-chip" style="display:none;"></span>
         </header>
+        <div class="dept-notice" id="dept-notice" style="display:none;">
+          You are not assigned to a department yet, so portfolios from <b>every</b> department are shown. Ask the IT Administrator to assign your department in User Accounts.
+        </div>
 
         <section class="stats-grid" >
           <div class="stat stat-link" data-jump="Pending"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value" id="stat-pending">0</p></div>
@@ -238,6 +242,18 @@
       const state = await api.getState();
       latestUsers = state.users || [];
       latestPortfolios = state.allPortfolios || [];
+      const dept = state.myDepartment;
+      const chip = document.getElementById('dept-chip');
+      if (dept) {
+        chip.textContent = `${dept.code} · ${dept.name}`;
+        chip.title = 'You only see and review portfolios from this department.';
+        chip.style.display = '';
+        document.getElementById('dept-notice').style.display = 'none';
+      } else {
+        chip.style.display = 'none';
+        document.getElementById('dept-notice').style.display = '';
+      }
+      document.getElementById('user-role').textContent = dept ? `College Administrator · ${dept.code}` : 'College Administrator';
       allItems = latestPortfolios
         .map((p) => ({ p, bucket: bucketOf(p) }))
         .filter((it) => it.bucket)
