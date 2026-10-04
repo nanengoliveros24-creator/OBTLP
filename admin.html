@@ -20,7 +20,8 @@
         </a>
       </div>
       <nav class="nav">
-        <a href="admin.html" class="nav-link active"><i data-lucide="clipboard-list" class="svg-icon"></i> Review Queue</a>
+        <span class="nav-link active" data-tab="queue"><i data-lucide="clipboard-list" class="svg-icon"></i> Review Queue</span>
+        <span class="nav-link" data-tab="faculty"><i data-lucide="users" class="svg-icon"></i> Faculty</span>
         <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
         <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
       </nav>
@@ -39,59 +40,123 @@
     </aside>
 
     <main class="main">
-      <header class="page-header">
-        <div>
-          <h1 class="page-title">Portfolio Review Queue</h1>
-          <p class="page-subtitle">Submissions pending administrative review and approval.</p>
-        </div>
-      </header>
 
-<section class="stats-grid">
-        <div class="stat"><div class="stat-top"><p class="stat-label">Pending</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value">0</p></div>
-        <div class="stat"><div class="stat-top"><p class="stat-label">In Review</p><i data-lucide="eye" class="svg-icon t-primary"></i></div><p class="stat-value">0</p></div>
-        <div class="stat"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="file-check-2" class="svg-icon t-success"></i></div><p class="stat-value">0</p></div>
-        <div class="stat"><div class="stat-top"><p class="stat-label">Faculty Active</p><i data-lucide="users" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-faculty">0</p></div>
-      </section>
 
-      <div class="grid-3">
-        <section class="card span-2" style="overflow:hidden;">
-          <div class="section-head">
-            <h2 class="card-title">Incoming Submissions</h2>
-            <div class="filter-tabs">
-              <button class="active" data-filter="All">All</button>
-              <button data-filter="Pending">Pending</button>
-              <button data-filter="In Review">In Review</button>
-              <button data-filter="Resubmitted">Resubmitted</button>
-            </div>
+      <!-- ===== Review Queue ===== -->
+      <section class="tab-panel active" data-tab-panel="queue">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">Portfolio Review Queue</h1>
+            <p class="page-subtitle">Review submissions, and keep track of what you sent back for revision and what you approved.</p>
           </div>
-          <ul class="review-list" id="review-list">
-            <li class="empty-state">Loading submissions…</li>
-          </ul>
+        </header>
+
+        <section class="stats-grid" >
+          <div class="stat stat-link" data-jump="Pending"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value" id="stat-pending">0</p></div>
+          <div class="stat stat-link" data-jump="Revision"><div class="stat-top"><p class="stat-label">For Revision</p><i data-lucide="message-square" class="svg-icon t-destructive"></i></div><p class="stat-value" id="stat-revision">0</p></div>
+          <div class="stat stat-link" data-jump="Approved"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="file-check-2" class="svg-icon t-success"></i></div><p class="stat-value" id="stat-approved">0</p></div>
+          <div class="stat stat-link" data-jump-tab="faculty"><div class="stat-top"><p class="stat-label">Active Faculty <span class="t-muted" style="font-weight:400;">(30 days)</span></p><i data-lucide="users" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-faculty">0</p></div>
         </section>
 
-        <aside class="card card-pad col-flex">
-          <h3 class="card-title" style="margin-bottom:0.25rem;">Active Review</h3>
-          <p class="section-sub" style="margin-bottom:1rem;" id="active-review-label">Select a submission to review</p>
-
-          <a href="#" id="view-portfolio-link" class="btn btn-outline btn-sm" style="margin-bottom:1rem;display:none;"><i data-lucide="eye" class="svg-icon"></i> View Full Portfolio</a>
-
-          <div class="compliance">
-            <p style="font-weight:500;margin-bottom:0.25rem;">Compliance Check</p>
-            <ul id="compliance-list">
-              <li><i data-lucide="minus" class="svg-icon"></i> Select a submission to review</li>
+        <div class="grid-3">
+          <section class="card span-2" style="overflow:hidden;">
+            <div class="section-head" style="flex-wrap:wrap;gap:0.75rem;">
+              <h2 class="card-title" id="list-title">Pending Review</h2>
+              <div class="filter-tabs" style="flex-wrap:wrap;">
+                <button class="active" data-filter="Pending">Pending <span class="tab-count" id="count-Pending"></span></button>
+                <button data-filter="Resubmitted">Resubmitted <span class="tab-count" id="count-Resubmitted"></span></button>
+                <button data-filter="Revision">Revision <span class="tab-count" id="count-Revision"></span></button>
+                <button data-filter="Approved">Approved <span class="tab-count" id="count-Approved"></span></button>
+                <button data-filter="All">All <span class="tab-count" id="count-All"></span></button>
+              </div>
+            </div>
+            <p class="section-sub tab-help" id="tab-help"></p>
+            <ul class="review-list" id="review-list">
+              <li class="empty-state">Loading submissions…</li>
             </ul>
-          </div>
+          </section>
 
-          <label class="field-label" style="margin-bottom:0.375rem;">Comments to faculty</label>
-          <textarea class="textarea" rows="4" placeholder="Add revision notes…" style="margin-bottom:0.75rem;" id="review-comments"></textarea>
+          <aside class="card card-pad col-flex">
+            <h3 class="card-title" style="margin-bottom:0.25rem;">Active Review</h3>
+            <p class="section-sub" style="margin-bottom:1rem;" id="active-review-label">Select a submission to review</p>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;" class="mt-auto">
-              <button class="btn btn-danger btn-sm" id="btn-request-revision" disabled><i data-lucide="message-square" class="svg-icon"></i> Request Revision</button>
-            <button class="btn btn-success btn-sm" id="btn-approve" disabled><i data-lucide="check" class="svg-icon"></i> Approve</button>
+            <a href="#" id="view-portfolio-link" class="btn btn-outline btn-sm" style="margin-bottom:1rem;display:none;"><i data-lucide="eye" class="svg-icon"></i> View Full Portfolio</a>
+
+            <div class="compliance">
+              <p style="font-weight:500;margin-bottom:0.25rem;">Compliance Check</p>
+              <ul id="compliance-list">
+                <li><i data-lucide="minus" class="svg-icon"></i> Select a submission to review</li>
+              </ul>
+            </div>
+
+            <div id="review-history" class="review-history" style="display:none;"></div>
+
+            <div id="review-actions">
+              <label class="field-label" style="margin-bottom:0.375rem;" for="review-comments">Comments to faculty</label>
+              <textarea class="textarea" rows="4" placeholder="Add revision notes…" style="margin-bottom:0.75rem;" id="review-comments"></textarea>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                <button class="btn btn-danger btn-sm" id="btn-request-revision" disabled><i data-lucide="message-square" class="svg-icon"></i> Request Revision</button>
+                <button class="btn btn-success btn-sm" id="btn-approve" disabled><i data-lucide="check" class="svg-icon"></i> Approve</button>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-sm delete-sub-btn mt-auto" id="btn-delete" style="display:none;"><i data-lucide="trash-2" class="svg-icon"></i> Delete Submission</button>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ===== Faculty ===== -->
+      <section class="tab-panel" data-tab-panel="faculty">
+        <header class="page-header">
+          <div>
+            <h1 class="page-title">Faculty</h1>
+            <p class="page-subtitle">Who is active, and where each faculty member's portfolios stand.</p>
           </div>
-        </aside>
-      </div>
+        </header>
+        <section class="card" style="overflow:hidden;">
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Faculty</th><th>Last Active</th><th class="center">Pending</th><th class="center">For Revision</th><th class="center">Approved</th><th class="center">Drafts</th></tr></thead>
+              <tbody id="faculty-rows"><tr><td colspan="6" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+        <p class="section-sub" style="margin-top:0.75rem;">"Active" means signed in within the last 30 days. Drafts are counted only; their content stays private to the faculty member until submitted.</p>
+      </section>
     </main>
+  </div>
+
+  <!-- Delete submission modal -->
+  <div class="modal-overlay" id="delsub-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title">Delete Submission</h3>
+        <button type="button" class="modal-close" id="delsub-close"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="delsub-form" class="form-stack">
+        <div class="danger-callout">
+          <p><b>Permanently delete <span id="delsub-what"></span>?</b></p>
+          <ul>
+            <li>It will be removed from the system for everyone, including the faculty member.</li>
+            <li>This cannot be undone.</li>
+            <li>The faculty member will get a notification, with your reason if you add one.</li>
+          </ul>
+        </div>
+        <div class="field">
+          <label class="field-label" for="delsub-reason">Reason (optional)</label>
+          <input class="input" id="delsub-reason" placeholder="e.g. Test entry / course no longer offered" maxlength="500" />
+        </div>
+        <div class="field">
+          <label class="field-label" for="delsub-confirm">Type <b id="delsub-code"></b> to confirm</label>
+          <input class="input" id="delsub-confirm" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="form-error" id="delsub-error" style="display:none;"></div>
+        <div style="display:flex;gap:0.5rem;">
+          <button type="button" class="btn btn-outline" id="delsub-cancel" style="flex:1;">Cancel</button>
+          <button type="submit" class="btn btn-danger-solid" id="delsub-submit" style="flex:1;" disabled>Delete</button>
+        </div>
+      </form>
+    </div>
   </div>
 
 <script src="https://unpkg.com/lucide@latest"></script>
@@ -100,8 +165,8 @@
   <script src="db.js"></script>
   <script src="app-actions.js"></script>
   <script>
-    // Render the review queue dynamically from the real server DB so that
-    // faculty submissions (submitted on the portfolio-preview page) appear here.
+    // College Administrator: review queue (Pending / Resubmitted / Revision /
+    // Approved / All) and a Faculty overview, all from the live server data.
     const api = window.__OBTLP_API__;
     const ui = () => window.__OBTLP_UI__;
     const session = api.getSession();
@@ -111,142 +176,243 @@
       window.location.href = session.role === 'it' ? 'it-admin.html' : 'dashboard.html';
     }
     let allItems = [];
-    let activeFilter = 'All';
+    let activeFilter = 'Pending';
     let selectedId = null;
     let selectedPortfolio = null;
+    let latestUsers = [];
+    let latestPortfolios = [];
 
     document.getElementById('user-name').textContent = session ? session.name : '—';
     document.getElementById('user-avatar').textContent = session ? (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–' : '–';
 
     function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-    function nameOf(users, facultyId) {
-      const u = users.find((x) => x.id === facultyId);
+    function nameOf(facultyId) {
+      const u = latestUsers.find((x) => x.id === facultyId);
       return u ? u.name : 'Faculty Member';
     }
+    function initialsOf(name) { return (name || 'FM').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase(); }
+    function when(iso) { return iso ? new Date(iso).toLocaleString() : '—'; }
+    function ago(iso) {
+      if (!iso) return 'Never signed in';
+      const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.round(hrs / 24);
+      if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+      return new Date(iso).toLocaleDateString();
+    }
+    const ACTIVE_MS = 30 * 24 * 60 * 60 * 1000;
+    const isActive = (u) => !!u.lastActiveAt && Date.now() - new Date(u.lastActiveAt).getTime() < ACTIVE_MS;
 
-    function statusToBucket(status) {
-      if (status === 'In Review') return 'In Review';
-      if (status === 'Pending Review') return 'Pending';
-      return null;
+    // Which tab a portfolio belongs to. "In Review" is an old status that
+    // nothing sets any more; treat it as Pending.
+    function bucketOf(p) {
+      if (p.status === 'Pending Review' || p.status === 'In Review') return p.resubmitted ? 'Resubmitted' : 'Pending';
+      if (p.status === 'Revision Required') return 'Revision';
+      if (p.status === 'Approved') return 'Approved';
+      return null; // Drafts stay private to the faculty member
+    }
+    const TAB_TITLE = { Pending: 'Pending Review', Resubmitted: 'Resubmitted', Revision: 'Sent Back for Revision', Approved: 'Approved', All: 'All Submissions' };
+    const TAB_HELP = {
+      Pending: 'New and resubmitted portfolios waiting for your decision.',
+      Resubmitted: 'Portfolios the faculty fixed and sent back after your revision request.',
+      Revision: 'Portfolios you returned for changes. They are with the faculty member now; they come back under Resubmitted.',
+      Approved: 'Portfolios you have approved.',
+      All: 'Every submitted portfolio, whatever its status.'
+    };
+    const BADGE = {
+      Pending: ['badge-pending', 'Pending'],
+      Resubmitted: ['badge-accent', 'Resubmitted'],
+      Revision: ['badge-revision', 'For Revision'],
+      Approved: ['badge-approved', 'Approved']
+    };
+    function inTab(item, tab) {
+      if (tab === 'All') return true;
+      if (tab === 'Pending') return item.bucket === 'Pending' || item.bucket === 'Resubmitted';
+      return item.bucket === tab;
     }
 
-    let latestUsers = [];
-
-    async function loadAndRenderQueue() {
+    async function loadAll() {
       const state = await api.getState();
-      const users = state.users || [];
-      latestUsers = users;
-      const portfolios = state.allPortfolios || [];
+      latestUsers = state.users || [];
+      latestPortfolios = state.allPortfolios || [];
+      allItems = latestPortfolios
+        .map((p) => ({ p, bucket: bucketOf(p) }))
+        .filter((it) => it.bucket)
+        .sort((a, b) => String(b.p.updatedAt || '').localeCompare(String(a.p.updatedAt || '')));
 
-      allItems = portfolios
-        .filter((p) => p.status === 'Pending Review' || p.status === 'In Review')
-        .map((p) => ({ p, bucket: p.resubmitted ? 'Resubmitted' : statusToBucket(p.status) }));
-
-      renderStats(portfolios, users);
-      renderList(users);
+      renderStats();
+      renderList();
+      renderFaculty();
 
       if (selectedId) {
         const stillThere = allItems.find((it) => it.p.id === selectedId);
-        if (stillThere) selectedPortfolio = stillThere.p;
+        if (stillThere) selectForReview(selectedId, true);
         else resetSelection();
       }
     }
 
-    function renderStats(portfolios, users) {
-      const pending = portfolios.filter((p) => p.status === 'Pending Review').length;
-      const inReview = portfolios.filter((p) => p.status === 'In Review').length;
-      const approved = portfolios.filter((p) => p.status === 'Approved').length;
-      document.querySelectorAll('.stat-value')[0].textContent = pending;
-      document.querySelectorAll('.stat-value')[1].textContent = inReview;
-      document.querySelectorAll('.stat-value')[2].textContent = approved;
-      document.getElementById('stat-faculty').textContent = (users || []).filter((u) => u.role === 'faculty').length;
+    function renderStats() {
+      const count = (b) => allItems.filter((it) => inTab(it, b)).length;
+      document.getElementById('stat-pending').textContent = count('Pending');
+      document.getElementById('stat-revision').textContent = count('Revision');
+      document.getElementById('stat-approved').textContent = count('Approved');
+      document.getElementById('stat-faculty').textContent = latestUsers.filter((u) => u.role === 'faculty' && isActive(u)).length;
+      ['Pending', 'Resubmitted', 'Revision', 'Approved', 'All'].forEach((t) => {
+        const n = count(t);
+        document.getElementById(`count-${t}`).textContent = n ? `(${n})` : '';
+      });
     }
 
-    function renderList(users) {
+    function renderList() {
       const list = document.getElementById('review-list');
-      let items = allItems;
-      if (activeFilter === 'Pending') items = items.filter((it) => it.bucket === 'Pending');
-      if (activeFilter === 'In Review') items = items.filter((it) => it.bucket === 'In Review');
-      if (activeFilter === 'Resubmitted') items = items.filter((it) => it.bucket === 'Resubmitted');
-
-      if (items.length === 0) {
-        list.innerHTML = '<li class="empty-state">No submissions yet. When faculty submit a portfolio, it will appear here.</li>';
+      document.getElementById('list-title').textContent = TAB_TITLE[activeFilter];
+      document.getElementById('tab-help').textContent = TAB_HELP[activeFilter];
+      const items = allItems.filter((it) => inTab(it, activeFilter));
+      if (!items.length) {
+        const empty = {
+          Pending: 'Nothing to review right now.',
+          Resubmitted: 'No resubmissions yet.',
+          Revision: 'You have not sent anything back for revision.',
+          Approved: 'You have not approved any portfolio yet.',
+          All: 'No submissions yet. When faculty submit a portfolio, it will appear here.'
+        }[activeFilter];
+        list.innerHTML = `<li class="empty-state">${empty}</li>`;
         return;
       }
-
       list.innerHTML = items.map(({ p, bucket }) => {
-        const badgeClass = bucket === 'In Review' ? 'badge-review' : (bucket === 'Resubmitted' ? 'badge-accent' : 'badge-pending');
-        const initials = (nameOf(users, p.facultyId) || 'FM').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+        const [badgeClass, badgeText] = BADGE[bucket];
+        const name = nameOf(p.facultyId);
+        const sub = bucket === 'Approved'
+          ? `approved ${when(p.review && p.review.approvedAt || p.updatedAt)}`
+          : bucket === 'Revision'
+            ? `returned ${when(p.review && p.review.requestedRevisionAt || p.updatedAt)}`
+            : `submitted ${when(p.updatedAt)}`;
         return `
-          <li>
-            <div class="avatar-sec">${initials}</div>
-            <div style="flex:1;min-width:0;"><p class="cell-strong">${esc(p.courseCode)} — ${esc(p.courseTitle)}</p><p class="cell-sub">${esc(nameOf(users, p.facultyId))} · submitted ${new Date(p.updatedAt).toLocaleString()}</p></div>
-            <span class="badge ${badgeClass}">${bucket}</span>
-            <button class="btn btn-outline btn-sm" data-id="${p.id}">Review</button>
-          </li>
-        `;
+          <li class="${p.id === selectedId ? 'is-selected' : ''}">
+            <div class="avatar-sec">${esc(initialsOf(name))}</div>
+            <div style="flex:1;min-width:0;"><p class="cell-strong">${esc(p.courseCode)} — ${esc(p.courseTitle)}</p><p class="cell-sub">${esc(name)} · ${sub}</p></div>
+            <span class="badge ${badgeClass}">${badgeText}</span>
+            <button class="btn btn-outline btn-sm" data-id="${esc(p.id)}">${bucket === 'Pending' || bucket === 'Resubmitted' ? 'Review' : 'View'}</button>
+          </li>`;
       }).join('');
-
       list.querySelectorAll('button[data-id]').forEach((btn) => {
         btn.addEventListener('click', () => selectForReview(btn.dataset.id));
       });
     }
 
+    function renderFaculty() {
+      const rows = document.getElementById('faculty-rows');
+      const faculty = latestUsers.filter((u) => u.role === 'faculty')
+        .sort((a, b) => String(b.lastActiveAt || '').localeCompare(String(a.lastActiveAt || '')) || a.name.localeCompare(b.name));
+      if (!faculty.length) {
+        rows.innerHTML = '<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No faculty accounts yet.</td></tr>';
+        return;
+      }
+      const mine = (id, test) => latestPortfolios.filter((p) => p.facultyId === id && test(p)).length;
+      rows.innerHTML = faculty.map((u) => {
+        const active = isActive(u);
+        const n = (v) => v ? `<b>${v}</b>` : '<span class="t-muted">0</span>';
+        return `
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:0.625rem;"><div class="avatar-sec" style="height:2rem;width:2rem;font-size:0.75rem;">${esc(initialsOf(u.name))}</div><span class="cell-strong">${esc(u.name)}</span></div></td>
+            <td><span class="presence ${active ? 'on' : ''}"></span>${active ? 'Active · ' : ''}${esc(ago(u.lastActiveAt))}</td>
+            <td class="center">${n(mine(u.id, (p) => p.status === 'Pending Review' || p.status === 'In Review'))}</td>
+            <td class="center">${n(mine(u.id, (p) => p.status === 'Revision Required'))}</td>
+            <td class="center">${n(mine(u.id, (p) => p.status === 'Approved'))}</td>
+            <td class="center">${n(mine(u.id, (p) => p.status === 'Draft'))}</td>
+          </tr>`;
+      }).join('');
+    }
+
     function renderCompliance(p) {
-      const items = [
-        { ok: !!(p.courseCode && p.courseTitle && p.academicYear && p.description), label: 'Course data complete' },
-        // Official-template portfolios are generated automatically, so no
-        // supporting documents are required; confirm the template instead.
-        (p.teachingPlan || []).length
-          ? { ok: !!p.templateId, label: 'Official OBTLP template applied' }
-          : { ok: (p.documents || []).length > 0, label: `${(p.documents || []).length} document${(p.documents || []).length === 1 ? '' : 's'} attached` },
-        { ok: (p.outcomes || []).length > 0, label: 'Intended learning outcomes provided' },
-        // Official-template portfolios follow the PnC OBTLP form, which has
-        // no "Course Objectives" section; check its Teaching and Learning
-        // Plan instead. Legacy (manual) portfolios keep the old check.
-        (p.teachingPlan || []).length
-          ? { ok: (p.teachingPlan || []).some((r) => r.type === 'week'), label: 'Teaching and Learning Plan provided' }
-          : { ok: (p.objectives || []).length > 0, label: 'Course objectives provided' }
-      ];
+      const isTemplate = !!p.templateId || (p.teachingPlan || []).length > 0;
+      const items = isTemplate
+        ? [
+            { ok: !!(p.courseCode && p.courseTitle && p.academicYear && p.description), label: 'Course data complete' },
+            { ok: !!p.templateId, label: 'Official OBTLP template applied' },
+            { ok: (p.soMap || []).length > 0, label: 'Student outcomes mapped' },
+            { ok: (p.teachingPlan || []).some((r) => r.type === 'week'), label: 'Teaching and Learning Plan provided' }
+          ]
+        : [
+            { ok: !!(p.courseCode && p.courseTitle && p.academicYear && p.description), label: 'Course data complete' },
+            { ok: (p.documents || []).length > 0, label: `${(p.documents || []).length} document${(p.documents || []).length === 1 ? '' : 's'} attached` },
+            { ok: (p.outcomes || []).length > 0, label: 'Intended learning outcomes provided' },
+            { ok: (p.objectives || []).length > 0, label: 'Course objectives provided' }
+          ];
       document.getElementById('compliance-list').innerHTML = items.map((it) => `
-        <li><i data-lucide="${it.ok ? 'check' : 'x'}" class="svg-icon" style="color:${it.ok ? 'var(--success)' : 'var(--destructive)'};"></i> ${it.label}</li>
+        <li><i data-lucide="${it.ok ? 'check' : 'x'}" class="svg-icon" style="color:${it.ok ? 'var(--success)' : 'var(--destructive)'};"></i> ${esc(it.label)}</li>
       `).join('');
       if (window.lucide) lucide.createIcons();
     }
 
-    function selectForReview(id) {
-      selectedId = id;
+    function selectForReview(id, keepComment) {
       const found = allItems.find((it) => it.p.id === id);
-      selectedPortfolio = found ? found.p : null;
-      const label = selectedPortfolio ? `${selectedPortfolio.courseCode} — ${selectedPortfolio.courseTitle}` : '';
-      const name = selectedPortfolio ? nameOf(latestUsers, selectedPortfolio.facultyId) : '';
-      document.getElementById('active-review-label').textContent = `${label} · ${name}`;
-      document.getElementById('review-comments').value = '';
-      document.getElementById('btn-approve').disabled = false;
-      document.getElementById('btn-request-revision').disabled = false;
+      if (!found) return;
+      selectedId = id;
+      selectedPortfolio = found.p;
+      const p = found.p;
+      document.getElementById('active-review-label').textContent = `${p.courseCode} — ${p.courseTitle} · ${nameOf(p.facultyId)}`;
+      if (!keepComment) document.getElementById('review-comments').value = '';
       const viewLink = document.getElementById('view-portfolio-link');
       viewLink.href = `portfolio-preview.html?id=${encodeURIComponent(id)}`;
       viewLink.style.display = 'inline-flex';
-      if (selectedPortfolio) renderCompliance(selectedPortfolio);
+      renderCompliance(p);
+
+      // Approve / Request Revision only make sense while it's waiting on you.
+      const actionable = found.bucket === 'Pending' || found.bucket === 'Resubmitted';
+      document.getElementById('review-actions').style.display = actionable ? '' : 'none';
+      document.getElementById('btn-approve').disabled = !actionable;
+      document.getElementById('btn-request-revision').disabled = !actionable;
+
+      const history = document.getElementById('review-history');
+      const r = p.review || {};
+      if (found.bucket === 'Revision') {
+        history.innerHTML = `<p class="rh-title">Sent back for revision · ${esc(when(r.requestedRevisionAt))}</p><p>${esc(r.notes || 'No comment was added.')}</p><p class="t-muted">Waiting for ${esc(nameOf(p.facultyId))} to fix and resubmit.</p>`;
+        history.style.display = '';
+      } else if (found.bucket === 'Approved') {
+        history.innerHTML = `<p class="rh-title">Approved · ${esc(when(r.approvedAt))}</p>${r.notes ? `<p>${esc(r.notes)}</p>` : ''}`;
+        history.style.display = '';
+      } else if (found.bucket === 'Resubmitted' && r.notes) {
+        history.innerHTML = `<p class="rh-title">Your earlier revision note</p><p>${esc(r.notes)}</p>`;
+        history.style.display = '';
+      } else {
+        history.style.display = 'none';
+      }
+      document.getElementById('btn-delete').style.display = 'inline-flex';
+      document.querySelectorAll('#review-list li').forEach((li) => {
+        li.classList.toggle('is-selected', !!li.querySelector(`button[data-id="${CSS.escape(id)}"]`));
+      });
     }
 
+    function setFilter(tab) {
+      activeFilter = tab;
+      document.querySelectorAll('.filter-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.filter === tab));
+      renderList();
+    }
     document.querySelectorAll('.filter-tabs button').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-tabs button').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeFilter = btn.dataset.filter;
-        loadAndRenderQueue();
-      });
+      btn.addEventListener('click', () => setFilter(btn.dataset.filter));
     });
+
+    // Sidebar tabs (Review Queue / Faculty)
+    function showTab(tab) {
+      document.querySelectorAll('.nav [data-tab]').forEach((x) => x.classList.toggle('active', x.dataset.tab === tab));
+      document.querySelectorAll('[data-tab-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.tabPanel === tab));
+    }
+    document.querySelectorAll('.nav [data-tab]').forEach((el) => el.addEventListener('click', () => showTab(el.dataset.tab)));
+    document.querySelectorAll('[data-jump]').forEach((el) => el.addEventListener('click', () => { showTab('queue'); setFilter(el.dataset.jump); }));
+    document.querySelectorAll('[data-jump-tab]').forEach((el) => el.addEventListener('click', () => showTab(el.dataset.jumpTab)));
 
     document.getElementById('btn-approve').addEventListener('click', async () => {
       if (!selectedId) return;
       const comment = document.getElementById('review-comments').value.trim();
       try {
         await api.approve(selectedId, comment);
-        ui().notify('Approved', 'The portfolio has been approved and the faculty member notified.');
+        ui().notify('Approved', 'The portfolio has been approved and the faculty member notified. You can find it under Approved.');
         resetSelection();
-        loadAndRenderQueue();
+        loadAll();
       } catch (err) {
         ui().notifyError(err);
       }
@@ -261,11 +427,57 @@
       }
       try {
         await api.requestRevision(selectedId, comment);
-        ui().notify('Revision Requested', 'The faculty member has been notified with your comments.');
+        ui().notify('Revision Requested', 'The faculty member has been notified. You can follow it under Revision.');
         resetSelection();
-        loadAndRenderQueue();
+        loadAll();
       } catch (err) {
         ui().notifyError(err);
+      }
+    });
+
+    // Delete submission
+    const delOverlay = document.getElementById('delsub-overlay');
+    const delConfirm = document.getElementById('delsub-confirm');
+    const delSubmit = document.getElementById('delsub-submit');
+    function closeDel() { delOverlay.style.display = 'none'; }
+    document.getElementById('btn-delete').addEventListener('click', () => {
+      if (!selectedPortfolio) return;
+      const p = selectedPortfolio;
+      document.getElementById('delsub-what').textContent = `${p.courseCode} — ${p.courseTitle} (${nameOf(p.facultyId)})`;
+      document.getElementById('delsub-code').textContent = p.courseCode;
+      document.getElementById('delsub-reason').value = '';
+      delConfirm.value = '';
+      delSubmit.disabled = true;
+      document.getElementById('delsub-error').style.display = 'none';
+      delOverlay.style.display = 'flex';
+      delConfirm.focus();
+    });
+    delConfirm.addEventListener('input', () => {
+      delSubmit.disabled = !selectedPortfolio || delConfirm.value.trim().toLowerCase() !== String(selectedPortfolio.courseCode || '').trim().toLowerCase();
+    });
+    document.getElementById('delsub-close').addEventListener('click', closeDel);
+    document.getElementById('delsub-cancel').addEventListener('click', closeDel);
+    delOverlay.addEventListener('click', (e) => { if (e.target === delOverlay) closeDel(); });
+    document.getElementById('delsub-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedPortfolio || delSubmit.disabled) return;
+      const errEl = document.getElementById('delsub-error');
+      errEl.style.display = 'none';
+      delSubmit.disabled = true;
+      try {
+        await api.deletePortfolio(selectedPortfolio.id, {
+          confirmCourseCode: delConfirm.value.trim(),
+          reason: document.getElementById('delsub-reason').value.trim()
+        });
+        const label = selectedPortfolio.courseCode;
+        closeDel();
+        ui().notify('Submission Deleted', `${label} was removed and the faculty member was notified.`);
+        resetSelection();
+        loadAll();
+      } catch (err) {
+        errEl.textContent = err.message || 'Could not delete the submission.';
+        errEl.style.display = 'block';
+        delSubmit.disabled = false;
       }
     });
 
@@ -276,12 +488,17 @@
       document.getElementById('review-comments').value = '';
       document.getElementById('btn-approve').disabled = true;
       document.getElementById('btn-request-revision').disabled = true;
+      document.getElementById('review-actions').style.display = '';
+      document.getElementById('review-history').style.display = 'none';
+      document.getElementById('btn-delete').style.display = 'none';
       document.getElementById('view-portfolio-link').style.display = 'none';
       document.getElementById('compliance-list').innerHTML = '<li><i data-lucide="minus" class="svg-icon"></i> Select a submission to review</li>';
       if (window.lucide) lucide.createIcons();
     }
 
-    loadAndRenderQueue();
+    const startTab = new URLSearchParams(window.location.search).get('tab');
+    if (startTab && TAB_TITLE[startTab]) setFilter(startTab);
+    loadAll();
   </script>
 </body>
 </html>

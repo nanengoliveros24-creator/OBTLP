@@ -49,6 +49,7 @@
         </div>
         <div class="header-actions">
           <button class="btn btn-outline" data-action="download-pdf"><i data-lucide="download" class="svg-icon"></i> Download PDF</button>
+          <a href="admin.html" id="back-link" class="btn btn-outline" style="display:none;"><i data-lucide="arrow-left" class="svg-icon"></i> Back to Review Queue</a>
           <a href="portfolio-new.html" id="edit-link" class="btn btn-outline"><i data-lucide="pencil" class="svg-icon"></i> Edit</a>
           <button class="btn btn-primary" data-action="submit-for-review" id="submit-btn"><i data-lucide="send" class="svg-icon"></i> Submit for Review</button>
         </div>
@@ -164,7 +165,7 @@
               <ul class="file-list" id="doc-list"></ul>
             </div>
 
-            <div class="card card-pad">
+            <div class="card card-pad" id="notes-card">
               <h3 class="card-title" style="margin-bottom:0.75rem;">Submission Notes</h3>
               <p class="section-sub" style="margin-bottom:0.75rem;">Optional message visible to the reviewing administrator.</p>
               <textarea class="textarea" rows="5" id="f-notes" placeholder="Add any notes for the reviewer…"></textarea>
@@ -189,6 +190,10 @@
       const session = api.getSession();
       if (!session) { window.location.href = 'index.html'; return; }
 
+      if (session.role === 'admin') {
+        const nav = document.querySelector('.sidebar .nav');
+        nav.insertAdjacentHTML('afterbegin', '<a href="admin.html" class="nav-link"><i data-lucide="clipboard-list" class="svg-icon"></i> Review Queue</a>');
+      }
       if (session.role !== 'faculty') {
         document.querySelectorAll(
           '.sidebar .nav a[href="dashboard.html"], .sidebar .nav a[href="portfolio-new.html"], .sidebar .nav a[href^="my-portfolios.html"]'
@@ -202,6 +207,8 @@
 
       document.getElementById('user-name').textContent = session.name || '—';
       document.getElementById('user-avatar').textContent = (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+      const roleEl = document.querySelector('.sidebar .user-role');
+      if (roleEl) roleEl.textContent = { faculty: 'Faculty', admin: 'College Administrator', it: 'IT Administrator' }[session.role] || 'Faculty';
 
       if (!portfolioId) return; // picker empty-state stays visible
 
@@ -233,6 +240,30 @@
         if (!p) {
           document.getElementById('picker').innerHTML = '<p>Portfolio not found, or you do not have access to it.</p>';
           return;
+        }
+
+        // Viewing someone else's portfolio (College Administrator / IT):
+        // read-only — no Edit / Submit, and the faculty shown is the owner.
+        const isOwner = p.facultyId === session.userId;
+        const owner = (state.users || []).find((u) => u.id === p.facultyId);
+        const ownerName = isOwner ? (session.name || '') : (owner ? owner.name : 'Faculty Member');
+        if (!isOwner) {
+          document.getElementById('edit-link').style.display = 'none';
+          document.getElementById('submit-btn').style.display = 'none';
+          document.getElementById('page-title').textContent = 'Portfolio Preview';
+          document.getElementById('page-subtitle').textContent = `${p.courseCode || 'Portfolio'} · submitted by ${ownerName}`;
+          if (session.role === 'admin') {
+            const back = document.getElementById('back-link');
+            const tab = { 'Revision Required': 'Revision', Approved: 'Approved' }[p.status] || 'Pending';
+            back.href = `admin.html?tab=${tab}`;
+            back.style.display = 'inline-flex';
+          }
+          const notesCard = document.getElementById('notes-card');
+          if (p.notes) {
+            notesCard.querySelector('.section-sub').textContent = 'Message from the faculty member.';
+          } else {
+            notesCard.style.display = 'none';
+          }
         }
 
         document.getElementById('picker').style.display = 'none';
@@ -267,7 +298,7 @@
             academicYear: p.academicYear || '',
             description: p.description || 'No course description provided yet.',
             prerequisite: p.prerequisite || '',
-            faculty: session.name || '',
+            faculty: ownerName,
             facultyDept: p.facultyDepartment || '',
             facultyUnits: p.facultyUnits || '',
             units: p.facultyUnits || '',
@@ -319,7 +350,7 @@
           legacyEl.style.display = 'block';
 
           document.getElementById('pdf-description').textContent = model.description;
-          document.getElementById('pdf-faculty').textContent = session.name || '—';
+          document.getElementById('pdf-faculty').textContent = ownerName || '—';
           document.getElementById('pdf-faculty-dept').textContent = p.facultyDepartment || '—';
           document.getElementById('pdf-units').textContent = p.facultyUnits || '—';
           document.getElementById('pdf-schedule').textContent = p.facultySchedule || '—';

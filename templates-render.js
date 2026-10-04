@@ -858,7 +858,42 @@
     if (formCodeEl) formCodeEl.style.display = 'none';
   }
 
-  const api = { resolveTemplate, renderSectionsHtml, buildOfficialPdf, applyOfficialLetterhead, classifyItems };
+  // ---------------------------------------------------------------------
+  // The official preview pages are a fixed 1100px wide (A4 landscape).
+  // When the space on screen is narrower (sidebar + side panel, laptop
+  // screens), shrink them to fit instead of letting the edges get cut off.
+  // Runs automatically whenever the preview is (re)rendered or resized.
+  // ---------------------------------------------------------------------
+  const PAGE_W = 1102; // .oo-page width + borders
+  function fitOfficialPages() {
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll('.obtlp-official').forEach((el) => {
+      const host = el.parentElement;
+      if (!host) return;
+      const avail = host.clientWidth;
+      if (!avail) return;
+      const scale = Math.min(1, avail / PAGE_W);
+      el.style.zoom = scale < 0.999 ? String(Math.round(scale * 1000) / 1000) : '';
+    });
+  }
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    let queued = false;
+    const schedule = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; fitOfficialPages(); });
+    };
+    window.addEventListener('resize', schedule);
+    const start = () => {
+      if (typeof MutationObserver !== 'undefined') {
+        new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+      }
+      schedule();
+    };
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  }
+
+  const api = { resolveTemplate, renderSectionsHtml, buildOfficialPdf, applyOfficialLetterhead, classifyItems, fitOfficialPages };
   if (typeof window !== 'undefined') window.__OBTLP_TEMPLATE_RENDERER__ = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

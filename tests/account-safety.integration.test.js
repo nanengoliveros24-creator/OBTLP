@@ -120,7 +120,7 @@ test('a College Administrator sees only names of other users, not their accounts
   const others = state.data.users.filter((u) => u.id !== user.id);
   assert.ok(others.length > 0);
   others.forEach((u) => {
-    assert.deepEqual(Object.keys(u).sort(), ['id', 'name', 'role']);
+    assert.deepEqual(Object.keys(u).sort(), ['id', 'lastActiveAt', 'name', 'role']);
   });
   const me = state.data.users.find((u) => u.id === user.id);
   assert.equal(me.username, 'dean@test.edu', 'own profile is still complete');

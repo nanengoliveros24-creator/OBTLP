@@ -166,7 +166,7 @@
     // ---- portfolios ----
     createPortfolio: () => req('/api/portfolios', { method: 'POST', body: JSON.stringify({}) }),
     updatePortfolio: (id, body) => req(`/api/portfolios/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }),
-    deletePortfolio: (id) => req(`/api/portfolios/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    deletePortfolio: (id, body) => req(`/api/portfolios/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify(body || {}) }),
     submitForReview: (id, comment) =>
       req(`/api/portfolios/${encodeURIComponent(id)}/actions`, { method: 'POST', body: JSON.stringify({ action: 'submit', comment }) }),
     approve: (id, comment) =>

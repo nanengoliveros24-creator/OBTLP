@@ -200,6 +200,7 @@ function startSession(db, user) {
   db.sessions = db.sessions.filter((s) => !auth.isExpired(s));
   const session = auth.newSession(user.id);
   db.sessions.push(session);
+  user.lastLoginAt = store.nowIso();
   pushAudit(db, { actor: user.id, action: 'login', portfolioId: null, detail: `${user.name} signed in` });
   return { status: 200, data: { token: session.token, user: stripPassword(user) } };
 }
@@ -212,7 +213,16 @@ function visibleUsers(db, me) {
   const users = db.users || [];
   if (me.role === 'it') return users.map(stripPassword);
   if (me.role === 'admin') {
-    return users.map((u) => (u.id === me.id ? stripPassword(u) : { id: u.id, name: u.name, role: u.role }));
+    // Last sign-in lets the College Administrator see which faculty are
+    // active. Older accounts (before lastLoginAt existed) fall back to the
+    // newest "signed in" entry in the activity log.
+    const lastLoginFromLog = {};
+    (db.auditLogs || []).forEach((l) => {
+      if (l.action === 'login' && l.actor && !lastLoginFromLog[l.actor]) lastLoginFromLog[l.actor] = l.at;
+    });
+    return users.map((u) => (u.id === me.id
+      ? stripPassword(u)
+      : { id: u.id, name: u.name, role: u.role, lastActiveAt: u.lastLoginAt || lastLoginFromLog[u.id] || null }));
   }
   return [stripPassword(me)];
 }
@@ -1250,6 +1260,37 @@ const routes = {
     auth: true,
     handler: (db, ctx, query, body, params) => {
       const p = ownedPortfolio(db, params.id, ctx);
+      // A College Administrator can remove a submission from the system
+      // (e.g. a test entry or an outdated course). It needs an explicit
+      // confirmation, is logged, and the faculty member is notified.
+      if (ctx.user.role === 'admin' && p.facultyId !== ctx.user.id) {
+        if (p.status === 'Draft') {
+          throw { status: 409, message: 'Drafts belong to the faculty member and can only be deleted by them.' };
+        }
+        if (String(body.confirmCourseCode || '').trim().toLowerCase() !== String(p.courseCode || '').trim().toLowerCase()) {
+          throw { status: 400, message: `Type "${p.courseCode}" exactly to confirm.` };
+        }
+        const reason = String(body.reason || '').trim().slice(0, 500);
+        (p.documents || []).forEach((d) => {
+          const filePath = path.join(UPLOADS_DIR, d.storedName);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        });
+        db.portfolios = (db.portfolios || []).filter((x) => x.id !== p.id);
+        const owner = (db.users || []).find((u) => u.id === p.facultyId);
+        pushAudit(db, {
+          actor: ctx.user.id,
+          action: 'delete',
+          portfolioId: p.id,
+          detail: `Deleted ${p.status.toLowerCase()} submission ${p.courseCode}${owner ? ` by ${owner.name}` : ''}${reason ? ` — ${reason}` : ''}`
+        });
+        pushNotification(db, {
+          userId: p.facultyId,
+          title: 'Submission Removed',
+          message: `Your ${p.courseCode} portfolio was removed by ${ctx.user.name}.${reason ? ` Reason: ${reason}` : ''}`,
+          portfolioId: null
+        });
+        return { status: 200, data: { ok: true } };
+      }
       if (p.facultyId !== ctx.user.id) {
         throw { status: 403, message: 'Only the owning faculty member can delete this portfolio.' };
       }

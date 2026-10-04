@@ -708,7 +708,7 @@ table.data tbody tr:hover { background: color-mix(in oklch, var(--secondary) 40%
 .pdf-sheet--official #pdf-official-letterhead { display: none !important; }
 .pdf-sheet--official .pdf-body { padding: 0; }
 .pdf-canvas:has(.pdf-sheet--official) { overflow-x: auto; padding: 1rem; }
-.obtlp-official { display: flex; flex-direction: column; gap: 1.25rem; align-items: center; font-family: "Century Gothic", "Segoe UI", Arial, sans-serif; color: #000; }
+.obtlp-official { display: flex; flex-direction: column; gap: 1.25rem; align-items: safe center; font-family: "Century Gothic", "Segoe UI", Arial, sans-serif; color: #000; }
 .oo-page { position: relative; width: 1100px; min-height: 778px; /* 297:210 */ background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.15); border: 1px solid #ddd; padding: 28px 46px 64px; display: flex; flex-direction: column; }
 .oo-page-top { position: absolute; top: 14px; right: 40px; font-family: Arial, sans-serif; font-size: 10px; }
 .oo-letterhead { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 10px 0 14px; }
@@ -794,3 +794,20 @@ table.data tbody tr:hover { background: color-mix(in oklch, var(--secondary) 40%
 .draft-item .draft-main { flex: 1; min-width: 0; }
 .draft-item .draft-main p { margin: 0; }
 .draft-item .svg-icon { flex: none; }
+
+/* ---------- College Administrator: review queue + faculty overview ---------- */
+.stat-link { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.stat-link:hover { border-color: color-mix(in oklch, var(--primary) 40%, var(--border)); }
+.tab-count { opacity: 0.8; font-weight: 400; }
+.tab-help { padding: 0 1.5rem 0.75rem; margin: -0.25rem 0 0; }
+.review-list li.is-selected { background: color-mix(in oklch, var(--primary) 8%, transparent); box-shadow: inset 3px 0 0 var(--primary); }
+.review-history { border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.875rem; display: grid; gap: 0.35rem; }
+.review-history p { margin: 0; }
+.review-history .rh-title { font-weight: 600; }
+.delete-sub-btn { margin-top: 1rem; border-color: transparent; background: transparent; color: var(--destructive); justify-content: center; }
+.delete-sub-btn:hover { background: color-mix(in oklch, var(--destructive) 8%, transparent); }
+.presence { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 999px; background: var(--border); margin-right: 0.5rem; vertical-align: middle; }
+.presence.on { background: var(--success); box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 20%, transparent); }
+table.data th.center, table.data td.center { text-align: center; }
+/* The yellow "Pending" badge text was nearly invisible in dark mode. */
+[data-theme="dark"] .badge-pending { color: var(--warning); }
