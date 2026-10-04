@@ -58,7 +58,7 @@
             <button data-filter="all" class="active">All</button>
             <button data-filter="draft">Draft</button>
             <button data-filter="submitted">Submitted</button>
-            <button data-filter="review">Under Review</button>
+            <button data-filter="review">Pending Review</button>
             <button data-filter="approved">Approved</button>
             <button data-filter="revision">Returned for Revision</button>
           </div>
@@ -109,7 +109,9 @@
       all: (s) => true,
       draft: (s) => s === 'Draft',
       submitted: (s) => s !== 'Draft',
-      review: (s) => s === 'In Review',
+      // Submitted and waiting for the College Administrator. ("In Review" is
+      // an old status nothing sets any more; it counts as pending too.)
+      review: (s) => s === 'Pending Review' || s === 'In Review',
       approved: (s) => s === 'Approved',
       revision: (s) => s === 'Revision Required'
     };
