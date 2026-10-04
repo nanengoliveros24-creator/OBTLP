@@ -76,3 +76,12 @@ test('the Course Outline renders as portrait pages with the COED letterhead', ()
   assert.match(html, /READ100 \(3 units\)/);
   assert.match(html, /Final Exam/);
 });
+
+test('the faculty "Department" list includes every official department', async () => {
+  const c = makeClient(server.baseUrl);
+  const login = await c.post('/api/login', { username: 'coed.prof@test.edu', password: 'secret1' });
+  c.setToken(login.data.token);
+  const cat = (await c.get('/api/catalog')).data;
+  assert.ok(cat.departments.includes('College of Education'));
+  assert.ok(cat.departments.includes('College of Computing Studies'));
+});

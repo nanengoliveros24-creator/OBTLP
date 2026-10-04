@@ -556,6 +556,12 @@ function buildCatalog(db) {
   });
 
   const departments = new Set((catalog.departments || []).map((d) => String(d || '').trim()).filter(Boolean));
+  // Every official department (CCS, COED, …) is always offered, even
+  // before anyone has typed it in or used it on a portfolio.
+  (db.departments || []).forEach((d) => {
+    const name = String((d && d.name) || '').trim();
+    if (name) departments.add(name);
+  });
   (db.portfolios || []).forEach((p) => {
     const dept = String(p.facultyDepartment || '').trim();
     if (dept) departments.add(dept);
