@@ -362,6 +362,7 @@
       const ui = window.__OBTLP_UI__;
       const params = new URLSearchParams(window.location.search);
       let portfolioId = params.get('id');
+      let myEmail = '';
       let current = null;
       let editable = true;
       let step = 1;
@@ -933,6 +934,7 @@
           description: edits.description || 'No course description provided yet.',
           prerequisite: edits.prerequisite || '',
           faculty: session.name || '',
+          facultyEmail: myEmail,
           facultyDept: edits.facultyDepartment || '',
           facultyUnits: edits.facultyUnits || '',
           units: edits.facultyUnits || '',
@@ -1174,6 +1176,12 @@
         allPrograms = progResp || [];
         obtlpTemplates = obtlpTplResp || [];
         orgProfile = orgProfileResp || {};
+
+        try {
+          const meState = await api.getState();
+          const me = (meState.users || []).find((u) => u.id === session.userId);
+          myEmail = (me && (me.email || (/@/.test(me.username || '') ? me.username : ''))) || '';
+        } catch (e) { /* email is optional on the document */ }
 
         if (!portfolioId) {
           current = await api.createPortfolio();

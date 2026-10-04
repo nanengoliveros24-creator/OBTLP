@@ -73,6 +73,25 @@
   }
   loadLogoDataUrl();
 
+  // Other images used by some official forms (e.g. the College of
+  // Education seal on the COED Course Outline). Same caching idea.
+  const imageCache = {};
+  function loadImageDataUrl(path) {
+    if (!path) return Promise.resolve(null);
+    if (!imageCache[path]) {
+      imageCache[path] = fetch(path)
+        .then((res) => (res.ok ? res.blob() : Promise.reject(new Error('image fetch failed'))))
+        .then((blob) => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error('Could not read image.'));
+          reader.readAsDataURL(blob);
+        }))
+        .catch((err) => { console.warn('[Download PDF] image preload failed', path, err); return null; });
+    }
+    return imageCache[path];
+  }
+
   // Draws the portfolio directly with jsPDF's own text/drawing API (no DOM
   // screenshotting). This is deliberate: an earlier html2canvas-based
   // version silently failed, because this app's whole stylesheet is built
@@ -321,8 +340,10 @@
     });
     const restoreButtons = () => buttons.forEach((b, i) => { b.disabled = false; b.innerHTML = originalHtml[i]; });
 
-    loadLogoDataUrl().then((logoDataUrl) => {
+    const secondaryLogo = data.template && data.template.secondaryLogo;
+    Promise.all([loadLogoDataUrl(), loadImageDataUrl(secondaryLogo)]).then(([logoDataUrl, secondaryLogoDataUrl]) => {
       try {
+        if (secondaryLogoDataUrl) data.secondaryLogoDataUrl = secondaryLogoDataUrl;
         console.log('[Download PDF] building document from data', data);
         const { jsPDF } = window.jspdf;
         const doc = buildPortfolioPdf(jsPDF, data, logoDataUrl);

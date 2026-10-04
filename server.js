@@ -368,7 +368,10 @@ function sanitizeSoMap(v) {
     soCode: String((row && row.soCode) || '').trim(),
     intensity: String((row && row.intensity) || '').trim(),
     // course-specific SO wording as printed on that course's official OBTLP
-    description: String((row && row.description) || '').trim().slice(0, 2000)
+    description: String((row && row.description) || '').trim().slice(0, 2000),
+    // which program the SO belongs to, when one course serves several
+    // (e.g. the COED READ100 course outline: Computer Science / Nursing)
+    group: String((row && row.group) || '').trim().slice(0, 200)
   })).filter((row) => row.soCode);
 }
 
@@ -401,7 +404,9 @@ function sanitizeReferenceGroups(v) {
     onlineResources: sanitizeStrList(src.onlineResources),
     // Journals / research articles — a separate group in the 2026-2027
     // official PnC OBTLP templates ("Journal/Researches").
-    journals: sanitizeStrList(src.journals)
+    journals: sanitizeStrList(src.journals),
+    // "Suggested Readings and References" on the COED Course Outline form
+    suggested: sanitizeStrList(src.suggested)
   };
 }
 
@@ -431,6 +436,14 @@ function sanitizeOfficialMeta(v) {
     peo: sanitizeStrList(src.peo),
     division: str('division', 200),
     gradingIntro: str('gradingIntro', 1000),
+    // COED Course Outline (PNC:AA-FO-44) fields
+    effectivityDate: str('effectivityDate', 100),
+    supersedes: str('supersedes', 100),
+    soProgramLabel: str('soProgramLabel', 300),
+    programOutcomes: sanitizeStrList(src.programOutcomes),
+    descriptionLead: str('descriptionLead', 200),
+    gradingNotes: sanitizeStrList(src.gradingNotes),
+    consultationOffice: str('consultationOffice', 200),
     signatories: {
       preparedBy: sanitizeSigList(sig.preparedBy),
       reviewedBy: sanitizeSigList(sig.reviewedBy),
@@ -510,7 +523,7 @@ function blankStructuredFields() {
     prerequisite: '',
     soMap: [],
     teachingPlan: [],
-    referenceGroups: { textbooks: [], onlineResources: [], journals: [] },
+    referenceGroups: { textbooks: [], onlineResources: [], journals: [], suggested: [] },
     grading: { components: [] },
     courseRequirements: [],
     classPoliciesOverride: '',
@@ -1424,6 +1437,8 @@ const routes = {
           throw { status: 400, message: 'Please complete the course code and course title before submitting.' };
         }
         const wasRevision = p.status === 'Revision Required';
+        // Printed on forms that show the faculty's email (COED Course Outline).
+        p.facultyEmail = userEmail(ctx.user) || p.facultyEmail || '';
         p.status = 'Pending Review';
         p.resubmitted = wasRevision;
         // Auto-fill the "Prepared by" signatory with the submitting faculty
@@ -1921,6 +1936,8 @@ store.initDbIfMissing()
   // users, portfolios, or templates an admin edited by hand. Runs on every
   // boot so a git push + Render redeploy is all it takes to update MongoDB.
   .then(() => require('./seed-templates').ensureOfficialTemplates(store))
+  // College of Education Course Outline (PNC:AA-FO-44) — see seed-coed.js.
+  .then(() => require('./seed-coed').ensureCoedTemplates(store))
   // Built-in IT Administrator from DEFAULT_IT_EMAIL / DEFAULT_IT_PASSWORD
   // (see seed-admin.js) — public sign-up only creates Faculty accounts.
   .then(() => require('./seed-admin').ensureDefaultItAdmin(store))

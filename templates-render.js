@@ -269,6 +269,7 @@
 
   function renderSectionsHtml(template, data) {
     if (!template) return '';
+    if (template.layout === 'course-outline') return renderCourseOutlineHtml(template, data);
     const plan = planDocument(template);
     const formCode = template.formCode || '';
     const pages = [];
@@ -822,6 +823,7 @@
 
   function buildOfficialPdf(jsPDFCtor, data, logoDataUrl) {
     const template = data.template;
+    if (template && template.layout === 'course-outline') return buildCourseOutlinePdf(jsPDFCtor, data, logoDataUrl);
     const doc = new jsPDFCtor({ unit: 'pt', format: 'a4', orientation: 'landscape' });
     const ctx = makeCtx(doc, data, logoDataUrl, template);
     drawFrame(ctx);
@@ -843,6 +845,459 @@
       doc.text(`${formCode} / Page${i}`, PT.pageW - PT.marginX, 22, { align: 'right' });
     }
     return doc;
+  }
+
+  // =====================================================================
+  // COED COURSE OUTLINE (PNC:AA-FO-44) — PORTRAIT, long bond 8.5" x 13"
+  // Used when template.layout === 'course-outline'. Same data model as the
+  // OBTLP; laid out the way the College of Education's official form is:
+  // PnC seal + text + COED seal letterhead, gray section bars, and a
+  // signature strip with "Page x of y" at the bottom of every page.
+  // =====================================================================
+  function coMeta(data) { return data.officialMeta || {}; }
+  function coCodeTitle(data) { return `${data.courseCode || ''}: ${data.courseTitle || ''}`; }
+  function coUnits(data) {
+    const u = String(creditUnits(data) || '').trim();
+    if (!u) return data.courseCode || '';
+    return /unit/i.test(u) ? `${data.courseCode} (${u})` : `${data.courseCode} (${u} unit${u === '1' ? '' : 's'})`;
+  }
+  function coFaculty(data) {
+    return [String(data.faculty || '').toUpperCase(), data.facultyEmail || ''].filter(Boolean).join('/');
+  }
+  function coSemester(data) {
+    const m = String(data.semester || '').match(/^(\d+(?:st|nd|rd|th))/i);
+    return m ? m[1] : (data.semester || '');
+  }
+  function coTopicItems(items) {
+    return (items || []).map((s) => String(s == null ? '' : s)).filter((s) => s.trim()).map((s) => (
+      /^•\s/.test(s) ? { text: s.replace(/^•\s+/, ''), kind: 'bullet' } : { text: s, kind: 'plain', bold: true }
+    ));
+  }
+  // Footer strip: Course Title | Prepared by | Reviewed by | Recommending | Approved by
+  function coSignatories(data, template) {
+    const section = ((template && template.sections) || []).find((s) => s.type === 'signatureBlock');
+    const cols = signatoryColumns(data, section);
+    const defaults = get(data, 'officialMeta.signatories', {}) || {};
+    const roles = (section && section.roles) || [];
+    return cols.map((c, i) => {
+      const key = roles[i] && roles[i].key;
+      const fallbackTitle = key && Array.isArray(defaults[key]) && defaults[key][0] ? defaults[key][0].title : '';
+      return { label: c.label, people: c.people.map((p) => ({ name: key === 'preparedBy' ? String(p.name || '').toUpperCase() : p.name, title: p.title && p.title !== 'Faculty' ? p.title : (key === 'preparedBy' ? '' : fallbackTitle) })) };
+    });
+  }
+  function coPolicies(data) {
+    const cp = get(data, 'orgProfile.classPolicies', {}) || {};
+    return {
+      attendanceHeading: cp.attendanceHeading || 'Class Attendance',
+      attendanceText: cp.attendanceText || 'As per CHED policy on attendance, a student who misses a maximum of 20% of the total contact hours will be given a grade of failure due to absences.',
+      dishonestyIntro: 'Academic Dishonesty – is a deliberate attempt to misrepresent, fabricate or otherwise tamper with data, information, records, or any other material that is relevant to the student\'s participation in any course, laboratory, or other academic exercise or function. These may include but may not be limited to:',
+      dishonestyItems: cp.academicDishonestyItems && cp.academicDishonestyItems.length ? cp.academicDishonestyItems : [
+        'Falsification, forgery, alteration, unauthorized possession, or misuse of school official documents, records, or identification, or knowingly furnishing false information to the university or to a university official.',
+        'Unauthorized accessing of electronic information of the university and securing, soliciting, and holding a copy of an examination or a portion thereof, that is yet to be administered',
+        'Plagiarism or copyright infringement'
+      ],
+      submissionHeading: cp.submissionHeading || 'Submission of Course Requirements',
+      submissionText: cp.submissionText || 'Course requirements must be submitted on-time.',
+      office: coMeta(data).consultationOffice || 'College of Education'
+    };
+  }
+  const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
+
+  // ---------- HTML ----------
+  function coHtmlLetterhead(data, template) {
+    const lh = letterheadLines(data);
+    const second = template.secondaryLogo || '';
+    return `
+      <div class="co-formcode">${escapeHtml(template.formCode || '')}</div>
+      <div class="co-letterhead">
+        <img class="co-seal" src="assets/pnc-logo.png" alt="PnC seal" />
+        <div class="co-lh-text">
+          <div class="co-lh-1">${escapeHtml(lh.line1)}</div>
+          <div class="co-lh-2">${escapeHtml(lh.line2)}</div>
+          <div class="co-lh-3">${escapeHtml(get(data, 'orgProfile.letterhead.line3', '') || '(University of Cabuyao)')}</div>
+          <div class="co-lh-4">${escapeHtml(coMeta(data).division || lh.line4)}</div>
+          <div class="co-lh-5">${escapeHtml(lh.address)}</div>
+        </div>
+        ${second ? `<img class="co-seal" src="${escapeHtml(second)}" alt="College seal" />` : '<span class="co-seal"></span>'}
+      </div>`;
+  }
+  function coHtmlFooter(data, template, pageNo, pages) {
+    const sigs = coSignatories(data, template);
+    return `
+      <div class="co-footer">
+        <table class="co-sigstrip"><tr>
+          <td><div class="co-sig-label">Course Title</div><div class="co-sig-name">${escapeHtml(String(data.courseTitle || '').toUpperCase())}</div></td>
+          ${sigs.map((c) => `<td><div class="co-sig-label">${escapeHtml(c.label)}</div>${c.people.map((p) => `<div class="co-sig-name">${escapeHtml(p.name || '')}</div>${p.title ? `<div class="co-sig-title">${escapeHtml(p.title)}</div>` : ''}`).join('')}</td>`).join('')}
+          <td class="co-sig-page">Page <b>${pageNo}</b> of <b>${pages}</b></td>
+        </tr></table>
+        <div class="oo-dangal">Dangal ng Bayan.</div><div class="oo-dangal-sub">bringing pride and honor to the nation.</div>
+      </div>`;
+  }
+  function coHtmlList(items, kind) {
+    if (kind === 'alpha') return `<ol type="a">${items.map((v) => `<li>${escapeHtml(v)}</li>`).join('')}</ol>`;
+    if (kind === 'num') return `<ol>${items.map((v) => `<li>${escapeHtml(v)}</li>`).join('')}</ol>`;
+    return `<ul>${items.map((v) => `<li>${escapeHtml(v)}</li>`).join('')}</ul>`;
+  }
+  function renderCourseOutlineHtml(template, data) {
+    const meta = coMeta(data);
+    const org = data.orgProfile || {};
+    const pages = [];
+
+    // Page 1 — header table, PEO / core values, student outcomes, code & units
+    pages.push(`
+      <div class="co-bar co-bar-center">${escapeHtml(template.docTitle || 'COURSE OUTLINE')}</div>
+      <table class="co-table">
+        <colgroup><col style="width:30%"><col style="width:22%"><col></colgroup>
+        <tr><th>Document</th><th>Course Code / Title</th><td>${escapeHtml(coCodeTitle(data))}</td></tr>
+        <tr><td>Course Description</td><td colspan="2" class="co-justify">${escapeHtml(data.description || '')}</td></tr>
+        <tr><td>Effectivity Date:<br>${escapeHtml(coSemester(data))} Sem, S.Y. ${escapeHtml(data.academicYear || '')}${meta.effectivityDate ? `<br>${escapeHtml(meta.effectivityDate)}` : ''}</td>
+            <td colspan="2">Supersedes dated:<br>${escapeHtml(meta.supersedes || '')}</td></tr>
+      </table>
+      <table class="co-table co-org">
+        <colgroup><col style="width:52%"><col></colgroup>
+        <tr>
+          <td><p class="co-italic">${escapeHtml(peoIntro(data))}</p>${coHtmlList(peoList(data), 'alpha')}</td>
+          <td><div class="co-minibar">CORE VALUES</div><p>${escapeHtml(org.coreValuesIntro || '')}</p>${coHtmlList(org.coreValues || [], 'bullet')}
+              <div class="co-minibar">PnC Graduate Attributes</div>${coHtmlList(org.graduateAttributes || [], 'num')}</td>
+        </tr>
+      </table>
+      <div class="co-bar">Student Outcomes for [PROGRAM]</div>
+      <p class="co-italic">By the time of graduation, <span class="co-fill">${escapeHtml(meta.soProgramLabel || get(data, 'program.name', ''))}</span> students will be able to:</p>
+      ${coHtmlList(meta.programOutcomes || [], 'alpha')}
+      <p class="co-inline"><span class="co-label">COURSE CODE &amp; UNITS:</span> <span class="co-underline">${escapeHtml(coUnits(data))}</span></p>`);
+
+    // Page 2 — course info, CILO, SO map
+    const sos = soRows(data);
+    const soCols = ['I/L', 'E/P', 'D/O'];
+    pages.push(`
+      <table class="co-info">
+        <colgroup><col style="width:24%"><col></colgroup>
+        <tr><td class="co-label">COURSE TITLE:</td><td class="co-underline">${escapeHtml(data.courseTitle || '')}</td></tr>
+        <tr><td class="co-label">COURSE DESCRIPTION:</td><td class="co-justify">${meta.descriptionLead ? `<span class="co-lead">${escapeHtml(meta.descriptionLead)}</span> ` : ''}${escapeHtml(data.description || '')}</td></tr>
+        <tr><td class="co-label">SCHEDULE:</td><td class="co-underline">${escapeHtml(data.schedule || '') || '&nbsp;'}<div class="co-caption">(CLASS SCHEDULES)</div></td></tr>
+        <tr><td class="co-label">FACULTY:</td><td class="co-underline">${escapeHtml(coFaculty(data)) || '&nbsp;'}<div class="co-caption">NAME OF FACULTY / EMAIL</div></td></tr>
+      </table>
+      <div class="co-bar">COURSE INTENDED LEARNING OUTCOMES (CILO):</div>
+      <table class="co-table">
+        <colgroup><col style="width:16%"><col></colgroup>
+        <tr><td colspan="2" class="oo-center">On the completion of the course, student is expected to be able to do the following:</td></tr>
+        ${(data.outcomes || []).map((v, i) => `<tr><td class="oo-center">CO${i + 1}</td><td>${escapeHtml(v)}</td></tr>`).join('') || '<tr><td colspan="2" class="t-muted">No CILO on file yet.</td></tr>'}
+      </table>
+      <table class="co-table co-somap">
+        <colgroup><col style="width:19%"><col style="width:9%"><col><col style="width:7%"><col style="width:7%"><col style="width:7%"></colgroup>
+        <tr><th class="co-gray" rowspan="${Math.max(1, sos.length) + 1}">Student Outcomes Map Addressed by the Course</th><td colspan="2"></td>${soCols.map((c) => `<th class="oo-center">${c}</th>`).join('')}</tr>
+        ${sos.length ? sos.map((so, i) => `<tr><td>${escapeHtml(String(so.code || '').replace(/^SO\s*/i, 'SO #. '))}</td><td>${(data.soMap[i] && data.soMap[i].group) ? `<div class="co-italic">${escapeHtml(data.soMap[i].group)}</div>` : ''}${escapeHtml(so.description)}</td>${soCols.map((c) => `<td class="oo-center oo-middle">${so.intensity.includes(c) ? '/' : ''}</td>`).join('')}</tr>`).join('')
+          : `<tr><td colspan="5" class="t-muted">No student outcomes mapped yet.</td></tr>`}
+      </table>
+      <p class="co-legend">Legend: &nbsp;I/L – Introductory/Learning &nbsp; E/P – Enabling/Practice &nbsp; D/O – Demonstrating/Opportunity</p>`);
+
+    // Page 3 — course outline and time-frame
+    const weeks = (data.teachingPlan || []).map((r) => {
+      if (r.type === 'milestone') return `<tr><td></td><td><b>${escapeHtml(r.label)}</b></td></tr>`;
+      const items = coTopicItems(r.topics);
+      let html = ''; let inList = false;
+      items.forEach((it) => {
+        if (it.kind === 'bullet') { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${escapeHtml(it.text)}</li>`; }
+        else { if (inList) { html += '</ul>'; inList = false; } html += `<p><b>${escapeHtml(it.text)}</b></p>`; }
+      });
+      if (inList) html += '</ul>';
+      return `<tr><td>${escapeHtml(r.week)}</td><td>${html}</td></tr>`;
+    }).join('');
+    pages.push(`
+      <div class="co-bar">COURSE OUTLINE AND TIME-FRAME</div>
+      <table class="co-table co-weeks">
+        <colgroup><col style="width:14%"><col></colgroup>
+        <thead><tr><th class="co-dark oo-center">WEEK</th><th class="co-dark oo-center">TOPIC</th></tr></thead>
+        <tbody>${weeks || '<tr><td colspan="2" class="t-muted">No topics entered yet.</td></tr>'}</tbody>
+      </table>`);
+
+    // Page 4 — references, requirements, grading, policies
+    const rg = data.referenceGroups || {};
+    const textbooks = rg.textbooks || [];
+    const suggested = (rg.suggested || []).concat(rg.onlineResources || [], rg.journals || []);
+    const comps = get(data, 'grading.components', []);
+    const gradingRows = comps.length === 1
+      ? (comps[0].items || [])
+      : comps.map((c) => ({ item: c.name, source: (c.items || []).map((it) => `${it.item} – ${it.pct}%`).join('\n'), pct: c.weightPct }));
+    const pol = coPolicies(data);
+    pages.push(`
+      <div class="co-bar">TEXTBOOK:</div>
+      ${textbooks.map((t) => `<p class="co-ref">${escapeHtml(t)}</p>`).join('') || '<p class="t-muted">None listed.</p>'}
+      <div class="co-bar">SUGGESTED READINGS AND REFERENCES:</div>
+      ${suggested.map((t) => `<p class="co-ref">${escapeHtml(t)}</p>`).join('') || '<p class="t-muted">None listed.</p>'}
+      <div class="co-bar">COURSE REQUIREMENTS:</div>
+      ${(data.courseRequirements || []).map((t) => `<p class="co-tight">${escapeHtml(t)}</p>`).join('') || '<p class="t-muted">None listed.</p>'}
+      <div class="co-bar">GRADING SYSTEM:</div>
+      <p>${escapeHtml(gradingIntro(data))}</p>
+      <table class="co-table co-grading">
+        <colgroup><col style="width:30%"><col style="width:35%"><col></colgroup>
+        <tr><td class="oo-center">Assessment Item</td><td class="oo-center">Grade Source</td><td class="oo-center">Percentage</td></tr>
+        ${gradingRows.map((it) => `<tr><td>${escapeHtml(it.item)}</td><td>${String(it.source || '').split('\n').map(escapeHtml).join('<br>')}</td><td class="oo-center">${escapeHtml(it.pct)}%</td></tr>`).join('')}
+      </table>
+      ${(meta.gradingNotes || []).map((t) => `<p class="co-tight">${escapeHtml(t)}</p>`).join('')}
+      <div class="co-bar">COURSE POLICIES:</div>
+      <p class="co-tight">${escapeHtml(pol.attendanceHeading)}</p><p class="co-indent">${escapeHtml(pol.attendanceText)}</p>
+      <p>${escapeHtml(pol.dishonestyIntro)}</p>${coHtmlList(pol.dishonestyItems, 'alpha')}
+      <p class="co-tight">${escapeHtml(pol.submissionHeading)}</p><p class="co-indent">${escapeHtml(pol.submissionText)}</p>
+      ${data.classPoliciesOverride ? `<p class="co-tight">Additional Notes</p><p class="co-indent">${escapeHtml(data.classPoliciesOverride)}</p>` : ''}
+      <p class="co-tight">Faculty Consultation Hours</p>
+      <p class="co-indent">The Faculty Consultation/Advising hours schedule is available at the <span class="co-fill">${escapeHtml(pol.office)}</span> office, and at the <span class="co-fill">${escapeHtml(pol.office)}</span> bulletin board.</p>`);
+
+    return `<div class="obtlp-official co-doc">${pages.map((content, idx) => `
+      <section class="oo-page co-page">
+        ${coHtmlLetterhead(data, template)}
+        <div class="oo-content">${content}</div>
+        ${coHtmlFooter(data, template, idx + 1, pages.length)}
+      </section>`).join('')}</div>`;
+  }
+
+  // ---------- PDF ----------
+  const CO_PT = { pageW: 612, pageH: 936, marginX: 36, contentTop: 112, contentBottom: 822, fs: 8.5, lh: 10.8, pad: 4 };
+  const GRAY = [217, 217, 217];
+
+  function coDrawFrame(ctx) {
+    const { doc, data, template } = ctx;
+    const lh = letterheadLines(data);
+    const cx = CO_PT.pageW / 2 + 6;
+    if (ctx.logoDataUrl) { try { doc.addImage(ctx.logoDataUrl, 'PNG', 64, 34, 58, 58); } catch (e) { /* seal is optional */ } }
+    if (ctx.secondLogoDataUrl) { try { doc.addImage(ctx.secondLogoDataUrl, 'PNG', 492, 34, 58, 58); } catch (e) { /* seal is optional */ } }
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('times', 'normal'); doc.setFontSize(9.5);
+    doc.text(lh.line1, cx, 44, { align: 'center' });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(0, 77, 0);
+    doc.text(lh.line2, cx, 61, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
+    doc.text(get(data, 'orgProfile.letterhead.line3', '') || '(University of Cabuyao)', cx, 74, { align: 'center' });
+    doc.setFont('helvetica', 'bolditalic'); doc.setFontSize(10.5);
+    doc.text(coMeta(data).division || lh.line4, cx, 86, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8);
+    doc.text(lh.address, cx, 96, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+    doc.text(template.formCode || '', CO_PT.pageW - CO_PT.marginX, 22, { align: 'right' });
+  }
+
+  function coDrawFooters(doc, data, template) {
+    const n = doc.internal.getNumberOfPages();
+    const sigs = coSignatories(data, template);
+    const x0 = 42, W = CO_PT.pageW - 84;
+    const widths = [78, 82, 86, 96, 92];
+    widths.push(W - widths.reduce((a, b) => a + b, 0));
+    const top = 838, h = 58;
+    for (let i = 1; i <= n; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.6); doc.setTextColor(0, 0, 0);
+      let x = x0;
+      const cells = [{ label: 'Course Title', lines: [String(data.courseTitle || '').toUpperCase()] }]
+        .concat(sigs.map((c) => ({ label: c.label, lines: c.people.reduce((a, p) => a.concat([p.name || ''], p.title ? [p.title] : []), []) })))
+        .concat([{ page: true }]);
+      cells.forEach((c, ci) => {
+        const w = widths[ci];
+        doc.rect(x, top, w, h);
+        doc.setFontSize(6.6);
+        if (c.page) {
+          doc.setFont('helvetica', 'normal');
+          doc.text(`Page ${i}`, x + w / 2, top + h / 2 - 2, { align: 'center' });
+          doc.text(`of ${n}`, x + w / 2, top + h / 2 + 7, { align: 'center' });
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.splitTextToSize(c.label, w - 6).slice(0, 2).forEach((ln, li) => doc.text(ln, x + w / 2, top + 9 + li * 8, { align: 'center' }));
+          let y = top + 27;
+          c.lines.forEach((t) => {
+            doc.splitTextToSize(String(t), w - 6).forEach((ln) => { if (y < top + h - 2) { doc.text(ln, x + w / 2, y, { align: 'center' }); y += 7.6; } });
+          });
+        }
+        x += w;
+      });
+      doc.setFont('times', 'italic'); doc.setFontSize(12);
+      doc.text('Dangal ng Bayan.', CO_PT.pageW / 2, 912, { align: 'center' });
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(5.5);
+      doc.text('bringing pride and honor to the nation.', CO_PT.pageW / 2 + 8, 919, { align: 'center' });
+    }
+  }
+
+  function buildCourseOutlinePdf(jsPDFCtor, data, logoDataUrl) {
+    const template = data.template;
+    const doc = new jsPDFCtor({ unit: 'pt', format: [CO_PT.pageW, CO_PT.pageH], orientation: 'portrait' });
+    // drawTable()/wrapItems() read the page limits from PT; switch them to
+    // the portrait long-bond values for this document, then restore.
+    const saved = Object.assign({}, PT);
+    Object.assign(PT, CO_PT);
+    try {
+      const ctx = {
+        doc, data, template, logoDataUrl,
+        secondLogoDataUrl: data.secondaryLogoDataUrl || null,
+        x0: CO_PT.marginX, width: CO_PT.pageW - CO_PT.marginX * 2, y: CO_PT.contentTop,
+        pageBreakHooks: [], pageStartHooks: []
+      };
+      ctx.newPage = function () {
+        doc.addPage([CO_PT.pageW, CO_PT.pageH], 'portrait');
+        coDrawFrame(ctx);
+        ctx.y = CO_PT.contentTop;
+      };
+      ctx.ensure = function (h) { if (ctx.y + h > CO_PT.contentBottom) ctx.newPage(); };
+      coDrawFrame(ctx);
+      const safe = (name, fn) => { try { fn(); } catch (e) { console.error(`[Course Outline PDF] ${name} failed`, e); } };
+      const meta = coMeta(data);
+      const org = data.orgProfile || {};
+      const W = ctx.width, X = ctx.x0;
+
+      function bar(text, center) {
+        ctx.ensure(30);
+        ctx.y += 6;
+        doc.setFillColor(GRAY[0], GRAY[1], GRAY[2]);
+        doc.rect(center ? X : X, ctx.y, center ? W : Math.min(W, Math.max(150, doc.getTextWidth(text) + 40)), 12, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(center ? 10 : 8.5); doc.setTextColor(0, 0, 0);
+        if (center) doc.text(text, X + W / 2, ctx.y + 9, { align: 'center' });
+        else doc.text(text, X + 4, ctx.y + 9);
+        ctx.y += 17;
+      }
+      function flow(items, opts) {
+        opts = opts || {};
+        const x = X + (opts.indent || 0), w = W - (opts.indent || 0);
+        wrapItems(doc, items, w, { raw: true, fs: opts.fs || 8.5 }).forEach((ln) => {
+          if (ctx.y + CO_PT.lh > CO_PT.contentBottom) ctx.newPage();
+          if (!ln.gap) {
+            doc.setFont('helvetica', ln.bold ? 'bold' : (opts.italic ? 'italic' : 'normal')); doc.setFontSize(opts.fs || 8.5); doc.setTextColor(0, 0, 0);
+            if (ln.prefix) doc.text(ln.prefix, x, ctx.y + 8);
+            doc.text(ln.text, x + (ln.dx || 0), ctx.y + 8);
+          }
+          ctx.y += CO_PT.lh;
+        });
+      }
+      const T = (t, extra) => P(t, extra);
+      const alpha = (arr) => arr.map((v, i) => ({ text: v, kind: 'number', n: LETTERS[i] || '-' }));
+
+      // Header table
+      safe('header', () => {
+        bar(template.docTitle || 'COURSE OUTLINE', true);
+        drawTable(ctx, [W * 0.3, W * 0.22, W * 0.48], [
+          { cells: [{ items: [T('Document', { bold: true })], raw: true }, { items: [T('Course Code / Title', { bold: true })], raw: true }, { items: [T(coCodeTitle(data))], raw: true }] },
+          { cells: [{ items: [T('Course Description')], raw: true }, { items: [T(data.description || '')], raw: true, span: 2 }] },
+          { cells: [
+            { items: [T('Effectivity Date:'), T(`${coSemester(data)} Sem, S.Y. ${data.academicYear || ''}`)].concat(meta.effectivityDate ? [T(meta.effectivityDate)] : []), raw: true },
+            { items: [T('Supersedes dated:'), T(meta.supersedes || '')], raw: true, span: 2 }
+          ] }
+        ], { fs: 8.5, lh: 10.6, pad: 4 });
+        ctx.y += 8;
+        const right = [T('CORE VALUES', { bold: true }), T(org.coreValuesIntro || '')]
+          .concat((org.coreValues || []).map((v) => ({ text: v, kind: 'bullet' })), [{ kind: 'gap' }, T('PnC Graduate Attributes', { bold: true })],
+            (org.graduateAttributes || []).map((v, i) => ({ text: v, kind: 'number', n: i + 1 })));
+        drawTable(ctx, [W * 0.52, W * 0.48], [
+          { cells: [{ items: [T(peoIntro(data), { bold: false })].concat(alpha(peoList(data))), raw: true }, { items: right, raw: true }] }
+        ], { fs: 8.5, lh: 10.6, pad: 6 });
+        ctx.y += 6;
+        bar('Student Outcomes for [PROGRAM]');
+        flow([T(`By the time of graduation, ${meta.soProgramLabel || get(data, 'program.name', '')} students will be able to:`)], { italic: true });
+        flow(alpha(meta.programOutcomes || []), { indent: 18 });
+        ctx.y += 8;
+        ctx.ensure(16);
+        doc.setFillColor(GRAY[0], GRAY[1], GRAY[2]); doc.rect(X, ctx.y, 100, 12, 'F');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(0, 0, 0);
+        doc.text('COURSE CODE & UNITS:', X + 3, ctx.y + 9);
+        doc.text(coUnits(data), X + 106, ctx.y + 9);
+        doc.setLineWidth(0.6); doc.line(X + 104, ctx.y + 11, X + W, ctx.y + 11);
+        ctx.y += 20;
+      });
+
+      // Course info / CILO / SO map
+      safe('courseInfo', () => {
+        const label = (t) => ({ items: [T(t)], raw: true, fill: GRAY });
+        const descItems = (meta.descriptionLead ? [T(`${meta.descriptionLead} ${data.description || ''}`)] : [T(data.description || '')]);
+        drawTable(ctx, [W * 0.24, W * 0.76], [
+          { cells: [label('COURSE TITLE:'), { items: [T(data.courseTitle || '')], raw: true }] },
+          { cells: [label('COURSE DESCRIPTION:'), { items: descItems, raw: true }] },
+          { cells: [label('SCHEDULE:'), { items: [T(data.schedule || ' '), T('(CLASS SCHEDULES)', { align: 'left' })], raw: true }] },
+          { cells: [label('FACULTY:'), { items: [T(coFaculty(data) || ' '), T('NAME OF FACULTY / EMAIL')], raw: true }] }
+        ], { fs: 8.5, lh: 10.6, pad: 4 });
+        ctx.y += 4;
+        bar('COURSE INTENDED LEARNING OUTCOMES (CILO):');
+        const rows = [{ cells: [{ items: [T('On the completion of the course, student is expected to be able to do the following:', { align: 'center' })], raw: true, span: 2 }] }];
+        (data.outcomes || []).forEach((v, i) => rows.push({ cells: [{ items: [T(`CO${i + 1}`, { align: 'center' })], raw: true }, { items: [T(v)], raw: true }] }));
+        drawTable(ctx, [W * 0.16, W * 0.84], rows, { fs: 8.5, lh: 10.6, pad: 4 });
+        ctx.y += 8;
+        const sos = soRows(data);
+        const cols = ['I/L', 'E/P', 'D/O'];
+        const widths = [W * 0.19, W * 0.09, W * 0.51, W * 0.07, W * 0.07, W * 0.07];
+        const soRowsPdf = [{ cells: [
+          { items: [T('Student Outcomes Map Addressed by the Course', { bold: true })], raw: true, fill: GRAY, openBottom: sos.length > 0 },
+          { items: [T('')], raw: true, span: 2 }
+        ].concat(cols.map((c) => ({ items: [T(c, { bold: true, align: 'center' })], raw: true }))) }];
+        sos.forEach((so, i) => {
+          const group = data.soMap[i] && data.soMap[i].group;
+          soRowsPdf.push({ cells: [
+            { lines: [], fill: GRAY, contTop: true, openBottom: i < sos.length - 1 },
+            { items: [T(String(so.code || '').replace(/^SO\s*/i, 'SO #. '))], raw: true },
+            { items: (group ? [T(group, { bold: true })] : []).concat([T(so.description)]), raw: true }
+          ].concat(cols.map((c) => ({ items: [T(so.intensity.includes(c) ? '/' : '', { align: 'center' })], raw: true, valign: 'middle' }))) });
+        });
+        drawTable(ctx, widths, soRowsPdf, { fs: 8.5, lh: 10.6, pad: 4 });
+        flow([T('Legend:  I/L – Introductory/Learning   E/P – Enabling/Practice   D/O – Demonstrating/Opportunity')]);
+      });
+
+      // Course outline and time-frame
+      safe('weeks', () => {
+        ctx.y += 4;
+        bar('COURSE OUTLINE AND TIME-FRAME');
+        const rows = [{ cells: [
+          { items: [T('WEEK', { bold: true, align: 'center' })], raw: true, fill: [166, 166, 166] },
+          { items: [T('TOPIC', { bold: true, align: 'center' })], raw: true, fill: [166, 166, 166] }
+        ] }];
+        (data.teachingPlan || []).forEach((r) => {
+          if (r.type === 'milestone') { rows.push({ cells: [{ items: [T('')], raw: true }, { items: [T(r.label, { bold: true })], raw: true }] }); return; }
+          rows.push({ cells: [{ items: [T(r.week)], raw: true }, { items: coTopicItems(r.topics), raw: true }] });
+        });
+        drawTable(ctx, [W * 0.14, W * 0.86], rows, { fs: 8.5, lh: 10.6, pad: 4 });
+      });
+
+      // References / requirements / grading / policies
+      safe('bottom', () => {
+        const rg = data.referenceGroups || {};
+        const suggested = (rg.suggested || []).concat(rg.onlineResources || [], rg.journals || []);
+        ctx.y += 6;
+        bar('TEXTBOOK:');
+        flow((rg.textbooks || []).length ? [].concat(...rg.textbooks.map((t) => [T(t), { kind: 'gap' }])) : [T('None listed.')]);
+        bar('SUGGESTED READINGS AND REFERENCES:');
+        flow(suggested.length ? [].concat(...suggested.map((t) => [T(t), { kind: 'gap' }])) : [T('None listed.')]);
+        bar('COURSE REQUIREMENTS:');
+        flow((data.courseRequirements || []).length ? data.courseRequirements.map((t) => T(t)) : [T('None listed.')]);
+        ctx.y += 4;
+        bar('GRADING SYSTEM:');
+        flow([T(gradingIntro(data))]);
+        ctx.y += 2;
+        const comps = get(data, 'grading.components', []);
+        const gRows = comps.length === 1
+          ? (comps[0].items || [])
+          : comps.map((c) => ({ item: c.name, source: (c.items || []).map((it) => `${it.item} – ${it.pct}%`).join('\n'), pct: c.weightPct }));
+        drawTable(ctx, [W * 0.3, W * 0.35, W * 0.35], [{ cells: ['Assessment Item', 'Grade Source', 'Percentage'].map((h) => ({ items: [T(h, { align: 'center' })], raw: true })) }]
+          .concat(gRows.map((it) => ({ cells: [
+            { items: [T(it.item)], raw: true },
+            { items: String(it.source || '').split('\n').map((s) => T(s)), raw: true },
+            { items: [T(`${it.pct}%`, { align: 'center' })], raw: true }
+          ] }))), { fs: 8.5, lh: 10.6, pad: 3 });
+        flow((meta.gradingNotes || []).map((t) => T(t)));
+        ctx.y += 4;
+        const pol = coPolicies(data);
+        bar('COURSE POLICIES:');
+        flow([T(pol.attendanceHeading)]);
+        flow([T(pol.attendanceText)], { indent: 24 });
+        ctx.y += 6;
+        flow([T(pol.dishonestyIntro)]);
+        flow(alpha(pol.dishonestyItems), { indent: 24 });
+        ctx.y += 6;
+        flow([T(pol.submissionHeading)]);
+        flow([T(pol.submissionText)], { indent: 24 });
+        if (data.classPoliciesOverride) { ctx.y += 6; flow([T('Additional Notes')]); flow([T(data.classPoliciesOverride)], { indent: 24 }); }
+        ctx.y += 6;
+        flow([T('Faculty Consultation Hours')]);
+        flow([T(`The Faculty Consultation/Advising hours schedule is available at the ${pol.office} office, and at the ${pol.office} bulletin board.`)], { indent: 6 });
+      });
+
+      coDrawFooters(doc, data, template);
+      return doc;
+    } finally {
+      Object.assign(PT, saved);
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -872,7 +1327,8 @@
       if (!host) return;
       const avail = host.clientWidth;
       if (!avail) return;
-      const scale = Math.min(1, avail / PAGE_W);
+      const page = el.querySelector('.oo-page');
+      const scale = Math.min(1, avail / ((page && page.offsetWidth + 2) || PAGE_W));
       el.style.zoom = scale < 0.999 ? String(Math.round(scale * 1000) / 1000) : '';
     });
   }

@@ -1,0 +1,387 @@
+{
+  "version": "coed-2026-2027-1",
+  "source": "COED Course Outline PNC:AA-FO-44 rev.0 06182026 (READ100, 1st Sem AY 2026-2027)",
+  "department": {
+    "code": "COED",
+    "name": "College of Education"
+  },
+  "program": {
+    "code": "COED",
+    "name": "College of Education – Course Outlines",
+    "peoIntro": "Three to five years after graduation, in Computer Science and Nursing",
+    "peo": [
+      "be employed in the field of accounting, auditing and assurance, tax related and management advisory services; finance; marketing; computing; nursing; and, psychology;",
+      "possess globally competitive skills;",
+      "demonstrate personal dignity and integrity; and engage in community development or nation-building."
+    ]
+  },
+  "courses": [
+    {
+      "courseCode": "READ100",
+      "courseTitle": "Science and Development of Reading",
+      "prerequisite": "",
+      "description": "The “Science and Development of Reading” course provides a comprehensive exploration of the cognitive, psychological, and educational aspects of reading acquisition and literacy development. This course delves into the science behind how individuals learn to read, the cognitive processes involved in reading comprehension, and effective instructional strategies that support reading development across diverse populations. From the foundational elements of phonological awareness to the neuroscientific underpinnings of reading, students will gain valuable insights into the intricacies of reading and its importance in today's information-driven world.",
+      "outcomes": [
+        "Demonstrate content knowledge and the applications of the underlying principles and theories of reading and reading development.",
+        "Apply the identified research-based principles and approaches in developing basic skills in reading comprehension."
+      ],
+      "soMap": [
+        {
+          "soCode": "SO 8",
+          "group": "Computer Science",
+          "intensity": "I/L",
+          "description": "Communicate effectively with the computing community and with society at large about complex computing activities by being able to comprehend and write effective reports, design documentation make effective presentations, and give and understand clear instructions."
+        },
+        {
+          "soCode": "SO 5",
+          "group": "Nursing",
+          "intensity": "I/L",
+          "description": "Communicate effectively in speaking, writing and presenting using culturally appropriate language."
+        }
+      ],
+      "teachingPlan": [
+        {
+          "type": "week",
+          "week": "1",
+          "topics": [
+            "• Discussion of PnC mission and vision, program educational objectives and outcomes, and course outcomes",
+            "• Course orientation and policies",
+            "• Expectations and prior knowledge about the course"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "2",
+          "topics": [
+            "Introduction to Reading and Literacy Development",
+            "• Reading as a Cognitive and Social Process",
+            "• The Importance of Reading",
+            "• Literacy in the Information Age"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "3",
+          "topics": [
+            "Language Awareness and Academic Reading",
+            "• Language Structure and Meaning",
+            "• Academic Vocabulary Development",
+            "• Strategies for Understanding Unfamiliar Words"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "4",
+          "topics": [
+            "Cognitive Processes in Reading",
+            "• Phases of the Reading Process",
+            "• Word Recognition and Meaning Construction",
+            "• Reading Comprehension Processes",
+            "• Working Memory",
+            "• Metacognition and Reading"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "5",
+          "topics": [
+            "Reading Development Across the Lifespan",
+            "• Stages of Literacy Development",
+            "• Professional Reading Demands",
+            "• Lifelong Literacy Development"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "6",
+          "topics": [
+            "Prelim Exam"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "7",
+          "topics": [
+            "Neuroscience of Reading",
+            "• Brain Regions Involved in Reading",
+            "• Neuroimaging Studies and Reading Research",
+            "• Links between Brain Development and Literacy"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "8",
+          "topics": [
+            "Reading Challenges",
+            "• Common Reading Difficulties",
+            "• Factors Affecting Reading Performance",
+            "• Evidence-Based Reading Interventions",
+            "• Assistive Technology"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "9",
+          "topics": [
+            "Reading Challenges",
+            "• Common Reading Difficulties",
+            "• Factors Affecting Reading Performance",
+            "• Evidence-Based Reading Interventions",
+            "• Assistive Technology"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "10",
+          "topics": [
+            "Digital Literacy and Reading",
+            "• Reading in Digital Environments",
+            "• Online Reading Platforms and Tools",
+            "• Digital Literacy Skills"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "11",
+          "topics": [
+            "Bilingualism and Reading",
+            "• Cultural Influences on Reading",
+            "• Bilingual Reading Development",
+            "• Advantages of Bilingualism",
+            "• Language Transfer and Reading Skills"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "12",
+          "topics": [
+            "Midterm Exam"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "13",
+          "topics": [
+            "Strategic Reading for Academic and Professional Success",
+            "• Critical Reading Strategies",
+            "• Reading Different Types of Texts"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "14",
+          "topics": [
+            "Evaluating and Improving Reading Performance",
+            "• Reading Assessment Strategies",
+            "• Identifying Reading Strengths and Areas for Improvement",
+            "• Monitoring Reading Progress",
+            "• Metacognitive Reading Strategies",
+            "• Personal Reading Improvement Plans"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "15",
+          "topics": [
+            "Evaluating and Improving Reading Performance",
+            "• Reading Assessment Strategies",
+            "• Identifying Reading Strengths and Areas for Improvement",
+            "• Monitoring Reading Progress",
+            "• Metacognitive Reading Strategies",
+            "• Personal Reading Improvement Plans"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "16",
+          "topics": [
+            "Reading Motivation and Engagement",
+            "• Intrinsic vs. Extrinsic Motivation",
+            "• Cultivating a Love for Reading",
+            "• Encouraging Lifelong Reading Habits"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "17",
+          "topics": [
+            "Literacy in the Digital Age",
+            "• Media and Information Literacy",
+            "• Digital Citizenship",
+            "• Misinformation and Fact-Checking",
+            "• AI and Information Evaluation"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        },
+        {
+          "type": "week",
+          "week": "18",
+          "topics": [
+            "Final Exam"
+          ],
+          "ilo": [],
+          "tla": [],
+          "instructionalMaterials": [],
+          "assessmentTasks": []
+        }
+      ],
+      "referenceGroups": {
+        "textbooks": [
+          "Aquino, A.M. (2014). Developmental Reading 1. Jimczyville Publications.",
+          "Bernardo, A.S. (2015). Developmental Reading 2. Rex Book Store, Inc.",
+          "Bernardo, A.S. (2013). Developmental Reading 1. Rex Book Store, Inc."
+        ],
+        "onlineResources": [],
+        "journals": [],
+        "suggested": [
+          "The Reading Brain: The Science of Changing How We Think. Stanislas Dehaene. 2009. Viking Adult. ISBN: 978-0670021109",
+          "Reading in the Brain: The Science and Evolution of a Human Invention. Stanislas Dehaene. 2009. Penguin Books. ISBN: 978-0143118053",
+          "Proust and the Squid: The Story and Science of the Reading Brain. Maryanne Wolf. 2007. Harper Perennial. ISBN: 978-0060933845",
+          "Psychological Science. Reading in the Mind's Eye: A PET Investigation of the Neural Mechanisms of Reading. Marcel Adam Just, Patricia A. Carpenter. 1996. Volume: 7 Issue: 6. Pages: 337-344. DOI: 10.1111/j.1467-9280.1996.tb00381.x",
+          "Developmental Science. Developmental changes in the structure of the verbal IQ–working memory relationship: Implications for IQ measurement. Authors: Timothy J. Bartlett, Susan E. Gathercole. 2011. Volume: 14. Issue: 4. Pages: 976-987. DOI: 10.1111/j.1467-7687.2011.01035.x",
+          "Reading Research Quarterly. Article Title: The Science of Reading and Its Educational Implications. Margaret J. Snowling, Charles Hulme. 2011. Volume: 46 Issue: 3 Pages: 270-284. DOI: 10.1598/RRQ.46.3.4"
+        ]
+      },
+      "grading": {
+        "components": [
+          {
+            "name": "Term Grade",
+            "weightPct": 100,
+            "weightNote": "",
+            "items": [
+              {
+                "item": "Prelim Grade",
+                "source": "Term Examination – 50%\nQuizzes/Exercises – 20%\nClass Participation – 5%\nAttendance – 5%\nOthers – 20%",
+                "pct": 30
+              },
+              {
+                "item": "Midterm Grade",
+                "source": "Term Examination – 50%\nQuizzes/Exercises – 20%\nClass Participation – 5%\nAttendance – 5%\nOthers – 20%",
+                "pct": 30
+              },
+              {
+                "item": "Final Grade",
+                "source": "Term Examination – 50%\nQuizzes/Exercises – 20%\nClass Participation – 5%\nAttendance – 5%\nOthers – 20%",
+                "pct": 40
+              }
+            ]
+          }
+        ]
+      },
+      "courseRequirements": [
+        "Quizzes",
+        "Seatworks and Assignments",
+        "Case Study",
+        "Final Exam"
+      ],
+      "officialMeta": {
+        "creditUnits": "3",
+        "effectivityDate": "",
+        "supersedes": "June 22, 2026",
+        "soProgramLabel": "COMPUTER SCIENCE AND NURSING",
+        "programOutcomes": [
+          "be employed in the field of accounting, auditing and assurance, tax related and management advisory services; finance; marketing; computing; nursing; and, psychology;",
+          "possess globally competitive skills;",
+          "demonstrate personal dignity and integrity; and,",
+          "engage in community development or nation-building."
+        ],
+        "gradingIntro": "The final grade in this course will be composed of the following items and their weights in the final grade computation",
+        "gradingNotes": [
+          "Passing: 60%",
+          "Laboratory Grade: 40%",
+          "Lecture Grade: 60%",
+          "Term Grade (Prelim/Midterm/Finals): 100%"
+        ],
+        "consultationOffice": "College of Education",
+        "division": "College of Education",
+        "signatories": {
+          "reviewedBy": [
+            {
+              "name": "Ms. Hanna Grace S. Salengga",
+              "title": "Cluster Head"
+            }
+          ],
+          "concurredBy": [
+            {
+              "name": "Mr. Edward Francis G. Gabor",
+              "title": "Department Chair"
+            }
+          ],
+          "approvedBy": [
+            {
+              "name": "Dr. Nikki Crystel A. Elic",
+              "title": "Dean, COED"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -826,3 +826,50 @@ table.data th.center, table.data td.center { text-align: center; }
 .stat.stat-link.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
 .stat.stat-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .cell-note { margin: 0.35rem 0 0; font-size: 0.8125rem; color: var(--destructive); max-width: 28rem; }
+
+/* ---------- COED Course Outline (PNC:AA-FO-44) — PORTRAIT long bond ----------
+   8.5" x 13" at the same scale as the landscape OBTLP pages. */
+.oo-page.co-page { width: 800px; min-height: 1223px; padding: 30px 46px 150px; font-family: "Segoe UI", Arial, sans-serif; }
+.co-formcode { position: absolute; top: 12px; right: 40px; font-family: Arial, sans-serif; font-size: 10px; }
+.co-letterhead { display: grid; grid-template-columns: 84px 1fr 84px; align-items: center; gap: 8px; margin: 14px 18px 14px; }
+.co-seal { width: 78px; height: 78px; object-fit: contain; }
+.co-lh-text { text-align: center; line-height: 1.2; }
+.co-lh-1 { font-family: "Times New Roman", serif; font-size: 12px; }
+.co-lh-2 { font-weight: 800; font-size: 23px; color: #004d00; letter-spacing: .01em; }
+.co-lh-3 { font-size: 14px; }
+.co-lh-4 { font-size: 14px; font-weight: 700; font-style: italic; }
+.co-lh-5 { font-size: 9px; }
+.co-bar { background: #d9d9d9; font-weight: 700; font-size: 11px; padding: 2px 6px; margin: 12px 0 6px; display: inline-block; min-width: 40%; }
+.co-bar-center { display: block; text-align: center; font-size: 13px; letter-spacing: .02em; }
+.co-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; line-height: 1.35; margin-bottom: 8px; }
+.co-table th, .co-table td { border: 1px solid #000; padding: 3px 6px; vertical-align: top; text-align: left; font-weight: 400; }
+.co-table th { font-weight: 700; }
+.co-table ul, .co-table ol, .co-page .oo-content > ol, .co-page .oo-content > ul { margin: 0.1rem 0 0.25rem 1.2rem; padding: 0; font-size: 11px; }
+.co-page .oo-content > p, .co-page .oo-content li { font-size: 11px; line-height: 1.4; }
+.co-page .oo-content > p { margin: 0 0 0.35rem; }
+.co-org td { padding: 6px 8px; }
+.co-minibar { background: #d9d9d9; font-weight: 700; padding: 1px 4px; margin: 4px 0; }
+.co-italic { font-style: italic; }
+.co-justify { text-align: justify !important; }
+.co-fill { background: #e6e6e6; padding: 0 10px; font-style: normal; }
+.co-inline { margin-top: 0.75rem !important; }
+.co-label { background: #d9d9d9; padding: 1px 4px; font-size: 11px; }
+.co-underline { border-bottom: 1px solid #000; }
+.co-info { width: 100%; border-collapse: separate; border-spacing: 0 6px; font-size: 11px; }
+.co-info td { vertical-align: top; padding: 2px 6px; }
+.co-info td.co-label { background: #e6e6e6; }
+.co-lead { background: #e6e6e6; padding: 0 4px; }
+.co-caption { font-size: 9px; text-transform: uppercase; margin-top: 2px; }
+.co-gray { background: #bfbfbf; }
+.co-dark { background: #a6a6a6; }
+.co-weeks td p { margin: 0 0 0.1rem; }
+.co-legend { font-size: 10.5px !important; }
+.co-ref { margin-bottom: 0.55rem !important; }
+.co-tight { margin: 0 0 0.1rem !important; }
+.co-indent { padding-left: 2.25rem; }
+.co-grading td { font-size: 11px; }
+.co-footer { position: absolute; left: 46px; right: 46px; bottom: 10px; text-align: center; }
+.co-sigstrip { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; line-height: 1.25; margin-bottom: 6px; }
+.co-sigstrip td { border: 1px solid #000; padding: 3px 4px; text-align: center; vertical-align: top; height: 70px; }
+.co-sig-label { margin-bottom: 14px; }
+.co-sig-page { vertical-align: middle !important; width: 60px; }

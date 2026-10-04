@@ -299,6 +299,7 @@
             description: p.description || 'No course description provided yet.',
             prerequisite: p.prerequisite || '',
             faculty: ownerName,
+            facultyEmail: isOwner ? (((state.users || []).find((u) => u.id === session.userId) || {}).email || p.facultyEmail || '') : (p.facultyEmail || ''),
             facultyDept: p.facultyDepartment || '',
             facultyUnits: p.facultyUnits || '',
             units: p.facultyUnits || '',
