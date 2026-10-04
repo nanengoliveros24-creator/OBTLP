@@ -127,7 +127,65 @@ function isRole(role) {
 function stripPassword(u) {
   const copy = Object.assign({}, u);
   delete copy.passwordHash;
+  // Trusted-device secrets never leave the server; only how many there are.
+  copy.trustedDeviceCount = activeTrustedDevices(u).length;
+  delete copy.trustedDevices;
   return copy;
+}
+
+// ---------- "Trust this device" (skip the emailed code for 30 days) ----------
+// After a correct sign-in code, the user can tick "Trust this device". The
+// browser then keeps a random device token; the server stores only its
+// SHA-256 hash. On later sign-ins from that browser the password is still
+// required, but the emailed code is skipped until the token expires. All
+// trusted devices are forgotten whenever the password changes, and the user
+// can forget them from Profile.
+const TRUST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_TRUSTED_DEVICES = 10;
+
+function hashDeviceToken(token) {
+  return crypto.createHash('sha256').update(`device:${token}`).digest('hex');
+}
+
+function activeTrustedDevices(u) {
+  const now = Date.now();
+  return ((u && u.trustedDevices) || []).filter((d) => new Date(d.expiresAt).getTime() > now);
+}
+
+function deviceLabel(req) {
+  const ua = String((req && req.headers && req.headers['user-agent']) || '');
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : '';
+  return os ? `${browser} on ${os}` : browser;
+}
+
+function trustDevice(user, req) {
+  const token = auth.makeToken();
+  const now = new Date();
+  const devices = activeTrustedDevices(user);
+  devices.push({
+    id: store.nextId('dev'),
+    tokenHash: hashDeviceToken(token),
+    label: deviceLabel(req),
+    createdAt: now.toISOString(),
+    lastUsedAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + TRUST_TTL_MS).toISOString()
+  });
+  user.trustedDevices = devices.slice(-MAX_TRUSTED_DEVICES);
+  return token;
+}
+
+function findTrustedDevice(user, token) {
+  if (!token || typeof token !== 'string' || token.length > 200) return null;
+  const want = Buffer.from(hashDeviceToken(token), 'hex');
+  return activeTrustedDevices(user).find((d) => {
+    const have = Buffer.from(String(d.tokenHash || ''), 'hex');
+    return have.length === want.length && crypto.timingSafeEqual(have, want);
+  }) || null;
+}
+
+function forgetTrustedDevices(user) {
+  if (user && user.trustedDevices && user.trustedDevices.length) user.trustedDevices = [];
 }
 
 // ---------- Email OTP (multi-factor sign-in) ----------
@@ -625,6 +683,17 @@ const routes = {
       }
       if (!mfaActive()) return startSession(db, user);
 
+      // A browser this user marked "Trust this device" skips the emailed
+      // code (the password above was still checked).
+      const trusted = findTrustedDevice(user, body.deviceToken);
+      if (trusted) {
+        trusted.lastUsedAt = store.nowIso();
+        user.trustedDevices = activeTrustedDevices(user);
+        const res = startSession(db, user);
+        res.data.trustedDevice = true;
+        return res;
+      }
+
       // Second factor: email a one-time code instead of signing in now.
       pruneChallenges(db);
       db.mfaChallenges = db.mfaChallenges.filter((c) => c.userId !== user.id);
@@ -678,7 +747,7 @@ const routes = {
 
   'POST /api/login/verify': {
     auth: false,
-    handler: (db, ctx, query, body) => {
+    handler: (db, ctx, query, body, params, req) => {
       const challenge = findChallenge(db, body.challengeId);
       const code = String(body.code || '').replace(/\D/g, '');
       if (!challenge.codeHash) throw { status: 400, message: 'Please request a verification code first.' };
@@ -704,7 +773,14 @@ const routes = {
       db.mfaChallenges = db.mfaChallenges.filter((c) => c.id !== challenge.id);
       if (!user) throw { status: 400, message: 'This sign-in attempt has expired. Please sign in again.' };
       if (challenge.pendingEmail) user.email = challenge.email;
-      return startSession(db, user);
+      const deviceToken = body.trustDevice === true ? trustDevice(user, req) : null;
+      const res = startSession(db, user);
+      if (deviceToken) {
+        res.data.deviceToken = deviceToken;
+        res.data.trustedDays = Math.round(TRUST_TTL_MS / 86400000);
+        pushAudit(db, { actor: user.id, action: 'login', portfolioId: null, detail: `${user.name} trusted this device (${deviceLabel(req)}) for 30 days` });
+      }
+      return res;
     }
   },
 
@@ -761,11 +837,31 @@ const routes = {
         throw { status: 400, message: 'New password must be at least 6 characters.' };
       }
       ctx.user.passwordHash = auth.hashPassword(newPassword);
+      forgetTrustedDevices(ctx.user);
       // Keep the session that just made this change alive; sign the account
       // out everywhere else since the old password is no longer valid.
       db.sessions = (db.sessions || []).filter((s) => s.token === ctx.token || s.userId !== ctx.user.id);
       pushAudit(db, { actor: ctx.user.id, action: 'password-change', portfolioId: null, detail: `${ctx.user.username} changed their own password` });
       return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // ---- trusted devices (own account) ----
+  'GET /api/me/trusted-devices': {
+    auth: true,
+    handler: (db, ctx) => ({
+      status: 200,
+      data: activeTrustedDevices(ctx.user).map((d) => ({ id: d.id, label: d.label, createdAt: d.createdAt, lastUsedAt: d.lastUsedAt, expiresAt: d.expiresAt }))
+    })
+  },
+
+  'DELETE /api/me/trusted-devices': {
+    auth: true,
+    handler: (db, ctx) => {
+      const n = activeTrustedDevices(ctx.user).length;
+      forgetTrustedDevices(ctx.user);
+      pushAudit(db, { actor: ctx.user.id, action: 'user-update', portfolioId: null, detail: `${ctx.user.username} forgot ${n} trusted device${n === 1 ? '' : 's'}` });
+      return { status: 200, data: { ok: true, removed: n } };
     }
   },
 
@@ -1626,6 +1722,7 @@ const routes = {
         throw { status: 400, message: 'Password must be at least 6 characters.' };
       }
       u.passwordHash = auth.hashPassword(String(body.newPassword));
+      forgetTrustedDevices(u);
       db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);
       pushAudit(db, { actor: ctx.user.id, action: 'password-change', portfolioId: null, detail: `Changed password for ${u.username}` });
       return {
@@ -1697,7 +1794,7 @@ async function handleApi(req, res, pathname, query) {
         ctx = requireAuth(db, req);
         if (match.route.roles) requireRole(ctx, match.route.roles);
       }
-      return match.route.handler(db, ctx, query, body, match.params);
+      return match.route.handler(db, ctx, query, body, match.params, req);
     };
 
     // GET handlers never mutate `db` — skip the write-back and the shared

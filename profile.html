@@ -80,11 +80,18 @@
               <input class="input" id="p-confirm" type="password" autocomplete="new-password" />
             </div>
             <div class="form-error" id="password-error" style="display:none;" role="alert"></div>
-            <div class="form-success" id="password-success" style="display:none;">Password updated. Other sessions were signed out.</div>
+            <div class="form-success" id="password-success" style="display:none;">Password updated. Other sessions were signed out and trusted devices were forgotten.</div>
             <button type="submit" class="btn btn-primary" id="password-save-btn">Update Password</button>
           </form>
         </section>
       </div>
+
+      <section class="card card-pad" style="margin-top:1.5rem;max-width:44rem;">
+        <h3 class="card-title" style="margin-bottom:0.25rem;">Trusted Devices</h3>
+        <p class="section-sub" style="margin-bottom:1rem;">Browsers where you ticked "Trust this device". They skip the emailed sign-in code for 30 days, but still need your password. Changing your password forgets all of them.</p>
+        <ul class="device-list" id="device-list"><li class="t-muted">Loading…</li></ul>
+        <button type="button" class="btn btn-outline" id="forget-devices-btn" style="display:none;"><i data-lucide="shield-off" class="svg-icon"></i> Forget All Trusted Devices</button>
+      </section>
     </main>
   </div>
 
@@ -148,10 +155,49 @@
         const state = await api.getState();
         const me = (state.users || []).find((u) => u.id === session.userId) || {};
         document.getElementById('p-username').value = me.username || '';
+        myUsername = me.username || '';
       } catch (err) {
         ui.notifyError(err);
       }
+      loadDevices();
     }
+
+    let myUsername = '';
+    function fmtDate(iso) { return iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; }
+    function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    async function loadDevices() {
+      const list = document.getElementById('device-list');
+      const btn = document.getElementById('forget-devices-btn');
+      try {
+        const devices = await api.getTrustedDevices();
+        if (!devices.length) {
+          list.innerHTML = '<li class="t-muted">No trusted devices. You\'ll get a code by email each time you sign in.</li>';
+          btn.style.display = 'none';
+          return;
+        }
+        list.innerHTML = devices.map((d) => `
+          <li>
+            <i data-lucide="monitor-smartphone" class="svg-icon t-primary"></i>
+            <div style="flex:1;min-width:0;">
+              <p class="cell-strong">${escHtml(d.label)}</p>
+              <p class="cell-sub">Trusted ${fmtDate(d.createdAt)} · last used ${fmtDate(d.lastUsedAt)} · until ${fmtDate(d.expiresAt)}</p>
+            </div>
+          </li>`).join('');
+        btn.style.display = 'inline-flex';
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        list.innerHTML = '<li class="t-muted">Could not load trusted devices.</li>';
+      }
+    }
+    document.getElementById('forget-devices-btn').addEventListener('click', async () => {
+      if (!confirm('Forget all trusted devices? Every browser, including this one, will ask for an emailed code at the next sign-in.')) return;
+      try {
+        const r = await api.forgetTrustedDevices();
+        api.clearDeviceToken(myUsername);
+        ui.notify('Trusted Devices Forgotten', `${r.removed} device${r.removed === 1 ? '' : 's'} will need a code at the next sign-in.`);
+        loadDevices();
+      } catch (err) { ui.notifyError(err); }
+    });
 
     document.getElementById('profile-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -211,6 +257,8 @@
       btn.disabled = true;
       try {
         await api.changeMyPassword(currentPassword, newPassword);
+        api.clearDeviceToken(myUsername);
+        loadDevices();
         okEl.style.display = 'block';
         document.getElementById('password-form').reset();
         ui.notify('Password Updated', 'Your password has been changed.');

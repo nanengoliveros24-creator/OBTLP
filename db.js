@@ -43,6 +43,30 @@
     }
   }
 
+  // "Trust this device": one random token per account, kept in this
+  // browser (it survives sign-out on purpose). Sent with the password so
+  // the server can skip the emailed code.
+  const DEVICE_KEY = 'obtlp_trusted_devices';
+  function readDevices() {
+    try { return JSON.parse(localStorage.getItem(DEVICE_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function writeDevices(map) {
+    try { localStorage.setItem(DEVICE_KEY, JSON.stringify(map)); } catch (e) { /* ignore */ }
+  }
+  const userKey = (u) => String(u || '').trim().toLowerCase();
+  function getDeviceToken(username) { return readDevices()[userKey(username)] || null; }
+  function saveDeviceToken(username, token) {
+    const map = readDevices();
+    map[userKey(username)] = token;
+    writeDevices(map);
+  }
+  function clearDeviceToken(username) {
+    const map = readDevices();
+    if (username === undefined) { writeDevices({}); return; }
+    delete map[userKey(username)];
+    writeDevices(map);
+  }
+
   // Redirect to sign-in when the session is missing/expired, unless we're
   // already there. Shared by every authenticated request.
   function forceSignOut() {
@@ -117,10 +141,15 @@
     clearSession,
 
     // ---- auth ----
-    login: (username, password, role) => req('/api/login', { method: 'POST', body: JSON.stringify({ username, password, role }) }),
+    login: (username, password, role) => req('/api/login', { method: 'POST', body: JSON.stringify({ username, password, role, deviceToken: getDeviceToken(username) || undefined }) }),
     // Email OTP (second sign-in step)
     loginEmail: (challengeId, email) => req('/api/login/email', { method: 'POST', body: JSON.stringify({ challengeId, email }) }),
-    loginVerify: (challengeId, code) => req('/api/login/verify', { method: 'POST', body: JSON.stringify({ challengeId, code }) }),
+    loginVerify: (challengeId, code, trustDevice) => req('/api/login/verify', { method: 'POST', body: JSON.stringify({ challengeId, code, trustDevice: !!trustDevice }) }),
+    getDeviceToken,
+    saveDeviceToken,
+    clearDeviceToken,
+    getTrustedDevices: () => req('/api/me/trusted-devices'),
+    forgetTrustedDevices: () => req('/api/me/trusted-devices', { method: 'DELETE' }),
     loginResend: (challengeId) => req('/api/login/resend', { method: 'POST', body: JSON.stringify({ challengeId }) }),
     register: (body) => req('/api/register', { method: 'POST', body: JSON.stringify(body) }),
     setup: (body) => req('/api/setup', { method: 'POST', body: JSON.stringify(body) }),

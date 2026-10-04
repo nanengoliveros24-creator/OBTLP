@@ -124,6 +124,13 @@
             </div>
             <p class="field-hint">The code expires in 5 minutes. Check your Spam or Promotions folder if you don't see it.</p>
           </div>
+          <label class="trust-row" for="otp-trust">
+            <input type="checkbox" id="otp-trust" checked />
+            <span>
+              <b>Trust this device for 30 days</b>
+              <small>You won't need a code when signing in on this browser. Don't tick this on a shared or public computer.</small>
+            </span>
+          </label>
           <div class="form-error" id="otp-error" style="display:none;" role="alert"></div>
           <div class="form-success" id="otp-notice" style="display:none;"></div>
           <button type="submit" class="btn btn-primary w-full" id="otp-btn">Verify &amp; Sign in</button>
@@ -243,6 +250,7 @@
     })();
 
     let selectedRole = 'faculty';
+    let loginUsername = '';
     const roleSwitch = document.getElementById('role-switch');
     roleSwitch.querySelectorAll('button[data-role]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -267,8 +275,13 @@
       btn.disabled = true;
       btn.textContent = 'Signing in…';
       try {
+        const hadDeviceToken = !!api.getDeviceToken(username);
         const result = await api.login(username, password, selectedRole);
+        loginUsername = username;
         if (result.mfaRequired || result.emailRequired) {
+          // A remembered device that no longer works (expired, forgotten,
+          // or the password changed) — drop it and ask for a code as usual.
+          if (hadDeviceToken) api.clearDeviceToken(username);
           showOtpStep(result);
           btn.disabled = false;
           btn.textContent = 'Sign in';
@@ -392,7 +405,9 @@
       btn.disabled = true;
       btn.textContent = 'Verifying…';
       try {
-        const { token, user } = await api.loginVerify(challengeId, code);
+        const trust = document.getElementById('otp-trust').checked;
+        const { token, user, deviceToken } = await api.loginVerify(challengeId, code, trust);
+        if (deviceToken && loginUsername) api.saveDeviceToken(loginUsername, deviceToken);
         clearInterval(resendTimer);
         api.setSession({ token, userId: user.id, role: user.role, name: user.name });
         redirectForRole(user);
