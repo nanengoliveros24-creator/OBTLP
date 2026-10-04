@@ -61,21 +61,22 @@
 
       <!-- Stats -->
       <section class="stats-grid">
-        <div class="stat"><div class="stat-top"><p class="stat-label">Total Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-total">0</p></div>
-        <div class="stat"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="check-circle-2" class="svg-icon t-success"></i></div><p class="stat-value" id="stat-approved">0</p></div>
-        <div class="stat"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-pending">0</p></div>
-        <div class="stat"><div class="stat-top"><p class="stat-label">Needs Revision</p><i data-lucide="alert-triangle" class="svg-icon t-destructive"></i></div><p class="stat-value" id="stat-revision">0</p></div>
+        <div class="stat stat-link active" data-status-filter="All" role="button" tabindex="0" title="Show all portfolios"><div class="stat-top"><p class="stat-label">Total Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-total">0</p></div>
+        <div class="stat stat-link" data-status-filter="Approved" role="button" tabindex="0" title="Show approved portfolios"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="check-circle-2" class="svg-icon t-success"></i></div><p class="stat-value" id="stat-approved">0</p></div>
+        <div class="stat stat-link" data-status-filter="Pending" role="button" tabindex="0" title="Show portfolios waiting for review"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-pending">0</p></div>
+        <div class="stat stat-link" data-status-filter="Revision" role="button" tabindex="0" title="Show portfolios that need revision"><div class="stat-top"><p class="stat-label">Needs Revision</p><i data-lucide="alert-triangle" class="svg-icon t-destructive"></i></div><p class="stat-value" id="stat-revision">0</p></div>
       </section>
 
       <!-- Portfolio table -->
-      <section class="card mb-8" style="overflow:hidden;">
+      <section class="card mb-8" style="overflow:hidden;" id="portfolio-card">
         <div class="section-head">
           <div>
-            <h2 class="card-title" style="font-size:1.125rem;">My Portfolios</h2>
-            <p class="section-sub">Your saved OBTLP report records</p>
+            <h2 class="card-title" style="font-size:1.125rem;" id="table-title">My Portfolios</h2>
+            <p class="section-sub" id="table-sub">Your saved OBTLP report records</p>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <input class="input input-search" id="portfolio-search" placeholder="Search portfolios…" />
+            <button type="button" class="btn btn-outline btn-sm" id="clear-filter" style="display:none;">Show All</button>
             <a href="my-portfolios.html" class="btn btn-outline btn-sm">View All</a>
           </div>
         </div>
@@ -179,25 +180,55 @@
 
     let allPortfolios = [];
 
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+    // The stat cards double as filters for the table below (like the
+    // College Administrator's review queue).
+    let statusFilter = 'All';
+    const FILTERS = {
+      All: { test: () => true, title: 'My Portfolios', sub: 'Your saved OBTLP report records', empty: 'No portfolios yet. Create one to get started.' },
+      Approved: { test: (p) => p.status === 'Approved', title: 'Approved', sub: 'Portfolios the College Administrator approved', empty: 'No approved portfolios yet.' },
+      Pending: { test: (p) => p.status === 'Pending Review' || p.status === 'In Review', title: 'Pending Review', sub: 'Submitted and waiting for the College Administrator', empty: 'Nothing is waiting for review.' },
+      Revision: { test: (p) => p.status === 'Revision Required', title: 'Needs Revision', sub: 'Returned with comments — edit and resubmit', empty: 'Nothing needs revision. 🎉' }
+    };
+
+    function setStatusFilter(key, scroll) {
+      statusFilter = FILTERS[key] ? key : 'All';
+      document.querySelectorAll('[data-status-filter]').forEach((el) => el.classList.toggle('active', el.dataset.statusFilter === statusFilter));
+      document.getElementById('table-title').textContent = FILTERS[statusFilter].title;
+      document.getElementById('table-sub').textContent = FILTERS[statusFilter].sub;
+      document.getElementById('clear-filter').style.display = statusFilter === 'All' ? 'none' : '';
+      renderRows(searchInput ? searchInput.value : '');
+      if (scroll) document.getElementById('portfolio-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     function renderRows(filterText) {
       const tbody = document.getElementById('portfolio-rows');
       const term = (filterText || '').trim().toLowerCase();
-      const rows = allPortfolios.filter((p) =>
-        !term || p.courseCode.toLowerCase().includes(term) || p.courseTitle.toLowerCase().includes(term)
-      );
+      const f = FILTERS[statusFilter];
+      const rows = allPortfolios.filter((p) => f.test(p) && (
+        !term || String(p.courseCode || '').toLowerCase().includes(term) || String(p.courseTitle || '').toLowerCase().includes(term)
+      ));
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="t-muted" style="padding:1.5rem;">No portfolios yet. Create one to get started.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5" class="t-muted" style="padding:1.5rem;">${term ? 'No portfolios match your search.' : f.empty}</td></tr>`;
         return;
       }
-      tbody.innerHTML = rows.map((p) => `
+      tbody.innerHTML = rows.map((p) => {
+        const r = p.review || {};
+        const note = p.status === 'Revision Required' && r.notes
+          ? `<p class="cell-note"><b>Feedback:</b> ${esc(r.notes)}</p>`
+          : p.status === 'Approved' && r.approvedAt
+            ? `<p class="cell-sub">Approved ${esc(new Date(r.approvedAt).toLocaleDateString())}</p>`
+            : '';
+        return `
         <tr>
-          <td><p class="cell-strong">${p.courseCode}</p><p class="cell-sub">${p.courseTitle}</p></td>
-          <td class="t-muted">${p.semester} · ${p.academicYear}</td>
+          <td><p class="cell-strong">${esc(p.courseCode || 'Untitled')}</p><p class="cell-sub">${esc(p.courseTitle)}</p>${note}</td>
+          <td class="t-muted">${esc(p.semester)}${p.academicYear ? ' · ' + esc(p.academicYear) : ''}</td>
           <td class="t-muted">${fmtWhen(p.updatedAt)}</td>
-          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${p.status}</span></td>
+          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${esc(p.status)}</span></td>
           <td>${actionsCellFor(p)}</td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
       if (window.lucide) lucide.createIcons();
       tbody.querySelectorAll('[data-delete]').forEach((btn) => {
         btn.addEventListener('click', async () => {
@@ -206,6 +237,7 @@
             await api.deletePortfolio(btn.dataset.delete);
             allPortfolios = allPortfolios.filter((p) => p.id !== btn.dataset.delete);
             window.__OBTLP_UI__.notify('Portfolio Deleted', 'The draft has been removed.');
+            updateStats();
             renderRows(searchInput ? searchInput.value : '');
           } catch (err) {
             window.__OBTLP_UI__.notifyError(err);
@@ -213,6 +245,19 @@
         });
       });
     }
+
+    function updateStats() {
+      document.getElementById('stat-total').textContent = allPortfolios.length;
+      document.getElementById('stat-approved').textContent = allPortfolios.filter(FILTERS.Approved.test).length;
+      document.getElementById('stat-pending').textContent = allPortfolios.filter(FILTERS.Pending.test).length;
+      document.getElementById('stat-revision').textContent = allPortfolios.filter(FILTERS.Revision.test).length;
+    }
+
+    document.querySelectorAll('[data-status-filter]').forEach((el) => {
+      el.addEventListener('click', () => setStatusFilter(el.dataset.statusFilter, true));
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStatusFilter(el.dataset.statusFilter, true); } });
+    });
+    document.getElementById('clear-filter').addEventListener('click', () => setStatusFilter('All'));
 
     async function loadDashboard() {
       try {
@@ -224,15 +269,11 @@
         const state = await api.getState();
         allPortfolios = state.portfolios || [];
 
-        document.getElementById('stat-total').textContent = allPortfolios.length;
-        document.getElementById('stat-approved').textContent = allPortfolios.filter((p) => p.status === 'Approved').length;
-        document.getElementById('stat-pending').textContent = allPortfolios.filter((p) => p.status === 'Pending Review' || p.status === 'In Review').length;
-        document.getElementById('stat-revision').textContent = allPortfolios.filter((p) => p.status === 'Revision Required').length;
-
-        renderRows('');
+        updateStats();
+        setStatusFilter(new URLSearchParams(window.location.search).get('show') || 'All');
 
         const timeline = document.getElementById('timeline');
-        const myLogs = (state.auditLogs || []).filter((l) => allPortfolios.some((p) => p.id === l.portfolioId) || l.actor === session.userId).slice(0, 6);
+        const myLogs = (state.auditLogs || []).filter((l) => l.portfolioId && allPortfolios.some((p) => p.id === l.portfolioId)).slice(0, 6);
         if (!myLogs.length) {
           timeline.innerHTML = '<div class="timeline-item"><span class="dot dot-muted"></span><div><p class="item-title">No activity yet.</p></div></div>';
         } else {
@@ -240,7 +281,7 @@
           timeline.innerHTML = myLogs.map((l) => `
             <div class="timeline-item">
               <span class="dot ${dotFor[l.action] || 'dot-muted'}"></span>
-              <div><p class="item-title">${l.detail}</p><p class="item-time">${fmtWhen(l.at)}</p></div>
+              <div><p class="item-title">${esc(l.detail)}</p><p class="item-time">${fmtWhen(l.at)}</p></div>
             </div>
           `).join('');
         }

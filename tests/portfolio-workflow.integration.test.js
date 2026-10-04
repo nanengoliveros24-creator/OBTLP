@@ -116,3 +116,16 @@ test('admin can request revision, and the faculty member can then edit and resub
   assert.equal(resubmit.data.status, 'Pending Review');
   assert.equal(resubmit.data.resubmitted, true);
 });
+
+test('faculty see their own portfolio activity, not anyone else\'s', async () => {
+  const other = makeClient(server.baseUrl);
+  await other.post('/api/register', { name: 'Prof Two', username: 'prof-two@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1' });
+  const login = await other.post('/api/login', { username: 'prof-two@test.edu', password: 'facultypass1' });
+  other.setToken(login.data.token);
+  const mine = await other.post('/api/portfolios');
+  const state = await other.get('/api/state');
+  assert.ok(state.data.auditLogs.length > 0, 'own activity is returned');
+  state.data.auditLogs.forEach((l) => {
+    assert.ok(l.actor === login.data.user.id || l.portfolioId === mine.data.id, 'only own entries');
+  });
+});

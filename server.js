@@ -881,7 +881,11 @@ const routes = {
           portfolios,
           allPortfolios: isStaff ? (db.portfolios || []) : [],
           notifications,
-          auditLogs: isStaff ? (db.auditLogs || []).slice(0, 50) : [],
+          // Faculty get only their own activity (their sign-ins/edits and what
+          // happened to their portfolios) for the dashboard timeline.
+          auditLogs: isStaff
+            ? (db.auditLogs || []).slice(0, 50)
+            : (db.auditLogs || []).filter((l) => l.actor === ctx.user.id || (l.portfolioId && portfolios.some((p) => p.id === l.portfolioId))).slice(0, 20),
           settings: db.settings || {}
         }
       };

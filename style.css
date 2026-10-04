@@ -821,3 +821,8 @@ table.data th.center, table.data td.center { text-align: center; }
 .device-list li { display: flex; gap: 0.75rem; align-items: center; font-size: 0.875rem; padding: 0.625rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); }
 .device-list li .svg-icon { flex: none; }
 .device-list p { margin: 0; }
+
+/* Faculty dashboard: stat cards filter the table (selected card is outlined) */
+.stat.stat-link.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary) inset; }
+.stat.stat-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.cell-note { margin: 0.35rem 0 0; font-size: 0.8125rem; color: var(--destructive); max-width: 28rem; }
