@@ -20,6 +20,7 @@
   setup page on an empty database).
 */
 const auth = require('./auth');
+const passwordPolicy = require('./password-policy');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -47,8 +48,8 @@ function applyDefaultItAdmin(db, env, store) {
     return { changed, note: changed ? `updated default IT Administrator ${email}` : 'default IT Administrator already set up' };
   }
 
-  if (password.length < 6) {
-    return { changed, note: 'DEFAULT_IT_PASSWORD missing or shorter than 6 characters — account not created' };
+  if (!passwordPolicy.isStrong(password)) {
+    return { changed, note: 'DEFAULT_IT_PASSWORD missing or too weak (needs 8+ characters with uppercase, lowercase, number and special character) — account not created' };
   }
   const user = {
     id: store.nextId('u'),

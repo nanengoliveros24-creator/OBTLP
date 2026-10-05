@@ -11,7 +11,7 @@ const { startServer, makeClient } = require('./helpers');
 const { applyDefaultItAdmin } = require('../seed-admin');
 
 const IT_EMAIL = 'it.office@test.edu';
-const IT_PASS = 'itpass123';
+const IT_PASS = 'ItPass#123';
 
 let server;
 before(async () => {
@@ -37,26 +37,26 @@ test('the default IT Administrator exists and can sign in as IT', async () => {
 
 test('sign-up only makes faculty accounts and needs an email', async () => {
   const c = makeClient(server.baseUrl);
-  const sneaky = await c.post('/api/register', { name: 'Wants IT', username: 'wants.it@test.edu', password: 'secret1', confirmPassword: 'secret1', role: 'it', departmentId: 'CCS' });
+  const sneaky = await c.post('/api/register', { name: 'Wants IT', username: 'wants.it@test.edu', password: 'Secret#01', confirmPassword: 'Secret#01', role: 'it', departmentId: 'CCS' });
   assert.equal(sneaky.status, 201);
   assert.equal(sneaky.data.user.role, 'faculty', 'a requested role is ignored');
 
-  const asAdmin = await c.post('/api/login', { username: 'wants.it@test.edu', password: 'secret1', role: 'it' });
+  const asAdmin = await c.post('/api/login', { username: 'wants.it@test.edu', password: 'Secret#01', role: 'it' });
   assert.equal(asAdmin.status, 401);
 
-  const noEmail = await c.post('/api/register', { name: 'No Email', username: 'justname', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
+  const noEmail = await c.post('/api/register', { name: 'No Email', username: 'justname', password: 'Secret#01', confirmPassword: 'Secret#01', departmentId: 'CCS' });
   assert.equal(noEmail.status, 400);
 
-  const dupe = await c.post('/api/register', { name: 'Dupe', username: 'WANTS.IT@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
+  const dupe = await c.post('/api/register', { name: 'Dupe', username: 'WANTS.IT@test.edu', password: 'Secret#01', confirmPassword: 'Secret#01', departmentId: 'CCS' });
   assert.equal(dupe.status, 409);
 });
 
 test('deleting an account needs the typed username and the IT password', async () => {
   const { c: it } = await signIn(IT_EMAIL, IT_PASS);
   const pub = makeClient(server.baseUrl);
-  const reg = await pub.post('/api/register', { name: 'Leaving Soon', username: 'leaving@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
+  const reg = await pub.post('/api/register', { name: 'Leaving Soon', username: 'leaving@test.edu', password: 'Secret#01', confirmPassword: 'Secret#01', departmentId: 'CCS' });
   const victimId = reg.data.user.id;
-  const { c: victim } = await signIn('leaving@test.edu', 'secret1');
+  const { c: victim } = await signIn('leaving@test.edu', 'Secret#01');
   await victim.post('/api/portfolios');
 
   const noConfirm = await it.del(`/api/users/${victimId}`, {});
@@ -79,14 +79,14 @@ test('deleting an account needs the typed username and the IT password', async (
 
 test('the default IT Administrator is protected from other IT admins', async () => {
   const { c: it, user: itUser } = await signIn(IT_EMAIL, IT_PASS);
-  const made = await it.post('/api/users', { name: 'Second IT', username: 'second.it@test.edu', role: 'it', password: 'second123' });
+  const made = await it.post('/api/users', { name: 'Second IT', username: 'second.it@test.edu', role: 'it', password: 'Second#123' });
   assert.equal(made.status, 201);
   assert.equal((await it.post('/api/users', { name: 'X', username: 'not-an-email', role: 'faculty' })).status, 400);
 
-  const { c: it2 } = await signIn('second.it@test.edu', 'second123');
-  assert.equal((await it2.del(`/api/users/${itUser.id}`, { confirmUsername: IT_EMAIL, password: 'second123' })).status, 403);
+  const { c: it2 } = await signIn('second.it@test.edu', 'Second#123');
+  assert.equal((await it2.del(`/api/users/${itUser.id}`, { confirmUsername: IT_EMAIL, password: 'Second#123' })).status, 403);
   assert.equal((await it2.put(`/api/users/${itUser.id}`, { role: 'faculty' })).status, 403);
-  assert.equal((await it2.post(`/api/users/${itUser.id}/password`, { newPassword: 'hijacked1' })).status, 403);
+  assert.equal((await it2.post(`/api/users/${itUser.id}/password`, { newPassword: 'Hijacked#1' })).status, 403);
 
   // The default admin can still manage the other one.
   assert.equal((await it.put(`/api/users/${made.data.id}`, { role: 'admin' })).status, 200);
@@ -97,16 +97,16 @@ test('the default IT Administrator is protected from other IT admins', async () 
 test('seeding the default IT account is safe to repeat on every restart', () => {
   const store = { nextId: (p) => `${p}_1`, nowIso: () => new Date().toISOString() };
   const db = { users: [] };
-  applyDefaultItAdmin(db, { DEFAULT_IT_EMAIL: 'a@b.co', DEFAULT_IT_PASSWORD: 'pw12345' }, store);
+  applyDefaultItAdmin(db, { DEFAULT_IT_EMAIL: 'a@b.co', DEFAULT_IT_PASSWORD: 'Pw#12345' }, store);
   assert.equal(db.users.length, 1);
   const hash = db.users[0].passwordHash;
   // A later restart never resets a password the owner already changed.
-  applyDefaultItAdmin(db, { DEFAULT_IT_EMAIL: 'a@b.co', DEFAULT_IT_PASSWORD: 'different1' }, store);
+  applyDefaultItAdmin(db, { DEFAULT_IT_EMAIL: 'a@b.co', DEFAULT_IT_PASSWORD: 'Different#1' }, store);
   assert.equal(db.users.length, 1);
   assert.equal(db.users[0].passwordHash, hash);
   // An existing account named by DEFAULT_IT_EMAIL is promoted, not duplicated.
   const db2 = { users: [{ id: 'u1', username: 'Boss@B.co', role: 'faculty', passwordHash: 'x' }] };
-  applyDefaultItAdmin(db2, { DEFAULT_IT_EMAIL: 'boss@b.co', DEFAULT_IT_PASSWORD: 'pw12345' }, store);
+  applyDefaultItAdmin(db2, { DEFAULT_IT_EMAIL: 'boss@b.co', DEFAULT_IT_PASSWORD: 'Pw#12345' }, store);
   assert.equal(db2.users.length, 1);
   assert.equal(db2.users[0].role, 'it');
   assert.equal(db2.users[0].passwordHash, 'x');
@@ -114,8 +114,8 @@ test('seeding the default IT account is safe to repeat on every restart', () => 
 
 test('a College Administrator sees only names of other users, not their accounts', async () => {
   const { c: it } = await signIn(IT_EMAIL, IT_PASS);
-  await it.post('/api/users', { name: 'Dean Reviewer', username: 'dean@test.edu', role: 'admin', password: 'deanpass1' });
-  const { c: admin, user } = await signIn('dean@test.edu', 'deanpass1');
+  await it.post('/api/users', { name: 'Dean Reviewer', username: 'dean@test.edu', role: 'admin', password: 'Dean#Pass1' });
+  const { c: admin, user } = await signIn('dean@test.edu', 'Dean#Pass1');
   const state = await admin.get('/api/state');
   const others = state.data.users.filter((u) => u.id !== user.id);
   assert.ok(others.length > 0);
@@ -140,7 +140,7 @@ test('Download Backup returns the data without live sign-in secrets, IT only', a
   assert.ok(b.data.users.some((u) => u.passwordHash), 'accounts can be restored');
 
   const pub = makeClient(server.baseUrl);
-  await pub.post('/api/register', { name: 'Not IT', username: 'notit@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
-  const { c: fac } = await signIn('notit@test.edu', 'secret1');
+  await pub.post('/api/register', { name: 'Not IT', username: 'notit@test.edu', password: 'Secret#01', confirmPassword: 'Secret#01', departmentId: 'CCS' });
+  const { c: fac } = await signIn('notit@test.edu', 'Secret#01');
   assert.equal((await fac.post('/api/backup')).status, 403);
 });

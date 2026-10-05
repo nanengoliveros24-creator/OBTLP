@@ -17,13 +17,13 @@ before(async () => {
   server = await startServer();
   client = makeClient(server.baseUrl);
 
-  await client.post('/api/setup', { name: 'Root Admin', username: 'root-admin', password: 'adminpass1', role: 'admin' });
-  await client.post('/api/register', { name: 'Prof One', username: 'prof-one@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1', departmentId: 'CCS' });
+  await client.post('/api/setup', { name: 'Root Admin', username: 'root-admin', password: 'Admin#Pass1', role: 'admin' });
+  await client.post('/api/register', { name: 'Prof One', username: 'prof-one@test.edu', password: 'Faculty#Pass1', confirmPassword: 'Faculty#Pass1', departmentId: 'CCS' });
 
-  const facultyLogin = await client.post('/api/login', { username: 'prof-one@test.edu', password: 'facultypass1' });
+  const facultyLogin = await client.post('/api/login', { username: 'prof-one@test.edu', password: 'Faculty#Pass1' });
   facultyToken = facultyLogin.data.token;
 
-  const adminLogin = await client.post('/api/login', { username: 'root-admin', password: 'adminpass1' });
+  const adminLogin = await client.post('/api/login', { username: 'root-admin', password: 'Admin#Pass1' });
   adminToken = adminLogin.data.token;
 });
 
@@ -119,8 +119,8 @@ test('admin can request revision, and the faculty member can then edit and resub
 
 test('faculty see their own portfolio activity, not anyone else\'s', async () => {
   const other = makeClient(server.baseUrl);
-  await other.post('/api/register', { name: 'Prof Two', username: 'prof-two@test.edu', password: 'facultypass1', confirmPassword: 'facultypass1', departmentId: 'CCS' });
-  const login = await other.post('/api/login', { username: 'prof-two@test.edu', password: 'facultypass1' });
+  await other.post('/api/register', { name: 'Prof Two', username: 'prof-two@test.edu', password: 'Faculty#Pass1', confirmPassword: 'Faculty#Pass1', departmentId: 'CCS' });
+  const login = await other.post('/api/login', { username: 'prof-two@test.edu', password: 'Faculty#Pass1' });
   other.setToken(login.data.token);
   const mine = await other.post('/api/portfolios');
   const state = await other.get('/api/state');

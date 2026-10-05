@@ -23,6 +23,7 @@ const store = require('./dbstore');
 const auth = require('./auth');
 const crypto = require('crypto');
 const mailer = require('./mailer');
+const passwordPolicy = require('./password-policy');
 
 const ROOT = __dirname;
 // Same override pattern as dbstore.js: lets tests use throwaway folders
@@ -252,6 +253,18 @@ function issueOtp(challenge, user) {
   challenge.lastSentAt = new Date().toISOString();
   const to = challenge.email;
   return () => mailer.sendOtpEmail(to, user.name, code, Math.round(OTP_TTL_MS / 60000));
+}
+
+// Throws a 400 with a clear message when a new password is too weak.
+function assertStrongPassword(password) {
+  const msg = passwordPolicy.problem(password);
+  if (msg) throw { status: 400, message: msg };
+}
+
+// A password that passes the rules, for accounts an IT Administrator
+// creates without typing a temporary password.
+function generateTempPassword() {
+  return passwordPolicy.generate((n) => crypto.randomInt(n), 12);
 }
 
 function startSession(db, user) {
@@ -668,9 +681,7 @@ const routes = {
       if (!['admin', 'it'].includes(role)) {
         throw { status: 400, message: 'The first account must be an Administrator or IT Administrator.' };
       }
-      if (password.length < 6) {
-        throw { status: 400, message: 'Password must be at least 6 characters.' };
-      }
+      assertStrongPassword(password);
       const user = {
         id: store.nextId('u'),
         name,
@@ -702,9 +713,7 @@ const routes = {
       if (password !== confirmPassword) {
         throw { status: 400, message: 'Password and confirm password do not match.' };
       }
-      if (password.length < 6) {
-        throw { status: 400, message: 'Password must be at least 6 characters.' };
-      }
+      assertStrongPassword(password);
       // Sign-in codes are emailed, so every new account needs a real email.
       if (!isEmail(username)) {
         throw { status: 400, message: 'Please use your email address (e.g. your Gmail) — sign-in codes are sent there.' };
@@ -766,6 +775,11 @@ const routes = {
       if (!user.passwordHash || !auth.verifyPassword(password, user.passwordHash)) {
         throw { status: 401, message: 'Incorrect username or password.' };
       }
+      // Accounts made before the strong-password rule can still sign in,
+      // but are flagged so the app asks them to change their password.
+      // Only a true/false flag is kept — never the password itself.
+      if (passwordPolicy.isStrong(password)) delete user.passwordWeak;
+      else user.passwordWeak = true;
       // The selected role is a real credential check, not a client-trusted
       // value: a correct password with the wrong role selection is rejected
       // with the same generic message used for a wrong password, so the
@@ -932,10 +946,12 @@ const routes = {
         // 403, not 401: the browser treats 401 as "session expired" and signs out.
         throw { status: 403, message: 'Your current password is incorrect.' };
       }
-      if (newPassword.length < 6) {
-        throw { status: 400, message: 'New password must be at least 6 characters.' };
+      assertStrongPassword(newPassword);
+      if (auth.verifyPassword(newPassword, ctx.user.passwordHash)) {
+        throw { status: 400, message: 'Your new password must be different from your current password.' };
       }
       ctx.user.passwordHash = auth.hashPassword(newPassword);
+      delete ctx.user.passwordWeak;
       forgetTrustedDevices(ctx.user);
       // Keep the session that just made this change alive; sign the account
       // out everywhere else since the old password is no longer valid.
@@ -1736,7 +1752,9 @@ const routes = {
       if (findUserByUsername(db, username) || (db.users || []).some((u) => userEmail(u) === username.toLowerCase())) {
         throw { status: 409, message: 'A user with that email already exists.' };
       }
-      const password = body.password && String(body.password).length >= 6 ? String(body.password) : auth.makeToken().slice(0, 12);
+      const typedPassword = body.password ? String(body.password) : '';
+      if (typedPassword) assertStrongPassword(typedPassword);
+      const password = typedPassword || generateTempPassword();
       const user = {
         id: store.nextId('u'),
         name,
@@ -1865,10 +1883,10 @@ const routes = {
       const u = (db.users || []).find((x) => x.id === params.id);
       if (!u) throw { status: 404, message: 'User not found.' };
       assertNotProtected(u, ctx, 'given a new password');
-      if (!body.newPassword || String(body.newPassword).length < 6) {
-        throw { status: 400, message: 'Password must be at least 6 characters.' };
-      }
+      if (!body.newPassword) throw { status: 400, message: 'Please enter a new password.' };
+      assertStrongPassword(String(body.newPassword));
       u.passwordHash = auth.hashPassword(String(body.newPassword));
+      delete u.passwordWeak;
       forgetTrustedDevices(u);
       db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);
       pushAudit(db, { actor: ctx.user.id, action: 'password-change', portfolioId: null, detail: `Changed password for ${u.username}` });

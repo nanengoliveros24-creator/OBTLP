@@ -14,8 +14,8 @@ after(async () => { if (server) await server.stop(); });
 
 test('COED department, program, Course Outline template and READ100 are available', async () => {
   const c = makeClient(server.baseUrl);
-  await c.post('/api/register', { name: 'Coed Prof', username: 'coed.prof@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
-  const login = await c.post('/api/login', { username: 'coed.prof@test.edu', password: 'secret1' });
+  await c.post('/api/register', { name: 'Coed Prof', username: 'coed.prof@test.edu', password: 'Secret#01', confirmPassword: 'Secret#01', departmentId: 'CCS' });
+  const login = await c.post('/api/login', { username: 'coed.prof@test.edu', password: 'Secret#01' });
   c.setToken(login.data.token);
 
   const depts = (await c.get('/api/departments')).data;
@@ -79,7 +79,7 @@ test('the Course Outline renders as portrait pages with the COED letterhead', ()
 
 test('the faculty "Department" list includes every official department', async () => {
   const c = makeClient(server.baseUrl);
-  const login = await c.post('/api/login', { username: 'coed.prof@test.edu', password: 'secret1' });
+  const login = await c.post('/api/login', { username: 'coed.prof@test.edu', password: 'Secret#01' });
   c.setToken(login.data.token);
   const cat = (await c.get('/api/catalog')).data;
   assert.ok(cat.departments.includes('College of Education'));

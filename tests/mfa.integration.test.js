@@ -31,9 +31,9 @@ async function waitForCode(email) {
 
 test('password alone no longer signs in; the emailed code does', async () => {
   const c = makeClient(server.baseUrl);
-  await c.post('/api/register', { name: 'Mfa User', username: 'mfa.user@gmail.com', password: 'secret1', confirmPassword: 'secret1', role: 'faculty', departmentId: 'CCS' });
+  await c.post('/api/register', { name: 'Mfa User', username: 'mfa.user@gmail.com', password: 'Secret#01', confirmPassword: 'Secret#01', role: 'faculty', departmentId: 'CCS' });
 
-  const step1 = await c.post('/api/login', { username: 'mfa.user@gmail.com', password: 'secret1', role: 'faculty' });
+  const step1 = await c.post('/api/login', { username: 'mfa.user@gmail.com', password: 'Secret#01', role: 'faculty' });
   assert.equal(step1.status, 200);
   assert.equal(step1.data.mfaRequired, true);
   assert.equal(step1.data.token, undefined, 'no session before the code is entered');
@@ -54,7 +54,7 @@ test('password alone no longer signs in; the emailed code does', async () => {
 
 test('too many wrong codes ends the sign-in attempt', async () => {
   const c = makeClient(server.baseUrl);
-  const step1 = await c.post('/api/login', { username: 'mfa.user@gmail.com', password: 'secret1' });
+  const step1 = await c.post('/api/login', { username: 'mfa.user@gmail.com', password: 'Secret#01' });
   let last;
   for (let i = 0; i < 5; i++) {
     last = await c.post('/api/login/verify', { challengeId: step1.data.challengeId, code: `11111${i}` });
@@ -70,9 +70,9 @@ test('accounts without an email add one, verified by a code, before signing in',
   // (username that isn't an email) straight into the test database.
   const dbFile = path.join(server.dir, 'db.json');
   const db = JSON.parse(fs.readFileSync(dbFile, 'utf8'));
-  db.users.push({ id: 'u_legacy', name: 'No Mail', username: 'nomail', role: 'faculty', passwordHash: auth.hashPassword('secret1') });
+  db.users.push({ id: 'u_legacy', name: 'No Mail', username: 'nomail', role: 'faculty', passwordHash: auth.hashPassword('Secret#01') });
   fs.writeFileSync(dbFile, JSON.stringify(db, null, 2));
-  const step1 = await c.post('/api/login', { username: 'nomail', password: 'secret1' });
+  const step1 = await c.post('/api/login', { username: 'nomail', password: 'Secret#01' });
   assert.equal(step1.data.emailRequired, true);
 
   const bad = await c.post('/api/login/email', { challengeId: step1.data.challengeId, email: 'not-an-email' });
@@ -90,7 +90,7 @@ test('accounts without an email add one, verified by a code, before signing in',
 
 test('resend is rate-limited', async () => {
   const c = makeClient(server.baseUrl);
-  const step1 = await c.post('/api/login', { username: 'mfa.user@gmail.com', password: 'secret1' });
+  const step1 = await c.post('/api/login', { username: 'mfa.user@gmail.com', password: 'Secret#01' });
   const again = await c.post('/api/login/resend', { challengeId: step1.data.challengeId });
   assert.equal(again.status, 429);
 });

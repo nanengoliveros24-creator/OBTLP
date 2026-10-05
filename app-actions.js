@@ -667,5 +667,20 @@
   // Expose small shared helpers other inline page scripts can reuse.
   window.__OBTLP_UI__ = { notify, notifyError, buildPdfFilename, downloadPdf };
 
+  // Accounts with a password older than the strong-password rule see a
+  // reminder on every page until they change it (Profile → Change Password).
+  function showWeakPasswordBanner() {
+    const s = currentSession();
+    const main = document.querySelector('main.main');
+    if (!s || !s.passwordWeak || !main || /profile\.html$/.test(location.pathname)) return;
+    if (main.querySelector('.weak-pw-banner')) return;
+    const div = document.createElement('div');
+    div.className = 'dept-notice weak-pw-banner';
+    div.setAttribute('role', 'alert');
+    div.innerHTML = '<strong>Please update your password.</strong> Passwords now need at least 8 characters with an uppercase letter, a lowercase letter, a number, and a special character. <a href="profile.html?weak=1">Change it now</a>';
+    main.insertBefore(div, main.firstChild);
+  }
+
   document.addEventListener('DOMContentLoaded', ensureHandlers);
+  document.addEventListener('DOMContentLoaded', showWeakPasswordBanner);
 })();

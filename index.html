@@ -166,7 +166,7 @@
             <label class="field-label" for="setup-password">Password</label>
             <div class="input-with-icon">
               <i data-lucide="lock" class="svg-icon"></i>
-              <input class="input" id="setup-password" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+              <input class="input" id="setup-password" type="password" placeholder="Create a strong password" autocomplete="new-password" />
             </div>
           </div>
 
@@ -192,12 +192,14 @@
 
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="theme.js"></script>
+  <script src="password-policy.js"></script>
   <script src="db.js"></script>
   <script>
     lucide.createIcons();
     document.getElementById('year').textContent = new Date().getFullYear();
 
     const api = window.__OBTLP_API__;
+    PasswordPolicy.attachChecklist(document.getElementById('setup-password'));
     const loginForm = document.getElementById('login-form-element');
     const setupForm = document.getElementById('setup-form-element');
     const loginError = document.getElementById('login-error');
@@ -212,6 +214,9 @@
     }
 
     function redirectForRole(user) {
+      // Accounts whose password is older than the strong-password rule go
+      // to Profile first to change it.
+      if (user.passwordWeak) { window.location.href = 'profile.html?weak=1'; return; }
       if (user.role === 'admin') window.location.href = 'admin.html';
       else if (user.role === 'it') window.location.href = 'it-admin.html';
       else window.location.href = 'dashboard.html';
@@ -288,7 +293,7 @@
           return;
         }
         const { token, user } = result;
-        api.setSession({ token, userId: user.id, role: user.role, name: user.name });
+        api.setSession({ token, userId: user.id, role: user.role, name: user.name, passwordWeak: !!user.passwordWeak });
         redirectForRole(user);
       } catch (err) {
         showError(loginError, err.message || 'Login failed. Please try again.');
@@ -409,7 +414,7 @@
         const { token, user, deviceToken } = await api.loginVerify(challengeId, code, trust);
         if (deviceToken && loginUsername) api.saveDeviceToken(loginUsername, deviceToken);
         clearInterval(resendTimer);
-        api.setSession({ token, userId: user.id, role: user.role, name: user.name });
+        api.setSession({ token, userId: user.id, role: user.role, name: user.name, passwordWeak: !!user.passwordWeak });
         redirectForRole(user);
       } catch (err) {
         if ((err.data && err.data.restart) || /expired|sign in again/i.test(err.message || '')) {
@@ -447,8 +452,8 @@
         showError(setupError, 'Please fill in all fields.');
         return;
       }
-      if (password.length < 6) {
-        showError(setupError, 'Password must be at least 6 characters.');
+      if (!PasswordPolicy.isStrong(password)) {
+        showError(setupError, PasswordPolicy.problem(password));
         return;
       }
       const btn = document.getElementById('setup-btn');
@@ -456,7 +461,7 @@
       btn.textContent = 'Creating…';
       try {
         const { token, user } = await api.setup({ name, username, password, role });
-        api.setSession({ token, userId: user.id, role: user.role, name: user.name });
+        api.setSession({ token, userId: user.id, role: user.role, name: user.name, passwordWeak: !!user.passwordWeak });
         redirectForRole(user);
       } catch (err) {
         showError(setupError, err.message || 'Could not create account.');

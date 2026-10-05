@@ -264,7 +264,7 @@
           <select class="input select" id="u-department"></select>
           <p class="section-sub" style="margin-top:0.35rem;">Faculty are listed under this college; a College Administrator only sees and reviews its portfolios.</p>
         </div>
-        <div class="field"><label class="field-label">Temporary Password (optional)</label><input class="input" id="u-password" placeholder="Leave blank to auto-generate" /></div>
+        <div class="field"><label class="field-label">Temporary Password (optional)</label><input class="input" id="u-password" placeholder="Leave blank to auto-generate a strong one" autocomplete="off" /></div>
         <div class="form-error" id="user-form-error" style="display:none;"></div>
         <button type="submit" class="btn btn-primary w-full">Create User</button>
       </form>
@@ -280,7 +280,7 @@
       </div>
       <form id="pw-form" class="form-stack">
         <p class="section-sub" id="pw-target-label"></p>
-        <div class="field"><label class="field-label">New Password</label><input class="input" id="pw-new" type="text" placeholder="At least 6 characters" required /></div>
+        <div class="field"><label class="field-label">New Password</label><input class="input" id="pw-new" type="text" placeholder="e.g. Pnc#2026Ok" required /></div>
         <div class="form-error" id="pw-form-error" style="display:none;"></div>
         <button type="submit" class="btn btn-primary w-full">Set New Password</button>
       </form>
@@ -549,6 +549,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="theme.js"></script>
   <script>lucide.createIcons();</script>
+  <script src="password-policy.js"></script>
   <script src="db.js"></script>
   <script src="app-actions.js"></script>
   <script>
@@ -811,6 +812,11 @@
         const errEl = document.getElementById('user-form-error');
         errEl.style.display = 'none';
         try {
+          if (password && !PasswordPolicy.isStrong(password)) {
+            errEl.textContent = PasswordPolicy.problem(password);
+            errEl.style.display = 'block';
+            return;
+          }
           const body = { name, username, role };
           if (password) body.password = password;
           if (role !== 'it' && document.getElementById('u-department').value) body.departmentId = document.getElementById('u-department').value;
@@ -827,11 +833,13 @@
 
       // Reset password modal
       const pwModal = document.getElementById('pw-modal-overlay');
+      const pwChecklist = PasswordPolicy.attachChecklist(document.getElementById('pw-new'));
       let pwTargetId = null;
       function openPasswordModal(id, name) {
         pwTargetId = id;
         document.getElementById('pw-target-label').textContent = `Set a new password for ${name}.`;
         document.getElementById('pw-new').value = '';
+        pwChecklist.render();
         document.getElementById('pw-form-error').style.display = 'none';
         pwModal.style.display = 'flex';
       }
@@ -843,6 +851,11 @@
         const newPassword = document.getElementById('pw-new').value;
         const errEl = document.getElementById('pw-form-error');
         errEl.style.display = 'none';
+        if (!PasswordPolicy.isStrong(newPassword)) {
+          errEl.textContent = PasswordPolicy.problem(newPassword);
+          errEl.style.display = 'block';
+          return;
+        }
         try {
           await api.changePassword(pwTargetId, newPassword);
           pwModal.style.display = 'none';

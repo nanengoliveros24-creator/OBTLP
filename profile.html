@@ -70,7 +70,10 @@
         </section>
 
         <section class="card card-pad">
-          <h3 class="card-title" style="margin-bottom:1rem;">Change Password</h3>
+          <h3 class="card-title" style="margin-bottom:1rem;" id="change-password">Change Password</h3>
+          <div class="notice notice-warning" id="weak-password-notice" style="display:none;margin-bottom:1rem;" role="alert">
+            <strong>Please update your password.</strong> Passwords now need at least 8 characters with an uppercase letter, a lowercase letter, a number, and a special character (e.g. ! @ # $ %).
+          </div>
           <form id="password-form" class="form-stack">
             <div class="field">
               <label class="field-label" for="p-current">Current Password</label>
@@ -78,7 +81,7 @@
             </div>
             <div class="field">
               <label class="field-label" for="p-new">New Password</label>
-              <input class="input" id="p-new" type="password" placeholder="At least 6 characters" autocomplete="new-password" />
+              <input class="input" id="p-new" type="password" placeholder="Create a strong password" autocomplete="new-password" />
             </div>
             <div class="field">
               <label class="field-label" for="p-confirm">Confirm New Password</label>
@@ -103,6 +106,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="theme.js"></script>
   <script>lucide.createIcons();</script>
+  <script src="password-policy.js"></script>
   <script src="db.js"></script>
   <script src="app-actions.js"></script>
   <script>
@@ -252,6 +256,17 @@
       }
     });
 
+    const pwChecklist = PasswordPolicy.attachChecklist(document.getElementById('p-new'));
+    (function showWeakNotice() {
+      const s = api.getSession();
+      if ((s && s.passwordWeak) || new URLSearchParams(location.search).get('weak') === '1') {
+        const n = document.getElementById('weak-password-notice');
+        n.style.display = 'block';
+        n.scrollIntoView({ block: 'center' });
+        document.getElementById('p-current').focus();
+      }
+    })();
+
     document.getElementById('password-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('password-error');
@@ -271,8 +286,8 @@
         errEl.style.display = 'block';
         return;
       }
-      if (newPassword.length < 6) {
-        errEl.textContent = 'New password must be at least 6 characters.';
+      if (!PasswordPolicy.isStrong(newPassword)) {
+        errEl.textContent = PasswordPolicy.problem(newPassword);
         errEl.style.display = 'block';
         return;
       }
@@ -284,6 +299,11 @@
         loadDevices();
         okEl.style.display = 'block';
         document.getElementById('password-form').reset();
+        pwChecklist.render();
+        const cur = api.getSession();
+        if (cur && cur.passwordWeak) api.setSession(Object.assign({}, cur, { passwordWeak: false }));
+        document.getElementById('weak-password-notice').style.display = 'none';
+        document.querySelectorAll('.weak-pw-banner').forEach((b) => b.remove());
         ui.notify('Password Updated', 'Your password has been changed.');
       } catch (err) {
         errEl.textContent = err.message || 'Could not update password.';
