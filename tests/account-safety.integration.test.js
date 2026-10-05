@@ -125,3 +125,22 @@ test('a College Administrator sees only names of other users, not their accounts
   const me = state.data.users.find((u) => u.id === user.id);
   assert.equal(me.username, 'dean@test.edu', 'own profile is still complete');
 });
+
+test('Download Backup returns the data without live sign-in secrets, IT only', async () => {
+  const { c: it } = await signIn(IT_EMAIL, IT_PASS);
+  const r = await it.post('/api/backup');
+  assert.equal(r.status, 200);
+  assert.match(r.data.filename, /^obtlp-backup-.*\.json$/);
+  const b = r.data.backup;
+  assert.equal(b.format, 'obtlp-backup');
+  assert.ok(b.data.users.length > 0 && b.data.portfolios);
+  assert.equal(b.data.sessions, undefined, 'no sessions');
+  assert.equal(b.data.mfaChallenges, undefined, 'no pending codes');
+  b.data.users.forEach((u) => assert.equal(u.trustedDevices, undefined));
+  assert.ok(b.data.users.some((u) => u.passwordHash), 'accounts can be restored');
+
+  const pub = makeClient(server.baseUrl);
+  await pub.post('/api/register', { name: 'Not IT', username: 'notit@test.edu', password: 'secret1', confirmPassword: 'secret1', departmentId: 'CCS' });
+  const { c: fac } = await signIn('notit@test.edu', 'secret1');
+  assert.equal((await fac.post('/api/backup')).status, 403);
+});

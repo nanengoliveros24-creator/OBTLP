@@ -1888,12 +1888,37 @@ const routes = {
   'POST /api/backup': {
     auth: true,
     roles: ['it'],
+    // Returns the backup to the IT Administrator's browser, which saves it
+    // as a .json file on their computer. (Render's disk is wiped on every
+    // redeploy, so a copy kept on the server would not survive.) Sign-in
+    // secrets that are only useful while live are left out: sessions,
+    // pending sign-in/reset codes and trusted-device tokens. Password
+    // hashes stay so accounts can be restored — keep the file private.
     handler: (db, ctx) => {
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `db-backup-${stamp}.json`;
-      fs.writeFileSync(path.join(BACKUPS_DIR, filename), JSON.stringify(db, null, 2), 'utf8');
-      pushAudit(db, { actor: ctx.user.id, action: 'backup', portfolioId: null, detail: `Created backup ${filename}` });
-      return { status: 200, data: { ok: true, filename } };
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `obtlp-backup-${stamp}.json`;
+      pushAudit(db, { actor: ctx.user.id, action: 'backup', portfolioId: null, detail: `Downloaded backup ${filename}` });
+      const copy = JSON.parse(JSON.stringify(db));
+      delete copy._id;
+      delete copy.sessions;
+      delete copy.mfaChallenges;
+      delete copy.resetChallenges;
+      (copy.users || []).forEach((u) => { delete u.trustedDevices; });
+      const backup = {
+        format: 'obtlp-backup',
+        version: 1,
+        createdAt: store.nowIso(),
+        createdBy: ctx.user.username,
+        note: 'Uploaded document files (PDF/DOCX/PPTX) are not included; everything else in the database is.',
+        counts: {
+          users: (copy.users || []).length,
+          portfolios: (copy.portfolios || []).length,
+          courseTemplates: (copy.courseTemplates || []).length,
+          departments: (copy.departments || []).length
+        },
+        data: copy
+      };
+      return { status: 200, data: { ok: true, filename, backup } };
     }
   }
 };

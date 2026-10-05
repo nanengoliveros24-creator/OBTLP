@@ -411,7 +411,18 @@
     if (!api) return;
     try {
       const result = await api.runBackup();
-      notify('Backup Created', `Saved as ${result.filename} on the server.`);
+      // Save the backup as a .json file on this computer.
+      const blob = new Blob([JSON.stringify(result.backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename || 'obtlp-backup.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const c = (result.backup && result.backup.counts) || {};
+      notify('Backup Downloaded', `${result.filename} (${c.users || 0} users, ${c.portfolios || 0} portfolios) was saved to your Downloads. Keep it somewhere private.`);
     } catch (err) {
       notifyError(err);
     }
