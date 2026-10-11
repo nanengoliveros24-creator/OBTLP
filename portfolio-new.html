@@ -355,7 +355,7 @@
       const session = api.getSession();
       if (!session) { window.location.href = 'index.html'; return; }
       if (session.role !== 'faculty') {
-        window.location.href = session.role === 'admin' ? 'admin.html' : 'it-admin.html';
+        window.location.href = window.OBTLP_ROLES.home(session.role);
         return;
       }
 

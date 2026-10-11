@@ -93,7 +93,7 @@
     if (!session) {
       window.location.href = 'index.html';
     } else if (session.role !== 'faculty') {
-      window.location.href = session.role === 'admin' ? 'admin.html' : 'it-admin.html';
+      window.location.href = window.OBTLP_ROLES.home(session.role);
     }
 
     const badgeClassFor = {
@@ -109,7 +109,7 @@
       all: (s) => true,
       draft: (s) => s === 'Draft',
       submitted: (s) => s !== 'Draft',
-      // Submitted and waiting for the College Administrator. ("In Review" is
+      // Submitted and moving through the approval chain. ("In Review" is
       // an old status nothing sets any more; it counts as pending too.)
       review: (s) => s === 'Pending Review' || s === 'In Review',
       approved: (s) => s === 'Approved',
@@ -175,7 +175,7 @@
           <td class="t-muted">${session.name || '—'}</td>
           <td class="t-muted">${fmtWhen(p.createdAt)}</td>
           <td class="t-muted">${fmtWhen(p.updatedAt)}</td>
-          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${p.status}</span></td>
+          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${window.OBTLP_ROLES.statusText(p)}</span></td>
           <td>${actionsCellFor(p)}</td>
         </tr>
       `).join('');

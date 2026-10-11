@@ -190,7 +190,8 @@
       const session = api.getSession();
       if (!session) { window.location.href = 'index.html'; return; }
 
-      if (session.role === 'admin') {
+      const R = window.OBTLP_ROLES;
+      if (R.isReviewer(session.role)) {
         const nav = document.querySelector('.sidebar .nav');
         nav.insertAdjacentHTML('afterbegin', '<a href="admin.html" class="nav-link"><i data-lucide="clipboard-list" class="svg-icon"></i> Review Queue</a>');
       }
@@ -199,7 +200,7 @@
           '.sidebar .nav a[href="dashboard.html"], .sidebar .nav a[href="portfolio-new.html"], .sidebar .nav a[href^="my-portfolios.html"]'
         ).forEach((el) => el.remove());
         const brand = document.querySelector('.sidebar-head .brand');
-        if (brand) brand.setAttribute('href', session.role === 'admin' ? 'admin.html' : 'it-admin.html');
+        if (brand) brand.setAttribute('href', R.home(session.role));
       }
 
       const params = new URLSearchParams(window.location.search);
@@ -208,7 +209,7 @@
       document.getElementById('user-name').textContent = session.name || '—';
       document.getElementById('user-avatar').textContent = (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
       const roleEl = document.querySelector('.sidebar .user-role');
-      if (roleEl) roleEl.textContent = { faculty: 'Faculty', admin: 'College Administrator', it: 'IT Administrator' }[session.role] || 'Faculty';
+      if (roleEl) roleEl.textContent = R.label(session.role) || 'Faculty';
 
       if (!portfolioId) return; // picker empty-state stays visible
 
@@ -252,7 +253,7 @@
           document.getElementById('submit-btn').style.display = 'none';
           document.getElementById('page-title').textContent = 'Portfolio Preview';
           document.getElementById('page-subtitle').textContent = `${p.courseCode || 'Portfolio'} · submitted by ${ownerName}`;
-          if (session.role === 'admin') {
+          if (R.isReviewer(session.role)) {
             const back = document.getElementById('back-link');
             const tab = { 'Revision Required': 'Revision', Approved: 'Approved' }[p.status] || 'Pending';
             back.href = `admin.html?tab=${tab}`;

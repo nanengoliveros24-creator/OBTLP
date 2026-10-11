@@ -135,8 +135,10 @@
         { action: 'notifications', icon: 'bell', label: 'Notifications' }
       ]
     };
-    const ROLE_LABEL = { faculty: 'Faculty', admin: 'College Administrator', it: 'IT Administrator' };
-    const ROLE_HOME = { faculty: 'dashboard.html', admin: 'admin.html', it: 'it-admin.html' };
+    const ROLE_LABEL = window.OBTLP_ROLES.LABEL;
+    const ROLE_HOME = { faculty: 'dashboard.html', chair: 'admin.html', admin: 'admin.html', vpaa: 'admin.html', it: 'it-admin.html' };
+    NAV_BY_ROLE.chair = NAV_BY_ROLE.admin;
+    NAV_BY_ROLE.vpaa = NAV_BY_ROLE.admin;
 
     function initials(name) {
       return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
@@ -166,7 +168,7 @@
         document.getElementById('p-username').value = me.username || '';
         myUsername = me.username || '';
         // Faculty pick their own college; an administrator's is assigned by IT.
-        if (session.role === 'faculty' || (session.role === 'admin' && me.departmentId)) {
+        if (session.role === 'faculty' || (['chair', 'admin'].includes(session.role) && me.departmentId)) {
           const depts = await fetch('/api/public/departments').then((r) => r.json()).catch(() => []);
           const sel = document.getElementById('p-department');
           (Array.isArray(depts) ? depts : []).forEach((d) => {

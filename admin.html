@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>College Administrator · Review Queue</title>
+  <title>OBTLP Review &amp; Approval</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -28,7 +28,7 @@
 <div class="sidebar-foot">
         <div class="user-row">
           <div class="avatar" id="user-avatar">–</div>
-          <div><p class="user-name" id="user-name">–</p><p class="user-role" id="user-role">College Administrator</p></div>
+          <div><p class="user-name" id="user-name">–</p><p class="user-role" id="user-role">Reviewer</p></div>
         </div>
         <button type="button" id="theme-toggle" class="theme-toggle-row">
           <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
@@ -46,17 +46,18 @@
       <section class="tab-panel active" data-tab-panel="queue">
         <header class="page-header">
           <div>
-            <h1 class="page-title">Portfolio Review Queue</h1>
-            <p class="page-subtitle">Review submissions, and keep track of what you sent back for revision and what you approved.</p>
+            <h1 class="page-title" id="queue-title">OBTLP Review &amp; Approval</h1>
+            <p class="page-subtitle" id="queue-subtitle">Teacher → Department Chair → Dean. Act on what is waiting for you, and follow the rest.</p>
           </div>
           <span class="dept-chip" id="dept-chip" style="display:none;"></span>
         </header>
         <div class="dept-notice" id="dept-notice" style="display:none;">
-          You are not assigned to a department yet, so portfolios from <b>every</b> department are shown. Ask the IT Administrator to assign your department in User Accounts.
+          You are not assigned to a department yet, so OBTLPs from <b>every</b> department are shown. Ask the IT Administrator to assign your department in User Accounts.
         </div>
 
-        <section class="stats-grid" >
-          <div class="stat stat-link" data-jump="Pending"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value" id="stat-pending">0</p></div>
+        <section class="stats-grid stats-grid-5">
+          <div class="stat stat-link" data-jump="Pending"><div class="stat-top"><p class="stat-label">For My Approval</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value" id="stat-pending">0</p></div>
+          <div class="stat stat-link" data-jump="Progress"><div class="stat-top"><p class="stat-label">In Approval <span class="t-muted" style="font-weight:400;">(other levels)</span></p><i data-lucide="git-pull-request-arrow" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-progress">0</p></div>
           <div class="stat stat-link" data-jump="Revision"><div class="stat-top"><p class="stat-label">For Revision</p><i data-lucide="message-square" class="svg-icon t-destructive"></i></div><p class="stat-value" id="stat-revision">0</p></div>
           <div class="stat stat-link" data-jump="Approved"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="file-check-2" class="svg-icon t-success"></i></div><p class="stat-value" id="stat-approved">0</p></div>
           <div class="stat stat-link" data-jump-tab="faculty"><div class="stat-top"><p class="stat-label">Active Faculty <span class="t-muted" style="font-weight:400;">(30 days)</span></p><i data-lucide="users" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-faculty">0</p></div>
@@ -67,8 +68,8 @@
             <div class="section-head" style="flex-wrap:wrap;gap:0.75rem;">
               <h2 class="card-title" id="list-title">Pending Review</h2>
               <div class="filter-tabs" style="flex-wrap:wrap;">
-                <button class="active" data-filter="Pending">Pending <span class="tab-count" id="count-Pending"></span></button>
-                <button data-filter="Resubmitted">Resubmitted <span class="tab-count" id="count-Resubmitted"></span></button>
+                <button class="active" data-filter="Pending">For My Approval <span class="tab-count" id="count-Pending"></span></button>
+                <button data-filter="Progress">In Approval <span class="tab-count" id="count-Progress"></span></button>
                 <button data-filter="Revision">Revision <span class="tab-count" id="count-Revision"></span></button>
                 <button data-filter="Approved">Approved <span class="tab-count" id="count-Approved"></span></button>
                 <button data-filter="All">All <span class="tab-count" id="count-All"></span></button>
@@ -93,14 +94,15 @@
               </ul>
             </div>
 
+            <div id="approval-trail" class="approval-trail" style="display:none;"></div>
             <div id="review-history" class="review-history" style="display:none;"></div>
 
             <div id="review-actions">
-              <label class="field-label" style="margin-bottom:0.375rem;" for="review-comments">Comments to faculty</label>
+              <label class="field-label" style="margin-bottom:0.375rem;" for="review-comments">Comments to the faculty member</label>
               <textarea class="textarea" rows="4" placeholder="Add revision notes…" style="margin-bottom:0.75rem;" id="review-comments"></textarea>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+              <div id="review-buttons" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
                 <button class="btn btn-danger btn-sm" id="btn-request-revision" disabled><i data-lucide="message-square" class="svg-icon"></i> Request Revision</button>
-                <button class="btn btn-success btn-sm" id="btn-approve" disabled><i data-lucide="check" class="svg-icon"></i> Approve</button>
+                <button class="btn btn-success btn-sm" id="btn-approve" disabled><i data-lucide="check" class="svg-icon"></i> <span id="btn-approve-label">Approve</span></button>
               </div>
             </div>
 
@@ -169,16 +171,21 @@
   <script src="db.js"></script>
   <script src="app-actions.js"></script>
   <script>
-    // College Administrator: review queue (Pending / Resubmitted / Revision /
-    // Approved / All) and a Faculty overview, all from the live server data.
+    // Department Chair / Dean / VPAA: the OBTLP approval queue (Teacher →
+    // Department Chair → Dean → [VPAA]) and a Faculty overview, all from
+    // the live server data. Each reviewer acts on what is waiting at their
+    // level and can follow the rest.
     const api = window.__OBTLP_API__;
     const ui = () => window.__OBTLP_UI__;
+    const R = window.OBTLP_ROLES;
     const session = api.getSession();
     if (!session) {
       window.location.href = 'index.html';
-    } else if (session.role !== 'admin') {
-      window.location.href = session.role === 'it' ? 'it-admin.html' : 'dashboard.html';
+    } else if (!R.isReviewer(session.role)) {
+      window.location.href = R.home(session.role);
     }
+    const myRole = session ? session.role : '';
+    let chain = ['chair', 'admin'];
     let allItems = [];
     let activeFilter = 'Pending';
     let selectedId = null;
@@ -213,29 +220,34 @@
     // Which tab a portfolio belongs to. "In Review" is an old status that
     // nothing sets any more; treat it as Pending.
     function bucketOf(p) {
-      if (p.status === 'Pending Review' || p.status === 'In Review') return p.resubmitted ? 'Resubmitted' : 'Pending';
+      const stage = R.stageOf(p);
+      if (stage) return stage === myRole ? 'Pending' : 'Progress';
       if (p.status === 'Revision Required') return 'Revision';
       if (p.status === 'Approved') return 'Approved';
       return null; // Drafts stay private to the faculty member
     }
-    const TAB_TITLE = { Pending: 'Pending Review', Resubmitted: 'Resubmitted', Revision: 'Sent Back for Revision', Approved: 'Approved', All: 'All Submissions' };
+    const TAB_TITLE = { Pending: 'For My Approval', Progress: 'In Approval', Revision: 'Sent Back for Revision', Approved: 'Approved', All: 'All Submissions' };
     const TAB_HELP = {
-      Pending: 'New and resubmitted portfolios waiting for your decision.',
-      Resubmitted: 'Portfolios the faculty fixed and sent back after your revision request.',
-      Revision: 'Portfolios you returned for changes. They are with the faculty member now; they come back under Resubmitted.',
-      Approved: 'Portfolios you have approved.',
-      All: 'Every submitted portfolio, whatever its status.'
+      Pending: 'OBTLPs waiting for your decision at your level.',
+      Progress: 'OBTLPs being reviewed at another level (Department Chair, Dean or VPAA). View only — you can follow where each one is.',
+      Revision: 'OBTLPs returned to the faculty member for changes. They come back to the Department Chair when resubmitted.',
+      Approved: 'OBTLPs that received final approval.',
+      All: 'Every submitted OBTLP, whatever its status.'
     };
     const BADGE = {
-      Pending: ['badge-pending', 'Pending'],
-      Resubmitted: ['badge-accent', 'Resubmitted'],
+      Pending: ['badge-pending', 'Waiting for You'],
+      Progress: ['badge-review', 'In Approval'],
       Revision: ['badge-revision', 'For Revision'],
       Approved: ['badge-approved', 'Approved']
     };
     function inTab(item, tab) {
       if (tab === 'All') return true;
-      if (tab === 'Pending') return item.bucket === 'Pending' || item.bucket === 'Resubmitted';
       return item.bucket === tab;
+    }
+    // Who acts after me, for the Approve button.
+    function nextAfterMe() {
+      const i = chain.indexOf(myRole);
+      return i >= 0 && i < chain.length - 1 ? chain[i + 1] : null;
     }
 
     async function loadAll() {
@@ -256,7 +268,20 @@
       document.getElementById('faculty-subtitle').textContent = dept
         ? `${dept.name} faculty: who is active, and where their portfolios stand.`
         : 'Who is active, and where each faculty member\'s portfolios stand.';
-      document.getElementById('user-role').textContent = dept ? `College Administrator · ${dept.code}` : 'College Administrator';
+      chain = state.approvalChain || chain;
+      const roleName = R.label(myRole);
+      document.getElementById('user-role').textContent = dept ? `${roleName} · ${dept.code}` : roleName;
+      if (myRole === 'vpaa') {
+        chip.textContent = 'All colleges · University-wide';
+        chip.style.display = '';
+        document.getElementById('dept-notice').style.display = 'none';
+      } else if (state.myProgram && dept) {
+        chip.textContent = `${dept.code} · ${state.myProgram.code}`;
+      }
+      document.getElementById('queue-subtitle').textContent =
+        `${['Teacher'].concat(chain.map(R.label)).join(' → ')}. You are the ${roleName}: act on what is waiting for you, and follow the rest.`;
+      const next = nextAfterMe();
+      document.getElementById('btn-approve-label').textContent = next ? `Approve → ${R.label(next)}` : 'Final Approve';
       allItems = latestPortfolios
         .map((p) => ({ p, bucket: bucketOf(p) }))
         .filter((it) => it.bucket)
@@ -276,10 +301,11 @@
     function renderStats() {
       const count = (b) => allItems.filter((it) => inTab(it, b)).length;
       document.getElementById('stat-pending').textContent = count('Pending');
+      document.getElementById('stat-progress').textContent = count('Progress');
       document.getElementById('stat-revision').textContent = count('Revision');
       document.getElementById('stat-approved').textContent = count('Approved');
       document.getElementById('stat-faculty').textContent = latestUsers.filter((u) => u.role === 'faculty' && u.inDepartment !== false && isActive(u)).length;
-      ['Pending', 'Resubmitted', 'Revision', 'Approved', 'All'].forEach((t) => {
+      ['Pending', 'Progress', 'Revision', 'Approved', 'All'].forEach((t) => {
         const n = count(t);
         document.getElementById(`count-${t}`).textContent = n ? `(${n})` : '';
       });
@@ -292,29 +318,30 @@
       const items = allItems.filter((it) => inTab(it, activeFilter));
       if (!items.length) {
         const empty = {
-          Pending: 'Nothing to review right now.',
-          Resubmitted: 'No resubmissions yet.',
-          Revision: 'You have not sent anything back for revision.',
-          Approved: 'You have not approved any portfolio yet.',
+          Pending: 'Nothing is waiting for your approval right now.',
+          Progress: 'Nothing is being reviewed at another level.',
+          Revision: 'Nothing has been sent back for revision.',
+          Approved: 'No OBTLP has received final approval yet.',
           All: 'No submissions yet. When faculty submit a portfolio, it will appear here.'
         }[activeFilter];
         list.innerHTML = `<li class="empty-state">${empty}</li>`;
         return;
       }
       list.innerHTML = items.map(({ p, bucket }) => {
-        const [badgeClass, badgeText] = BADGE[bucket];
+        const [badgeClass, defaultText] = BADGE[bucket];
+        const badgeText = bucket === 'Progress' ? R.statusText(p).replace('Pending – ', 'At ') : (bucket === 'Pending' && p.resubmitted ? 'Resubmitted' : defaultText);
         const name = nameOf(p.facultyId);
         const sub = bucket === 'Approved'
           ? `approved ${when(p.review && p.review.approvedAt || p.updatedAt)}`
           : bucket === 'Revision'
             ? `returned ${when(p.review && p.review.requestedRevisionAt || p.updatedAt)}`
-            : `submitted ${when(p.updatedAt)}`;
+            : `submitted ${when(p.submittedAt || p.updatedAt)}`;
         return `
           <li class="${p.id === selectedId ? 'is-selected' : ''}">
             <div class="avatar-sec">${esc(initialsOf(name))}</div>
             <div style="flex:1;min-width:0;"><p class="cell-strong">${esc(p.courseCode)} — ${esc(p.courseTitle)}</p><p class="cell-sub">${esc(name)} · ${sub}</p></div>
             <span class="badge ${badgeClass}">${badgeText}</span>
-            <button class="btn btn-outline btn-sm" data-id="${esc(p.id)}">${bucket === 'Pending' || bucket === 'Resubmitted' ? 'Review' : 'View'}</button>
+            <button class="btn btn-outline btn-sm" data-id="${esc(p.id)}">${bucket === 'Pending' ? 'Review' : 'View'}</button>
           </li>`;
       }).join('');
       list.querySelectorAll('button[data-id]').forEach((btn) => {
@@ -382,30 +409,62 @@
       viewLink.style.display = 'inline-flex';
       renderCompliance(p);
 
-      // Approve / Request Revision only make sense while it's waiting on you.
-      const actionable = found.bucket === 'Pending' || found.bucket === 'Resubmitted';
-      document.getElementById('review-actions').style.display = actionable ? '' : 'none';
-      document.getElementById('btn-approve').disabled = !actionable;
-      document.getElementById('btn-request-revision').disabled = !actionable;
+      // Approve only at your own level; you (or anyone above) can send it
+      // back while it is still being reviewed.
+      const stage = R.stageOf(p);
+      const canApprove = found.bucket === 'Pending';
+      const ladder = chain.concat(chain.includes('vpaa') ? [] : ['vpaa']);
+      const canReturn = !!stage && ladder.indexOf(myRole) >= ladder.indexOf(stage);
+      document.getElementById('review-actions').style.display = (canApprove || canReturn) ? '' : 'none';
+      document.getElementById('btn-approve').disabled = !canApprove;
+      document.getElementById('btn-approve').style.display = canApprove ? '' : 'none';
+      document.getElementById('review-buttons').style.gridTemplateColumns = canApprove ? '1fr 1fr' : '1fr';
+      document.getElementById('btn-request-revision').disabled = !canReturn;
+      renderTrail(p);
 
       const history = document.getElementById('review-history');
       const r = p.review || {};
       if (found.bucket === 'Revision') {
-        history.innerHTML = `<p class="rh-title">Sent back for revision · ${esc(when(r.requestedRevisionAt))}</p><p>${esc(r.notes || 'No comment was added.')}</p><p class="t-muted">Waiting for ${esc(nameOf(p.facultyId))} to fix and resubmit.</p>`;
+        history.innerHTML = `<p class="rh-title">Sent back for revision${r.requestedByRole ? ` by the ${esc(R.label(r.requestedByRole))}` : ''} · ${esc(when(r.requestedRevisionAt))}</p><p>${esc(r.notes || 'No comment was added.')}</p><p class="t-muted">Waiting for ${esc(nameOf(p.facultyId))} to fix and resubmit.</p>`;
         history.style.display = '';
       } else if (found.bucket === 'Approved') {
-        history.innerHTML = `<p class="rh-title">Approved · ${esc(when(r.approvedAt))}</p>${r.notes ? `<p>${esc(r.notes)}</p>` : ''}`;
+        history.innerHTML = `<p class="rh-title">Final approval${r.approvedByRole ? ` by the ${esc(R.label(r.approvedByRole))}` : ''} · ${esc(when(r.approvedAt))}</p>${r.notes ? `<p>${esc(r.notes)}</p>` : ''}`;
         history.style.display = '';
-      } else if (found.bucket === 'Resubmitted' && r.notes) {
-        history.innerHTML = `<p class="rh-title">Your earlier revision note</p><p>${esc(r.notes)}</p>`;
+      } else if (p.resubmitted && r.notes) {
+        history.innerHTML = `<p class="rh-title">Earlier revision note${r.requestedByRole ? ` (${esc(R.label(r.requestedByRole))})` : ''}</p><p>${esc(r.notes)}</p>`;
         history.style.display = '';
       } else {
         history.style.display = 'none';
       }
-      document.getElementById('btn-delete').style.display = 'inline-flex';
+      // Only the Dean can remove a submission.
+      document.getElementById('btn-delete').style.display = myRole === 'admin' ? 'inline-flex' : 'none';
       document.querySelectorAll('#review-list li').forEach((li) => {
         li.classList.toggle('is-selected', !!li.querySelector(`button[data-id="${CSS.escape(id)}"]`));
       });
+    }
+
+    // Teacher → Chair → Dean → (VPAA) with a tick for each approval so far.
+    function renderTrail(p) {
+      const trail = document.getElementById('approval-trail');
+      const stage = R.stageOf(p);
+      const approvals = p.approvals || [];
+      const steps = [{ label: 'Teacher', done: p.status !== 'Draft', who: nameOf(p.facultyId), at: p.submittedAt }]
+        .concat(chain.map((role) => {
+          const a = approvals.filter((x) => x.stage === role).pop();
+          return {
+            label: R.label(role),
+            done: !!a,
+            current: stage === role,
+            who: a ? a.byName : '',
+            at: a ? a.at : null
+          };
+        }));
+      trail.innerHTML = '<p class="rh-title">Approval trail</p><ol>' + steps.map((s) => `
+        <li class="${s.done ? 'done' : ''} ${s.current ? 'current' : ''}">
+          <span class="trail-dot"></span>
+          <div><b>${esc(s.label)}</b>${s.done && s.who ? ` · ${esc(s.who)}` : s.current ? ' · <span class="t-warning">waiting</span>' : ''}${s.at && s.done ? `<br><span class="t-muted">${esc(when(s.at))}</span>` : ''}</div>
+        </li>`).join('') + '</ol>';
+      trail.style.display = '';
     }
 
     function setFilter(tab) {
@@ -430,8 +489,10 @@
       if (!selectedId) return;
       const comment = document.getElementById('review-comments').value.trim();
       try {
-        await api.approve(selectedId, comment);
-        ui().notify('Approved', 'The portfolio has been approved and the faculty member notified. You can find it under Approved.');
+        const updated = await api.approve(selectedId, comment);
+        ui().notify('Approved', updated.status === 'Approved'
+          ? 'Final approval given. The faculty member was notified.'
+          : `Approved and forwarded to the ${R.label(updated.reviewStage)}. The faculty member was notified.`);
         resetSelection();
         loadAll();
       } catch (err) {
@@ -448,7 +509,7 @@
       }
       try {
         await api.requestRevision(selectedId, comment);
-        ui().notify('Revision Requested', 'The faculty member has been notified. You can follow it under Revision.');
+        ui().notify('Revision Requested', 'The faculty member has been notified. It comes back to the Department Chair when resubmitted.');
         resetSelection();
         loadAll();
       } catch (err) {
@@ -511,6 +572,8 @@
       document.getElementById('btn-request-revision').disabled = true;
       document.getElementById('review-actions').style.display = '';
       document.getElementById('review-history').style.display = 'none';
+      document.getElementById('approval-trail').style.display = 'none';
+      document.getElementById('btn-approve').style.display = '';
       document.getElementById('btn-delete').style.display = 'none';
       document.getElementById('view-portfolio-link').style.display = 'none';
       document.getElementById('compliance-list').innerHTML = '<li><i data-lucide="minus" class="svg-icon"></i> Select a submission to review</li>';

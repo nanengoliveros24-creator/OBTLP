@@ -56,17 +56,11 @@
 
       <div class="login-form" id="login-form" style="display:none;">
         <h2>Welcome back</h2>
-        <p class="lede">Sign in with your institutional credentials to continue.</p>
-
-        <div class="role-switch" id="role-switch" role="radiogroup" aria-label="Sign in as">
-          <button type="button" data-role="faculty" class="active" aria-pressed="true">Faculty</button>
-          <button type="button" data-role="admin" aria-pressed="false">College Administrator</button>
-          <button type="button" data-role="it" aria-pressed="false">IT Administrator</button>
-        </div>
+        <p class="lede">Sign in with your email and password. You'll be taken to the right page for your role (Faculty, Department Chair, Dean, VPAA or IT Administrator).</p>
 
         <form class="form-stack" id="login-form-element" novalidate>
           <div class="field">
-            <label class="field-label" for="username">Username</label>
+            <label class="field-label" for="username">Email</label>
             <div class="input-with-icon">
               <i data-lucide="mail" class="svg-icon"></i>
               <input class="input" id="username" type="text" placeholder="you@university.edu" autocomplete="username" />
@@ -143,7 +137,7 @@
       <!-- First-run setup: create the initial administrator account -->
       <div class="login-form" id="setup-form" style="display:none;">
         <h2>Set Up This System</h2>
-        <p class="lede">No accounts exist yet. Create the first IT Administrator or College Administrator account to begin using the system. Faculty members can create their own accounts afterward from the sign-in page.</p>
+        <p class="lede">No accounts exist yet. Create the first IT Administrator or Dean account to begin using the system. Faculty members can create their own accounts afterward from the sign-in page.</p>
 
         <form class="form-stack" id="setup-form-element" novalidate>
           <div class="field">
@@ -174,7 +168,7 @@
             <label class="field-label" for="setup-role">Role</label>
             <select class="input select" id="setup-role">
               <option value="it">IT Administrator (manages accounts &amp; settings)</option>
-              <option value="admin">College Administrator (reviews portfolios)</option>
+              <option value="admin">Dean (approves OBTLPs)</option>
             </select>
           </div>
 
@@ -217,9 +211,7 @@
       // Accounts whose password is older than the strong-password rule go
       // to Profile first to change it.
       if (user.passwordWeak) { window.location.href = 'profile.html?weak=1'; return; }
-      if (user.role === 'admin') window.location.href = 'admin.html';
-      else if (user.role === 'it') window.location.href = 'it-admin.html';
-      else window.location.href = 'dashboard.html';
+      window.location.href = window.OBTLP_ROLES.home(user.role);
     }
 
     // If a real session already exists, skip straight to the right dashboard.
@@ -254,18 +246,7 @@
       }
     })();
 
-    let selectedRole = 'faculty';
     let loginUsername = '';
-    const roleSwitch = document.getElementById('role-switch');
-    roleSwitch.querySelectorAll('button[data-role]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        selectedRole = btn.dataset.role;
-        roleSwitch.querySelectorAll('button[data-role]').forEach((b) => {
-          b.classList.toggle('active', b === btn);
-          b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
-        });
-      });
-    });
 
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -273,7 +254,7 @@
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
       if (!username || !password) {
-        showError(loginError, 'Please enter your username and password.');
+        showError(loginError, 'Please enter your email and password.');
         return;
       }
       const btn = document.getElementById('login-btn');
@@ -281,7 +262,7 @@
       btn.textContent = 'Signing in…';
       try {
         const hadDeviceToken = !!api.getDeviceToken(username);
-        const result = await api.login(username, password, selectedRole);
+        const result = await api.login(username, password);
         loginUsername = username;
         if (result.mfaRequired || result.emailRequired) {
           // A remembered device that no longer works (expired, forgotten,

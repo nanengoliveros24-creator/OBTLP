@@ -120,10 +120,61 @@ function pushNotification(db, { userId, role, departmentId, title, message, port
 const BLOCKS_RESUBMIT = ['Pending Review', 'In Review', 'Approved'];
 const EDITABLE_STATUSES = ['Draft', 'Revision Required'];
 
-// The three supported roles in the system (RBAC).
-const ROLES = ['faculty', 'admin', 'it'];
+// Roles (RBAC). Panel feedback (Oct 2026): the OBTLP is written by the
+// teacher and approved up the college hierarchy:
+//   faculty (Teacher, author) → chair (Department Chair) → admin (Dean)
+//   → vpaa (VPAA, only when Settings → "Require VPAA final approval" is on)
+// 'admin' keeps its old key so existing accounts keep working; it is shown
+// as "Dean" everywhere.
+const ROLES = ['faculty', 'chair', 'admin', 'vpaa', 'it'];
+const REVIEWER_ROLES = ['chair', 'admin', 'vpaa'];
+const ROLE_LABEL = { faculty: 'Faculty', chair: 'Department Chair', admin: 'Dean', vpaa: 'VPAA', it: 'IT Administrator' };
 function isRole(role) {
   return ROLES.includes(String(role || '').toLowerCase());
+}
+function isReviewer(user) {
+  return !!user && REVIEWER_ROLES.includes(user.role);
+}
+// Roles that can be tied to one department (college).
+const DEPT_ROLES = ['faculty', 'chair', 'admin'];
+
+// The approval steps, in order. Dean is the final approver unless the IT
+// Administrator turns on the VPAA step.
+function approvalChain(db) {
+  return (db.settings && db.settings.requireVpaaApproval) ? ['chair', 'admin', 'vpaa'] : ['chair', 'admin'];
+}
+
+// Everyone with this reviewer role who handles this portfolio.
+function stageReviewers(db, stage, p) {
+  return (db.users || []).filter((u) => u.role === stage && inAdminScope(db, u, p));
+}
+
+// The first step from position `fromIdx` on that has someone to act on it,
+// so a college without a Department Chair (or VPAA) account yet doesn't get
+// stuck. With nobody assigned to any later step, the Dean step is used if it
+// is still ahead; null means there is no step left (fully approved).
+function nextStage(db, p, fromIdx) {
+  const chain = approvalChain(db);
+  for (let i = fromIdx; i < chain.length; i++) {
+    if (stageReviewers(db, chain[i], p).length) return chain[i];
+  }
+  return chain.indexOf('admin') >= fromIdx ? 'admin' : null;
+}
+
+// Older pending portfolios (from before the approval chain) wait for the Dean.
+function currentStage(p) {
+  if (p.status !== 'Pending Review' && p.status !== 'In Review') return null;
+  return p.reviewStage || 'admin';
+}
+
+function notifyStage(db, p, stage, title, message) {
+  stageReviewers(db, stage, p).forEach((u) => pushNotification(db, { userId: u.id, title, message, portfolioId: p.id }));
+}
+
+function pushHistory(p, entry) {
+  if (!Array.isArray(p.reviewHistory)) p.reviewHistory = [];
+  p.reviewHistory.push(Object.assign({ at: store.nowIso() }, entry));
+  p.reviewHistory = p.reviewHistory.slice(-100);
 }
 
 function stripPassword(u) {
@@ -284,7 +335,7 @@ function startSession(db, user) {
 function visibleUsers(db, me) {
   const users = db.users || [];
   if (me.role === 'it') return users.map(stripPassword);
-  if (me.role === 'admin') {
+  if (isReviewer(me)) {
     // Last sign-in lets the College Administrator see which faculty are
     // active. Older accounts (before lastLoginAt existed) fall back to the
     // newest "signed in" entry in the activity log.
@@ -377,7 +428,7 @@ function requireRole(ctx, roles) {
 function ownedPortfolio(db, id, ctx) {
   const p = (db.portfolios || []).find((x) => x.id === id);
   if (!p) throw { status: 404, message: 'Portfolio not found.' };
-  if (p.facultyId !== ctx.user.id && !['admin', 'it'].includes(ctx.user.role)) {
+  if (p.facultyId !== ctx.user.id && !isReviewer(ctx.user) && ctx.user.role !== 'it') {
     throw { status: 403, message: 'You do not have access to this portfolio.' };
   }
   // A College Administrator only handles their own department's portfolios;
@@ -410,17 +461,42 @@ function portfolioDepartmentId(db, p) {
       || String(x.code || '').trim().toLowerCase() === label);
     if (d) return d.id;
   }
+  // Last resort: the college of the faculty member who wrote it.
+  const owner = (db.users || []).find((u) => u.id === p.facultyId);
+  if (owner && owner.departmentId && findDepartment(db, owner.departmentId)) return owner.departmentId;
   return '';
 }
 
+// Department Chairs and Deans are tied to one college; the VPAA and IT
+// see every college.
 function adminDepartmentId(db, user) {
-  if (!user || user.role !== 'admin' || !user.departmentId) return '';
+  if (!user || !['admin', 'chair'].includes(user.role) || !user.departmentId) return '';
   return findDepartment(db, user.departmentId) ? user.departmentId : '';
+}
+
+function portfolioProgramId(db, p) {
+  if (p.programId) return p.programId;
+  const ct = (db.courseTemplates || []).find((t) => String(t.courseCode || '').toLowerCase() === String(p.courseCode || '').toLowerCase());
+  return (ct && ct.programId) || '';
 }
 
 function inAdminScope(db, user, p) {
   const scope = adminDepartmentId(db, user);
-  return !scope || portfolioDepartmentId(db, p) === scope;
+  if (scope && portfolioDepartmentId(db, p) !== scope) return false;
+  // A Department Chair can also be tied to one program (e.g. BSIT).
+  if (user && user.role === 'chair' && user.programId) {
+    const prog = portfolioProgramId(db, p);
+    if (prog && prog !== user.programId) return false;
+  }
+  return true;
+}
+
+function assertChairProgram(db, user, programId) {
+  const prog = (db.programs || []).find((x) => x.id === programId);
+  if (!prog) throw { status: 400, message: 'Selected program was not found.' };
+  if (user.departmentId && prog.departmentId !== user.departmentId) {
+    throw { status: 400, message: 'That program belongs to a different department.' };
+  }
 }
 
 function sanitizeStrList(v) {
@@ -761,12 +837,8 @@ const routes = {
     handler: (db, ctx, query, body) => {
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
-      const selectedRole = body.role ? String(body.role).toLowerCase() : null;
       if (!username || !password) {
-        throw { status: 400, message: 'Username and password are required.' };
-      }
-      if (selectedRole && !isRole(selectedRole)) {
-        throw { status: 400, message: 'Please choose a valid role.' };
+        throw { status: 400, message: 'Email and password are required.' };
       }
       const user = findUserByUsername(db, username);
       if (!user) {
@@ -780,13 +852,9 @@ const routes = {
       // Only a true/false flag is kept — never the password itself.
       if (passwordPolicy.isStrong(password)) delete user.passwordWeak;
       else user.passwordWeak = true;
-      // The selected role is a real credential check, not a client-trusted
-      // value: a correct password with the wrong role selection is rejected
-      // with the same generic message used for a wrong password, so the
-      // login form can't be used to probe which role an account holds.
-      if (selectedRole && user.role !== selectedRole) {
-        throw { status: 401, message: 'Incorrect username or password.' };
-      }
+      // No "user type" to pick at sign-in (panel feedback): the role comes
+      // from the account itself, and any role sent by an older page is
+      // ignored.
       if (!mfaActive()) return startSession(db, user);
 
       // A browser this user marked "Trust this device" skips the emailed
@@ -984,7 +1052,7 @@ const routes = {
   'GET /api/state': {
     auth: true,
     handler: (db, ctx) => {
-      const isStaff = ['admin', 'it'].includes(ctx.user.role);
+      const isStaff = isReviewer(ctx.user) || ctx.user.role === 'it';
       const scope = adminDepartmentId(db, ctx.user);
       const portfolios = isStaff
         ? (db.portfolios || []).filter((p) => inAdminScope(db, ctx.user, p))
@@ -1003,7 +1071,13 @@ const routes = {
           allPortfolios: isStaff ? portfolios : [],
           // The department this College Administrator is assigned to (null =
           // not assigned yet, so every department is shown).
-          myDepartment: ctx.user.role === 'admin' ? (dept ? { id: dept.id, code: dept.code, name: dept.name } : null) : undefined,
+          myDepartment: isReviewer(ctx.user) ? (dept ? { id: dept.id, code: dept.code, name: dept.name } : null) : undefined,
+          myProgram: ctx.user.role === 'chair' && ctx.user.programId
+            ? (((db.programs || []).find((x) => x.id === ctx.user.programId)) || null)
+            : undefined,
+          // The approval steps in order, e.g. ['chair', 'admin'], or
+          // ['chair', 'admin', 'vpaa'] when the VPAA step is on.
+          approvalChain: approvalChain(db),
           notifications,
           // Faculty get only their own activity (their sign-ins/edits and what
           // happened to their portfolios) for the dashboard timeline.
@@ -1203,7 +1277,7 @@ const routes = {
   'GET /api/obtlp-templates': {
     auth: true,
     handler: (db, ctx) => {
-      const isStaff = ['admin', 'it'].includes(ctx.user.role);
+      const isStaff = isReviewer(ctx.user) || ctx.user.role === 'it';
       const templates = db.obtlpTemplates || [];
       return { status: 200, data: isStaff ? templates : templates.filter((t) => t.active) };
     }
@@ -1496,7 +1570,7 @@ const routes = {
     auth: true,
     handler: (db, ctx, query, body, params) => {
       const p = ownedPortfolio(db, params.id, ctx);
-      // A College Administrator can remove a submission from the system
+      // The Dean can remove a submission from the system
       // (e.g. a test entry or an outdated course). It needs an explicit
       // confirmation, is logged, and the faculty member is notified.
       if (ctx.user.role === 'admin' && p.facultyId !== ctx.user.id) {
@@ -1548,7 +1622,7 @@ const routes = {
     handler: (db, ctx, query, body, params) => {
       const p = (db.portfolios || []).find((x) => x.id === params.id);
       if (!p) throw { status: 404, message: 'Portfolio not found.' };
-      if (ctx.user.role === 'admin' && !inAdminScope(db, ctx.user, p)) {
+      if (p.facultyId !== ctx.user.id && !inAdminScope(db, ctx.user, p)) {
         throw { status: 404, message: 'Portfolio not found.' };
       }
       const action = body.action;
@@ -1567,6 +1641,11 @@ const routes = {
         p.facultyEmail = userEmail(ctx.user) || p.facultyEmail || '';
         p.status = 'Pending Review';
         p.resubmitted = wasRevision;
+        // Every (re)submission starts at the first approval step again.
+        p.reviewStage = nextStage(db, p, 0);
+        p.approvals = [];
+        p.submittedAt = store.nowIso();
+        pushHistory(p, { action: wasRevision ? 'resubmit' : 'submit', by: ctx.user.id, byName: ctx.user.name, role: 'faculty' });
         // Auto-fill the "Prepared by" signatory with the submitting faculty
         // member — the rest (Reviewed/Concurred/Approved) are filled in
         // during administrative review.
@@ -1579,47 +1658,83 @@ const routes = {
         pushNotification(db, {
           userId: p.facultyId,
           title: 'Submission Received',
-          message: `Your ${p.courseCode} portfolio was received and is now pending review.`,
+          message: `Your ${p.courseCode} OBTLP was received and is now with the ${ROLE_LABEL[p.reviewStage]} for review.`,
           portfolioId: p.id
         });
-        pushNotification(db, {
-          role: 'admin',
-          departmentId: portfolioDepartmentId(db, p),
-          title: 'New Submission',
-          message: `${ctx.user.name} submitted ${p.courseCode} for review.`,
-          portfolioId: p.id
-        });
+        notifyStage(db, p, p.reviewStage, wasRevision ? 'Resubmitted OBTLP' : 'New OBTLP Submission',
+          `${ctx.user.name} ${wasRevision ? 'resubmitted' : 'submitted'} ${p.courseCode} for your review.`);
         return { status: 200, data: p };
       }
 
       if (action === 'approve') {
-        requireRole(ctx, ['admin']);
-        p.status = 'Approved';
-        p.updatedAt = store.nowIso();
-        p.review = { notes: comment, requestedRevisionAt: null, approvedAt: store.nowIso() };
+        if (!isReviewer(ctx.user)) throw { status: 403, message: 'You do not have permission to perform this action.' };
+        const stage = currentStage(p);
+        if (!stage) throw { status: 409, message: `This portfolio is ${String(p.status || '').toLowerCase()} and is not waiting for approval.` };
+        if (stage !== ctx.user.role) {
+          throw { status: 403, message: `This OBTLP is waiting for the ${ROLE_LABEL[stage] || stage}, not for you.` };
+        }
+        const chain = approvalChain(db);
+        const idx = chain.indexOf(stage);
+        const today = store.nowIso().slice(0, 10);
+        const sig = { name: ctx.user.name, date: today };
         if (!p.signatories) p.signatories = { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] };
-        p.signatories.reviewedBy = { name: ctx.user.name, date: store.nowIso().slice(0, 10) };
-        pushAudit(db, { actor: ctx.user.id, action: 'approve', portfolioId: p.id, detail: `Approved ${p.courseCode}` });
+        if (!Array.isArray(p.approvals)) p.approvals = [];
+        p.approvals.push({ stage, by: ctx.user.id, byName: ctx.user.name, at: store.nowIso(), note: comment });
+        pushHistory(p, { action: 'approve', stage, by: ctx.user.id, byName: ctx.user.name, role: ctx.user.role, note: comment });
+        const next = idx >= 0 ? nextStage(db, p, idx + 1) : null;
+        // Signatures on the official form: Reviewed by = Department Chair;
+        // Approved by = the final approver (Dean, or VPAA when that step is
+        // on — then the Dean signs "Recommending approval / Concurred by").
+        if (stage === 'chair') p.signatories.reviewedBy = sig;
+        else if (stage === 'admin' && next) p.signatories.concurredBy = sig;
+        else p.signatories.approvedBy = [sig];
+        p.updatedAt = store.nowIso();
+        if (next) {
+          p.reviewStage = next;
+          pushAudit(db, { actor: ctx.user.id, action: 'endorse', portfolioId: p.id, detail: `${ROLE_LABEL[stage]} approved ${p.courseCode} and forwarded it to the ${ROLE_LABEL[next]}` });
+          pushNotification(db, {
+            userId: p.facultyId,
+            title: `Approved by the ${ROLE_LABEL[stage]}`,
+            message: `${p.courseCode} was approved by ${ctx.user.name} (${ROLE_LABEL[stage]}) and is now with the ${ROLE_LABEL[next]}.`,
+            portfolioId: p.id
+          });
+          notifyStage(db, p, next, 'OBTLP for Your Approval', `${p.courseCode} was approved by the ${ROLE_LABEL[stage]} and now needs your approval.`);
+          return { status: 200, data: p };
+        }
+        p.status = 'Approved';
+        p.reviewStage = null;
+        p.review = { notes: comment, requestedRevisionAt: null, approvedAt: store.nowIso(), approvedBy: ctx.user.name, approvedByRole: stage };
+        pushAudit(db, { actor: ctx.user.id, action: 'approve', portfolioId: p.id, detail: `Final approval of ${p.courseCode} by the ${ROLE_LABEL[stage]}` });
         pushNotification(db, {
           userId: p.facultyId,
-          title: 'Portfolio Approved',
-          message: `Your ${p.courseCode} portfolio has been approved.`,
+          title: 'OBTLP Approved',
+          message: `Your ${p.courseCode} OBTLP has been given final approval by ${ctx.user.name} (${ROLE_LABEL[stage]}).`,
           portfolioId: p.id
         });
         return { status: 200, data: p };
       }
 
       if (action === 'request-revision') {
-        requireRole(ctx, ['admin']);
+        if (!isReviewer(ctx.user)) throw { status: 403, message: 'You do not have permission to perform this action.' };
+        const stage = currentStage(p);
+        if (!stage) throw { status: 409, message: `This portfolio is ${String(p.status || '').toLowerCase()} and is not waiting for review.` };
+        // The reviewer at the current step, or anyone above it, can send it back.
+        const chain = approvalChain(db).concat(['vpaa']);
+        if (chain.indexOf(ctx.user.role) < chain.indexOf(stage)) {
+          throw { status: 403, message: `This OBTLP is waiting for the ${ROLE_LABEL[stage] || stage}.` };
+        }
+        if (!comment) throw { status: 400, message: 'Please add a comment so the faculty member knows what to change.' };
         p.status = 'Revision Required';
         p.resubmitted = false;
+        p.reviewStage = null;
         p.updatedAt = store.nowIso();
-        p.review = { notes: comment, requestedRevisionAt: store.nowIso(), approvedAt: null };
-        pushAudit(db, { actor: ctx.user.id, action: 'request-revision', portfolioId: p.id, detail: `Requested revision on ${p.courseCode}${comment ? ': ' + comment : ''}` });
+        p.review = { notes: comment, requestedRevisionAt: store.nowIso(), approvedAt: null, requestedBy: ctx.user.name, requestedByRole: ctx.user.role };
+        pushHistory(p, { action: 'request-revision', stage, by: ctx.user.id, byName: ctx.user.name, role: ctx.user.role, note: comment });
+        pushAudit(db, { actor: ctx.user.id, action: 'request-revision', portfolioId: p.id, detail: `${ROLE_LABEL[ctx.user.role]} requested revision on ${p.courseCode}${comment ? ': ' + comment : ''}` });
         pushNotification(db, {
           userId: p.facultyId,
           title: 'Revision Requested',
-          message: `${p.courseCode} needs changes: ${comment || 'See admin comments.'}`,
+          message: `${p.courseCode} needs changes (${ROLE_LABEL[ctx.user.role]}): ${comment}`,
           portfolioId: p.id
         });
         return { status: 200, data: p };
@@ -1725,6 +1840,8 @@ const routes = {
       const allowed = ['systemName', 'schoolName', 'schoolAddress'];
       const patch = {};
       allowed.forEach((k) => { if (body[k] !== undefined) patch[k] = String(body[k]); });
+      // Approval hierarchy: Dean is the final approver unless this is on.
+      if (body.requireVpaaApproval !== undefined) patch.requireVpaaApproval = !!body.requireVpaaApproval;
       db.settings = Object.assign({}, db.settings, patch, { updatedAt: store.nowIso() });
       pushAudit(db, { actor: ctx.user.id, action: 'settings-update', portfolioId: null, detail: 'Updated system settings' });
       return { status: 200, data: db.settings };
@@ -1747,7 +1864,7 @@ const routes = {
       if (!name || !username || !body.role) {
         throw { status: 400, message: 'Name, username, and role are required.' };
       }
-      if (!isRole(body.role)) throw { status: 400, message: 'Role must be one of: faculty, admin, it.' };
+      if (!isRole(body.role)) throw { status: 400, message: 'Role must be one of: faculty, chair, admin (Dean), vpaa, it.' };
       if (!isEmail(username)) throw { status: 400, message: 'Use the person\'s email address as the username — sign-in codes are sent there.' };
       if (findUserByUsername(db, username) || (db.users || []).some((u) => userEmail(u) === username.toLowerCase())) {
         throw { status: 409, message: 'A user with that email already exists.' };
@@ -1764,9 +1881,13 @@ const routes = {
         createdVia: 'it-admin',
         passwordHash: auth.hashPassword(password)
       };
-      if (['admin', 'faculty'].includes(user.role) && body.departmentId) {
+      if (DEPT_ROLES.includes(user.role) && body.departmentId) {
         if (!findDepartment(db, String(body.departmentId))) throw { status: 400, message: 'Selected department was not found.' };
         user.departmentId = String(body.departmentId);
+      }
+      if (user.role === 'chair' && body.programId) {
+        assertChairProgram(db, user, String(body.programId));
+        user.programId = String(body.programId);
       }
       if (!db.users) db.users = [];
       db.users.push(user);
@@ -1782,7 +1903,7 @@ const routes = {
       const u = (db.users || []).find((x) => x.id === params.id);
       if (!u) throw { status: 404, message: 'User not found.' };
       if (body.role !== undefined && !isRole(body.role)) {
-        throw { status: 400, message: 'Role must be one of: faculty, admin, it.' };
+        throw { status: 400, message: 'Role must be one of: faculty, chair, admin (Dean), vpaa, it.' };
       }
       if (body.username !== undefined) {
         const existing = findUserByUsername(db, body.username);
@@ -1812,7 +1933,14 @@ const routes = {
         if ((u.departmentId || '') !== next) { deptChanged = true; }
         if (next) u.departmentId = next; else delete u.departmentId;
       }
-      if (newRole === 'it' && u.departmentId) { delete u.departmentId; }
+      if (!DEPT_ROLES.includes(newRole) && u.departmentId) { delete u.departmentId; }
+      // A Department Chair can be tied to one program ('' = whole college).
+      if (body.programId !== undefined && newRole === 'chair') {
+        const prog = String(body.programId || '');
+        if (prog) { assertChairProgram(db, u, prog); u.programId = prog; } else delete u.programId;
+        deptChanged = true;
+      }
+      if (newRole !== 'chair' && u.programId) delete u.programId;
       if (newRole !== oldRole) {
         // New permissions take effect on their next sign-in.
         db.sessions = (db.sessions || []).filter((s) => s.userId !== u.id);
@@ -2023,7 +2151,7 @@ async function handleDocumentDownload(req, res, pathname) {
     const ctx = requireAuth(db, req);
     const p = (db.portfolios || []).find((x) => x.id === portfolioId);
     if (!p) return sendJson(res, 404, { error: 'Portfolio not found.' });
-    if (p.facultyId !== ctx.user.id && !['admin', 'it'].includes(ctx.user.role)) {
+    if (p.facultyId !== ctx.user.id && !isReviewer(ctx.user) && ctx.user.role !== 'it') {
       return sendJson(res, 403, { error: 'You do not have access to this document.' });
     }
     if (p.facultyId !== ctx.user.id && !inAdminScope(db, ctx.user, p)) {

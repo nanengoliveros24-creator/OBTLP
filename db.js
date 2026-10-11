@@ -141,7 +141,8 @@
     clearSession,
 
     // ---- auth ----
-    login: (username, password, role) => req('/api/login', { method: 'POST', body: JSON.stringify({ username, password, role, deviceToken: getDeviceToken(username) || undefined }) }),
+    // No role is sent: the server uses the account's own role.
+    login: (username, password) => req('/api/login', { method: 'POST', body: JSON.stringify({ username, password, deviceToken: getDeviceToken(username) || undefined }) }),
     // Email OTP (second sign-in step)
     loginEmail: (challengeId, email) => req('/api/login/email', { method: 'POST', body: JSON.stringify({ challengeId, email }) }),
     loginVerify: (challengeId, code, trustDevice) => req('/api/login/verify', { method: 'POST', body: JSON.stringify({ challengeId, code, trustDevice: !!trustDevice }) }),
@@ -234,4 +235,25 @@
   };
 
   window.__OBTLP_API__ = api;
+
+  // Shared role / status wording, so every page names things the same way.
+  // 'admin' is the Dean (the key is kept for existing accounts).
+  const ROLE_LABEL = { faculty: 'Faculty', chair: 'Department Chair', admin: 'Dean', vpaa: 'VPAA', it: 'IT Administrator' };
+  const ROLE_HOME = { faculty: 'dashboard.html', chair: 'admin.html', admin: 'admin.html', vpaa: 'admin.html', it: 'it-admin.html' };
+  const STAGE_WAITING = { chair: 'Dept. Chair Review', admin: 'Dean Approval', vpaa: 'VPAA Approval' };
+  window.OBTLP_ROLES = {
+    LABEL: ROLE_LABEL,
+    REVIEWERS: ['chair', 'admin', 'vpaa'],
+    label: (role) => ROLE_LABEL[role] || role || '',
+    home: (role) => ROLE_HOME[role] || 'index.html',
+    isReviewer: (role) => ['chair', 'admin', 'vpaa'].includes(role),
+    // Where a pending OBTLP is in the approval chain.
+    stageOf: (p) => (p && (p.status === 'Pending Review' || p.status === 'In Review')) ? (p.reviewStage || 'admin') : null,
+    // "Pending – Dean Approval", or the plain status.
+    statusText: (p) => {
+      if (!p) return '';
+      if (p.status === 'Pending Review' || p.status === 'In Review') return `Pending – ${STAGE_WAITING[p.reviewStage || 'admin']}`;
+      return p.status;
+    }
+  };
 })();

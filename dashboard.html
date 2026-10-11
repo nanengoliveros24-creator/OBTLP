@@ -133,10 +133,8 @@
     // their own dashboards, so send them there instead of the faculty view.
     if (!session) {
       window.location.href = 'index.html';
-    } else if (session.role === 'admin') {
-      window.location.href = 'admin.html';
-    } else if (session.role === 'it') {
-      window.location.href = 'it-admin.html';
+    } else if (session.role !== 'faculty') {
+      window.location.href = window.OBTLP_ROLES.home(session.role);
     }
 
     const badgeClassFor = {
@@ -187,12 +185,12 @@
     function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
     // The stat cards double as filters for the table below (like the
-    // College Administrator's review queue).
+    // review queue).
     let statusFilter = 'All';
     const FILTERS = {
       All: { test: () => true, title: 'My Portfolios', sub: 'Your saved OBTLP report records', empty: 'No portfolios yet. Create one to get started.' },
-      Approved: { test: (p) => p.status === 'Approved', title: 'Approved', sub: 'Portfolios the College Administrator approved', empty: 'No approved portfolios yet.' },
-      Pending: { test: (p) => p.status === 'Pending Review' || p.status === 'In Review', title: 'Pending Review', sub: 'Submitted and waiting for the College Administrator', empty: 'Nothing is waiting for review.' },
+      Approved: { test: (p) => p.status === 'Approved', title: 'Approved', sub: 'OBTLPs that received final approval', empty: 'No approved portfolios yet.' },
+      Pending: { test: (p) => p.status === 'Pending Review' || p.status === 'In Review', title: 'Pending Review', sub: 'Submitted and moving through Dept. Chair → Dean approval', empty: 'Nothing is waiting for review.' },
       Revision: { test: (p) => p.status === 'Revision Required', title: 'Needs Revision', sub: 'Returned with comments — edit and resubmit', empty: 'Nothing needs revision. 🎉' }
     };
 
@@ -220,7 +218,7 @@
       tbody.innerHTML = rows.map((p) => {
         const r = p.review || {};
         const note = p.status === 'Revision Required' && r.notes
-          ? `<p class="cell-note"><b>Feedback:</b> ${esc(r.notes)}</p>`
+          ? `<p class="cell-note"><b>Feedback${r.requestedByRole ? ` (${esc(window.OBTLP_ROLES.label(r.requestedByRole))})` : ''}:</b> ${esc(r.notes)}</p>`
           : p.status === 'Approved' && r.approvedAt
             ? `<p class="cell-sub">Approved ${esc(new Date(r.approvedAt).toLocaleDateString())}</p>`
             : '';
@@ -229,7 +227,7 @@
           <td><p class="cell-strong">${esc(p.courseCode || 'Untitled')}</p><p class="cell-sub">${esc(p.courseTitle)}</p>${note}</td>
           <td class="t-muted">${esc(p.semester)}${p.academicYear ? ' · ' + esc(p.academicYear) : ''}</td>
           <td class="t-muted">${fmtWhen(p.updatedAt)}</td>
-          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${esc(p.status)}</span></td>
+          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${esc(window.OBTLP_ROLES.statusText(p))}</span></td>
           <td>${actionsCellFor(p)}</td>
         </tr>`;
       }).join('');
@@ -283,7 +281,7 @@
         if (!myLogs.length) {
           timeline.innerHTML = '<div class="timeline-item"><span class="dot dot-muted"></span><div><p class="item-title">No activity yet.</p></div></div>';
         } else {
-          const dotFor = { approve: 'dot-success', submit: 'dot-primary', resubmit: 'dot-primary', 'request-revision': 'dot-destructive', edit: 'dot-muted', create: 'dot-muted' };
+          const dotFor = { approve: 'dot-success', endorse: 'dot-success', submit: 'dot-primary', resubmit: 'dot-primary', 'request-revision': 'dot-destructive', edit: 'dot-muted', create: 'dot-muted' };
           timeline.innerHTML = myLogs.map((l) => `
             <div class="timeline-item">
               <span class="dot ${dotFor[l.action] || 'dot-muted'}"></span>

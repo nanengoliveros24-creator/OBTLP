@@ -41,8 +41,11 @@ test('sign-up only makes faculty accounts and needs an email', async () => {
   assert.equal(sneaky.status, 201);
   assert.equal(sneaky.data.user.role, 'faculty', 'a requested role is ignored');
 
+  // There is no "user type" at sign-in: a role sent by the client is
+  // ignored and the account's own role is used.
   const asAdmin = await c.post('/api/login', { username: 'wants.it@test.edu', password: 'Secret#01', role: 'it' });
-  assert.equal(asAdmin.status, 401);
+  assert.equal(asAdmin.status, 200);
+  assert.equal(asAdmin.data.user.role, 'faculty');
 
   const noEmail = await c.post('/api/register', { name: 'No Email', username: 'justname', password: 'Secret#01', confirmPassword: 'Secret#01', departmentId: 'CCS' });
   assert.equal(noEmail.status, 400);

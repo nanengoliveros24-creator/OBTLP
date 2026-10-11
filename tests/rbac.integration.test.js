@@ -51,13 +51,16 @@ test('an unauthenticated request to a protected route is rejected', async () => 
   assert.equal(res.status, 401);
 });
 
-test('login rejects a correct password paired with the wrong selected role', async () => {
+test('the role comes from the account, not from the sign-in form', async () => {
   // register a faculty account first
   await client.post('/api/register', {
     name: 'Faculty A', username: 'faculty-a@test.edu', password: 'Faculty#Pass1', confirmPassword: 'Faculty#Pass1', departmentId: 'CCS'
   });
   const res = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'Faculty#Pass1', role: 'admin' });
-  assert.equal(res.status, 401, 'a role mismatch must fail the same way a wrong password does');
+  assert.equal(res.status, 200);
+  assert.equal(res.data.user.role, 'faculty', 'asking for another role does not grant it');
+  const wrong = await client.post('/api/login', { username: 'faculty-a@test.edu', password: 'Wrong#Pass1' });
+  assert.equal(wrong.status, 401);
 });
 
 test('login works with the correct role and returns a usable token', async () => {

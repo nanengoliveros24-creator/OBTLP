@@ -88,7 +88,7 @@
         <header class="page-header">
           <div>
             <h1 class="page-title">User Accounts</h1>
-            <p class="page-subtitle">Faculty sign up on their own. College Administrator and IT Administrator accounts are created and assigned here.</p>
+            <p class="page-subtitle">Faculty (teachers) sign up on their own. Department Chair, Dean, VPAA and IT Administrator accounts are created here, and roles and access are assigned here.</p>
           </div>
           <div class="header-actions">
             <button class="btn btn-primary" id="btn-new-user"><i data-lucide="user-plus" class="svg-icon"></i> New User</button>
@@ -98,7 +98,7 @@
         <section class="card" style="overflow:hidden;">
           <div class="table-wrap">
             <table class="data">
-              <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Department</th><th class="right">Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department / Program</th><th class="right">Actions</th></tr></thead>
               <tbody id="user-rows"><tr><td colspan="5" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
             </table>
           </div>
@@ -122,6 +122,14 @@
             <div class="form-success" id="settings-success" style="display:none;">Settings saved.</div>
             <button type="submit" class="btn btn-primary" id="settings-save-btn">Save Settings</button>
           </form>
+        </section>
+
+        <section class="card card-pad" style="max-width:36rem;margin-bottom:1.5rem;">
+          <h3 class="card-title" style="margin-bottom:0.25rem;">Approval Hierarchy</h3>
+          <p class="section-sub" style="margin-bottom:1rem;">Every OBTLP is written by the teacher, then approved by the Department Chair and the Dean. Turn on the VPAA step if the VPAA gives the final approval.</p>
+          <ol class="hierarchy-steps" id="hierarchy-steps"></ol>
+          <label class="check-row"><input type="checkbox" id="s-requireVpaa" /> <span><b>Require VPAA final approval</b><br><span class="t-muted">Off: the Dean gives the final approval. On: Dean → VPAA.</span></span></label>
+          <p class="section-sub" style="margin-top:0.75rem;">OBTLPs already waiting keep their current step. A college without a Department Chair account goes straight to the Dean.</p>
         </section>
 
         <section class="card card-pad" style="max-width:44rem;">
@@ -255,14 +263,21 @@
           <label class="field-label">Role</label>
           <select class="input select" id="u-role">
             <option value="faculty">Faculty</option>
-            <option value="admin">College Administrator</option>
+            <option value="chair">Department Chair</option>
+            <option value="admin">Dean</option>
+            <option value="vpaa">VPAA</option>
             <option value="it">IT Administrator</option>
           </select>
         </div>
         <div class="field" id="u-department-field" style="display:none;">
           <label class="field-label" for="u-department">Department</label>
           <select class="input select" id="u-department"></select>
-          <p class="section-sub" style="margin-top:0.35rem;">Faculty are listed under this college; a College Administrator only sees and reviews its portfolios.</p>
+          <p class="section-sub" style="margin-top:0.35rem;">Faculty are listed under this college; a Department Chair or Dean only sees and approves its OBTLPs.</p>
+        </div>
+        <div class="field" id="u-program-field" style="display:none;">
+          <label class="field-label" for="u-program">Program (optional)</label>
+          <select class="input select" id="u-program"></select>
+          <p class="section-sub" style="margin-top:0.35rem;">Leave as "Whole college" if this Department Chair handles every program in the college.</p>
         </div>
         <div class="field"><label class="field-label">Temporary Password (optional)</label><input class="input" id="u-password" placeholder="Leave blank to auto-generate a strong one" autocomplete="off" /></div>
         <div class="form-error" id="user-form-error" style="display:none;"></div>
@@ -558,7 +573,7 @@
       const ui = window.__OBTLP_UI__;
       const session = api.getSession();
       if (!session) { window.location.href = 'index.html'; return; }
-      if (session.role !== 'it') { window.location.href = session.role === 'admin' ? 'admin.html' : 'dashboard.html'; return; }
+      if (session.role !== 'it') { window.location.href = window.OBTLP_ROLES.home(session.role); return; }
 
       document.getElementById('user-name').textContent = session.name || '—';
       document.getElementById('user-avatar').textContent = (session.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
@@ -588,7 +603,7 @@
       }
 
       const dotFor = {
-        approve: 'dot-success', submit: 'dot-primary', resubmit: 'dot-primary',
+        approve: 'dot-success', endorse: 'dot-success', submit: 'dot-primary', resubmit: 'dot-primary',
         'request-revision': 'dot-destructive', edit: 'dot-muted', create: 'dot-muted',
         'user-create': 'dot-primary', 'user-update': 'dot-muted', 'user-delete': 'dot-destructive',
         'password-change': 'dot-primary', 'settings-update': 'dot-muted', login: 'dot-success', backup: 'dot-primary'
@@ -624,10 +639,18 @@
       let usersCache = [];
       function initials(name) { return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–'; }
       function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-      const roleLabel = { faculty: 'Faculty', admin: 'College Administrator', it: 'IT Administrator' };
+      const roleLabel = window.OBTLP_ROLES.LABEL;
+      const DEPT_ROLES = ['faculty', 'chair', 'admin'];
 
-      // Departments a College Administrator can be assigned to.
+      // Departments a Department Chair / Dean / faculty member belongs to,
+      // and the programs a Department Chair can be tied to.
       let deptCache = [];
+      let programCache = [];
+      function programOptions(departmentId, selected) {
+        return '<option value="">Whole college</option>' + programCache
+          .filter((p) => p.departmentId === departmentId)
+          .map((p) => `<option value="${esc(p.id)}" ${p.id === selected ? 'selected' : ''}>${esc(p.code)} — ${esc(p.name)}</option>`).join('');
+      }
       function deptOptions(selected, allLabel) {
         return `<option value="">${esc(allLabel)}</option>` + deptCache
           .slice().sort((a, b) => String(a.code).localeCompare(String(b.code)))
@@ -637,7 +660,7 @@
       async function loadUsers() {
         const rows = document.getElementById('user-rows');
         try {
-          [usersCache, deptCache] = await Promise.all([api.getUsers(), api.getDepartments().catch(() => [])]);
+          [usersCache, deptCache, programCache] = await Promise.all([api.getUsers(), api.getDepartments().catch(() => []), api.getPrograms().catch(() => [])]);
         } catch (err) {
           ui.notifyError(err);
           rows.innerHTML = '<tr><td colspan="5" class="t-destructive" style="padding:1.5rem;">Failed to load — try refreshing.</td></tr>';
@@ -654,7 +677,7 @@
           const lastIt = u.role === 'it' && itCount <= 1;
           const roleCell = (isMe || locked || lastIt)
             ? `<span class="badge badge-accent">${roleLabel[u.role] || u.role}</span>`
-            : `<select class="input select input-sm" data-role-for="${u.id}" aria-label="Role for ${esc(u.name)}">
+            : `<select class="input select input-sm" style="min-width:11.5rem;" data-role-for="${u.id}" aria-label="Role for ${esc(u.name)}">
                  ${Object.keys(roleLabel).map((r) => `<option value="${r}" ${r === u.role ? 'selected' : ''}>${roleLabel[r]}</option>`).join('')}
                </select>`;
           const tags = [
@@ -667,9 +690,12 @@
             <td><div style="display:flex;align-items:center;gap:0.625rem;"><div class="avatar-sec" style="height:2rem;width:2rem;font-size:0.75rem;">${initials(u.name)}</div><span class="cell-strong">${esc(u.name)}</span> ${tags}</div></td>
             <td class="t-muted">${esc(u.username)}</td>
             <td>${roleCell}</td>
-            <td>${u.role === 'admin' || u.role === 'faculty'
-              ? `<select class="input select input-sm" style="max-width:19rem;" data-dept-for="${u.id}" aria-label="Department for ${esc(u.name)}">${deptOptions(u.departmentId || '', u.role === 'admin' ? 'Not assigned (sees all)' : 'Not set')}</select>`
-              : '<span class="t-muted">—</span>'}</td>
+            <td>${DEPT_ROLES.includes(u.role)
+              ? `<select class="input select input-sm" style="max-width:19rem;" data-dept-for="${u.id}" aria-label="Department for ${esc(u.name)}">${deptOptions(u.departmentId || '', u.role === 'faculty' ? 'Not set' : 'Not assigned (sees all)')}</select>`
+                + (u.role === 'chair' && u.departmentId
+                  ? `<select class="input select input-sm" style="max-width:19rem;margin-top:0.35rem;" data-program-for="${u.id}" aria-label="Program for ${esc(u.name)}">${programOptions(u.departmentId, u.programId || '')}</select>`
+                  : '')
+              : u.role === 'vpaa' ? '<span class="t-muted">All colleges</span>' : '<span class="t-muted">—</span>'}</td>
             <td>
               <div class="row-actions">
                 <button class="icon-btn" title="${locked ? 'Only the owner can change this password (from Profile)' : 'Reset Password'}" data-reset="${u.id}" data-name="${esc(u.name)}" ${locked ? 'disabled' : ''}><i data-lucide="key-round" class="svg-icon"></i></button>
@@ -695,10 +721,25 @@
               await api.updateUser(u.id, { departmentId: sel.value });
               ui.notify('Department Updated', u.role === 'faculty'
                 ? (d ? `${u.name} is now listed under ${d.name}.` : `${u.name} has no department set.`)
-                : (d ? `${u.name} now reviews ${d.name} portfolios only.` : `${u.name} now sees every department.`));
+                : (d ? `${u.name} now reviews ${d.name} OBTLPs only.` : `${u.name} now sees every department.`));
               loadUsers();
             } catch (err) {
               sel.value = u.departmentId || '';
+              ui.notifyError(err);
+            }
+          });
+        });
+        rows.querySelectorAll('[data-program-for]').forEach((sel) => {
+          sel.addEventListener('change', async () => {
+            const u = usersCache.find((x) => x.id === sel.dataset.programFor);
+            if (!u) return;
+            try {
+              await api.updateUser(u.id, { programId: sel.value });
+              const p = programCache.find((x) => x.id === sel.value);
+              ui.notify('Program Updated', p ? `${u.name} now approves ${p.code} OBTLPs only.` : `${u.name} now handles the whole college.`);
+              loadUsers();
+            } catch (err) {
+              sel.value = u.programId || '';
               ui.notifyError(err);
             }
           });
@@ -790,9 +831,14 @@
       const userModal = document.getElementById('user-modal-overlay');
       const roleSelect = document.getElementById('u-role');
       function syncDepartmentField() {
-        document.getElementById('u-department-field').style.display = roleSelect.value === 'it' ? 'none' : '';
+        document.getElementById('u-department-field').style.display = DEPT_ROLES.includes(roleSelect.value) ? '' : 'none';
+        const deptVal = document.getElementById('u-department').value;
+        const showProg = roleSelect.value === 'chair' && !!deptVal;
+        document.getElementById('u-program-field').style.display = showProg ? '' : 'none';
+        if (showProg) document.getElementById('u-program').innerHTML = programOptions(deptVal, '');
       }
       roleSelect.addEventListener('change', syncDepartmentField);
+      document.getElementById('u-department').addEventListener('change', syncDepartmentField);
       document.getElementById('btn-new-user').addEventListener('click', () => {
         document.getElementById('user-form').reset();
         document.getElementById('u-department').innerHTML = deptOptions('', 'Not assigned (sees all departments)');
@@ -819,10 +865,13 @@
           }
           const body = { name, username, role };
           if (password) body.password = password;
-          if (role !== 'it' && document.getElementById('u-department').value) body.departmentId = document.getElementById('u-department').value;
+          if (DEPT_ROLES.includes(role) && document.getElementById('u-department').value) body.departmentId = document.getElementById('u-department').value;
+          if (role === 'chair' && document.getElementById('u-program').value) body.programId = document.getElementById('u-program').value;
           const created = await api.createUser(body);
           userModal.style.display = 'none';
-          ui.notify('User Created', created.temporaryPassword ? `Temporary password: ${created.temporaryPassword}` : `${name}'s account is ready.`);
+          ui.notify('User Created', `${name}'s account is ready (${roleLabel[role]}).`);
+          // Keep the generated password on screen until it has been copied.
+          if (created.temporaryPassword) window.prompt(`Temporary password for ${name}. Copy it now and give it to them:`, created.temporaryPassword);
           loadUsers();
           loadOverview();
         } catch (err) {
@@ -872,7 +921,25 @@
         document.getElementById('s-systemName').value = s.systemName || '';
         document.getElementById('s-schoolName').value = s.schoolName || '';
         document.getElementById('s-schoolAddress').value = s.schoolAddress || '';
+        document.getElementById('s-requireVpaa').checked = !!s.requireVpaaApproval;
+        renderHierarchy(!!s.requireVpaaApproval);
       }
+      function renderHierarchy(vpaa) {
+        const steps = ['Teacher (writes the OBTLP)', 'Department Chair (approval)', vpaa ? 'Dean (recommending approval)' : 'Dean (final approval)']
+          .concat(vpaa ? ['VPAA (final approval)'] : []);
+        document.getElementById('hierarchy-steps').innerHTML = steps.map((s) => `<li>${esc(s)}</li>`).join('');
+      }
+      document.getElementById('s-requireVpaa').addEventListener('change', async (e) => {
+        const on = e.target.checked;
+        try {
+          await api.updateSettings({ requireVpaaApproval: on });
+          renderHierarchy(on);
+          ui.notify('Approval Hierarchy Updated', on ? 'The VPAA now gives the final approval.' : 'The Dean now gives the final approval.');
+        } catch (err) {
+          e.target.checked = !on;
+          ui.notifyError(err);
+        }
+      });
       document.getElementById('settings-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const successEl = document.getElementById('settings-success');
