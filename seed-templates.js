@@ -260,7 +260,7 @@ async function ensureOfficialTemplates(store) {
   }
 }
 
-module.exports = { ensureOfficialTemplates, applyOfficialTemplates };
+module.exports = { ensureOfficialTemplates, applyOfficialTemplates, TEMPLATE_SECTIONS, EFFECTIVITY };
 
 if (require.main === module) {
   const store = require('./dbstore');

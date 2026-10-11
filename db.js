@@ -188,6 +188,7 @@
     createObtlpTemplate: (body) => req('/api/obtlp-templates', { method: 'POST', body: JSON.stringify(body) }),
     updateObtlpTemplate: (id, body) => req(`/api/obtlp-templates/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }),
     deleteObtlpTemplate: (id) => req(`/api/obtlp-templates/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    duplicateObtlpTemplate: (id, body) => req(`/api/obtlp-templates/${encodeURIComponent(id)}/duplicate`, { method: 'POST', body: JSON.stringify(body || {}) }),
 
     // ---- org profile (Vision/Mission/Core Values/Graduate Attributes, etc.) ----
     getOrgProfile: () => req('/api/org-profile'),

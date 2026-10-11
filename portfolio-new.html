@@ -142,34 +142,28 @@
             </div>
           </div>
 
-          <!-- Shown only when the selected course has an official OBTLP template:
-               read-only preview of the official content, so faculty never
-               re-type what the template already provides. -->
+          <!-- Shown when the selected course has an official OBTLP template.
+               Everything is filled in from the template and stays editable
+               (panel feedback: the OBTLP must be editable when revisions
+               are needed, and editing belongs to the faculty member). -->
           <div class="card card-pad" id="official-content-card" style="display:none;margin-bottom:1.5rem;">
-            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
-              <i data-lucide="shield-check" class="svg-icon t-success" style="width:1.125rem;height:1.125rem;"></i>
-              <h3 class="card-title" style="margin-bottom:0;">Official Template Content</h3>
-              <span class="badge badge-approved" id="official-content-template-name"></span>
-            </div>
-            <p class="section-sub" style="margin-bottom:1rem;">Pulled automatically from the official course template — read-only here. The fully formatted document is in the Preview step.</p>
-            <div class="grid-3" style="gap:1.5rem;">
+            <div class="oe-head">
               <div>
-                <h4 class="field-label" style="margin-bottom:0.5rem;">Course Intended Learning Outcomes (CILO)</h4>
-                <ol class="pdf-list" id="official-cilo-list"><li class="t-muted">—</li></ol>
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                  <i data-lucide="file-pen-line" class="svg-icon t-primary" style="width:1.125rem;height:1.125rem;"></i>
+                  <h3 class="card-title" style="margin-bottom:0;">OBTLP Content</h3>
+                  <span class="badge badge-approved" id="official-content-template-name"></span>
+                  <span class="badge" id="course-category-badge" style="display:none;"></span>
+                </div>
+                <p class="section-sub" style="margin-top:0.35rem;">Filled in from the official course template. Edit anything that needs changing (for example when the Department Chair or Dean asks for a revision). <b>Reload Official Template</b> brings back the original.</p>
               </div>
-              <div>
-                <h4 class="field-label" style="margin-bottom:0.5rem;">Teaching &amp; Learning Plan</h4>
-                <p class="section-sub" id="official-teachingplan-summary">—</p>
-                <h4 class="field-label" style="margin:0.75rem 0 0.5rem;">Grading System</h4>
-                <p class="section-sub" id="official-grading-summary">—</p>
-              </div>
-              <div>
-                <h4 class="field-label" style="margin-bottom:0.5rem;">References</h4>
-                <p class="section-sub" id="official-references-summary">—</p>
-                <h4 class="field-label" style="margin:0.75rem 0 0.5rem;">Course Requirements</h4>
-                <p class="section-sub" id="official-requirements-summary">—</p>
+              <div class="field oe-template">
+                <label class="field-label" for="oe-template">OBTLP Template</label>
+                <select class="input select" id="oe-template"></select>
+                <p class="field-hint" id="oe-template-hint"></p>
               </div>
             </div>
+            <div id="obtlp-editor"></div>
             <h4 class="field-label" style="margin:1rem 0 0.375rem;">Effectivity Period</h4>
             <p class="section-sub" id="official-effectivity-summary">—</p>
           </div>
@@ -348,6 +342,7 @@
   <script src="db.js"></script>
   <script src="combobox.js"></script>
   <script src="templates-render.js"></script>
+  <script src="obtlp-editor.js"></script>
   <script src="app-actions.js"></script>
   <script>
     (async function () {
@@ -395,7 +390,8 @@
         courseRequirements: [],
         classPoliciesOverride: '',
         effectivityText: '',
-        officialMeta: {}
+        officialMeta: {},
+        courseCategory: ''
       };
       let resolvedTemplate = null;
       let resolvedProgram = null;
@@ -418,7 +414,8 @@
           courseRequirements: Array.isArray(p.courseRequirements) ? p.courseRequirements.slice() : [],
           classPoliciesOverride: p.classPoliciesOverride || '',
           effectivityText: p.effectivityText || '',
-          officialMeta: p.officialMeta || {}
+          officialMeta: p.officialMeta || {},
+          courseCategory: p.courseCategory || ''
         };
         resolvedTemplate = (window.__OBTLP_TEMPLATE_RENDERER__ && p.templateId)
           ? (obtlpTemplates.find((t) => t.id === p.templateId) || null)
@@ -555,18 +552,31 @@
       // there is nothing "already typed" to protect — this always syncs to
       // match the selected course, exactly like re-selecting a course would
       // reasonably be expected to do.
-      function applyStructuredTemplateData(tpl) {
-        structuredData = {
-          templateId: tpl.obtlpTemplateId || '',
-          soMap: Array.isArray(tpl.soMap) ? tpl.soMap.slice() : [],
-          teachingPlan: Array.isArray(tpl.teachingPlan) ? tpl.teachingPlan.slice() : [],
-          referenceGroups: tpl.referenceGroups || { textbooks: [], onlineResources: [] },
-          grading: tpl.grading || { components: [] },
-          courseRequirements: Array.isArray(tpl.courseRequirements) ? tpl.courseRequirements.slice() : [],
-          classPoliciesOverride: tpl.classPoliciesOverride || '',
-          effectivityText: tpl.effectivityText || '',
-          officialMeta: tpl.officialMeta || {}
-        };
+      // force = an explicit course change or "Reload Official Template".
+      // Otherwise (opening a saved OBTLP) the faculty member's own edited
+      // content is kept and only missing links are filled in.
+      function applyStructuredTemplateData(tpl, force) {
+        const hasOwn = !force && (structuredData.teachingPlan.length || structuredData.soMap.length
+          || ((structuredData.grading && structuredData.grading.components) || []).length);
+        if (hasOwn) {
+          if (!structuredData.templateId) structuredData.templateId = tpl.obtlpTemplateId || '';
+          if (!structuredData.courseCategory) structuredData.courseCategory = tpl.courseCategory || '';
+          if (!structuredData.effectivityText) structuredData.effectivityText = tpl.effectivityText || '';
+        } else {
+          structuredData = {
+            templateId: tpl.obtlpTemplateId || '',
+            soMap: JSON.parse(JSON.stringify(Array.isArray(tpl.soMap) ? tpl.soMap : [])),
+            teachingPlan: JSON.parse(JSON.stringify(Array.isArray(tpl.teachingPlan) ? tpl.teachingPlan : [])),
+            referenceGroups: JSON.parse(JSON.stringify(tpl.referenceGroups || { textbooks: [], onlineResources: [] })),
+            grading: JSON.parse(JSON.stringify(tpl.grading || { components: [] })),
+            courseRequirements: Array.isArray(tpl.courseRequirements) ? tpl.courseRequirements.slice() : [],
+            classPoliciesOverride: tpl.classPoliciesOverride || '',
+            effectivityText: tpl.effectivityText || '',
+            officialMeta: tpl.officialMeta || {},
+            courseCategory: tpl.courseCategory || ''
+          };
+        }
+        officialTemplateId = tpl.obtlpTemplateId || '';
 
         if (tpl.departmentId) {
           document.getElementById('f-departmentId').value = tpl.departmentId;
@@ -581,19 +591,83 @@
           resolvedProgram = null;
         }
 
-        resolvedTemplate = tpl.obtlpTemplateId
-          ? (obtlpTemplates.find((t) => t.id === tpl.obtlpTemplateId && t.active) || null)
+        resolvedTemplate = structuredData.templateId
+          ? (obtlpTemplates.find((t) => t.id === structuredData.templateId && t.active) || null)
           : null;
       }
+      let officialTemplateId = '';
 
       function clearStructuredTemplateData() {
         structuredData = {
           templateId: '', soMap: [], teachingPlan: [],
           referenceGroups: { textbooks: [], onlineResources: [] },
           grading: { components: [] }, courseRequirements: [],
-          classPoliciesOverride: '', effectivityText: '', officialMeta: {}
+          classPoliciesOverride: '', effectivityText: '', officialMeta: {}, courseCategory: ''
         };
+        officialTemplateId = '';
         resolvedTemplate = null;
+      }
+
+      // ---------- editable OBTLP content + template choice ----------
+      const CATEGORY_LABEL = { gened: 'General Education', specialized: 'Specialized / Professional' };
+      function renderTemplateChoice() {
+        const sel = document.getElementById('oe-template');
+        const active = obtlpTemplates.filter((t) => t.active !== false);
+        const group = (cat, label) => {
+          const list = active.filter((t) => (t.courseCategory || '') === cat);
+          if (!list.length) return '';
+          return `<optgroup label="${label}">${list.map((t) => `<option value="${escHtml(t.id)}">${escHtml(t.name)}${t.id === officialTemplateId ? ' — official for this course' : ''}</option>`).join('')}</optgroup>`;
+        };
+        sel.innerHTML = group('gened', 'General Education') + group('specialized', 'Specialized / Professional') + group('', 'Other templates');
+        sel.value = structuredData.templateId || '';
+        sel.disabled = !editable;
+        const hint = document.getElementById('oe-template-hint');
+        const t = resolvedTemplate;
+        hint.textContent = t && officialTemplateId && t.id !== officialTemplateId
+          ? 'Using a different template than the course\'s official one. Your content is kept; only the layout changes.'
+          : t ? `${CATEGORY_LABEL[t.courseCategory] || 'Any course'} template${t.layout === 'course-outline' ? ' · portrait Course Outline form' : ' · landscape OBTLP form'}.` : '';
+        const badge = document.getElementById('course-category-badge');
+        const cat = structuredData.courseCategory;
+        badge.style.display = cat ? '' : 'none';
+        badge.className = `badge ${cat === 'gened' ? 'badge-accent' : 'badge-review'}`;
+        badge.textContent = CATEGORY_LABEL[cat] || '';
+      }
+      document.getElementById('oe-template').addEventListener('change', (e) => {
+        const t = obtlpTemplates.find((x) => x.id === e.target.value);
+        if (!t) return;
+        structuredData.templateId = t.id;
+        resolvedTemplate = t;
+        document.getElementById('official-content-template-name').textContent = t.name;
+        renderTemplateChoice();
+        ui.notify('Template Changed', `The OBTLP will be laid out on "${t.name}". Your content stays the same — check it in the Preview step.`);
+      });
+
+      function renderOfficialEditor() {
+        const root = document.getElementById('obtlp-editor');
+        if (!window.OBTLPEditor) return;
+        window.OBTLPEditor.render(root, {
+          outcomes: (listData.outcomes || []).filter((s) => (s || '').trim()),
+          soMap: structuredData.soMap,
+          teachingPlan: structuredData.teachingPlan,
+          referenceGroups: structuredData.referenceGroups,
+          grading: structuredData.grading,
+          courseRequirements: structuredData.courseRequirements,
+          classPoliciesOverride: structuredData.classPoliciesOverride
+        }, {
+          editable,
+          programOutcomes: (resolvedProgram && resolvedProgram.studentOutcomes) || [],
+          feedbackParts: window.__OBTLP_FEEDBACK_PARTS__ ? window.__OBTLP_FEEDBACK_PARTS__() : null,
+          feedbackHtml: window.__OBTLP_FEEDBACK_HTML__ || null,
+          onChange: (m) => {
+            listData.outcomes = m.outcomes.length ? m.outcomes : [''];
+            structuredData.soMap = m.soMap;
+            structuredData.teachingPlan = m.teachingPlan;
+            structuredData.referenceGroups = m.referenceGroups;
+            structuredData.grading = m.grading;
+            structuredData.courseRequirements = m.courseRequirements;
+            structuredData.classPoliciesOverride = m.classPoliciesOverride;
+          }
+        });
       }
 
       // Phase 2: clearly separate "official / template-provided" content
@@ -611,34 +685,11 @@
           officialCard.style.display = 'block';
           legacyGrids.style.display = 'none';
           document.getElementById('official-content-template-name').textContent = resolvedTemplate.name;
-          const cilo = (listData.outcomes || []).map((s) => (s || '').trim()).filter(Boolean);
-          const ciloList = document.getElementById('official-cilo-list');
-          ciloList.innerHTML = cilo.length ? cilo.map((s) => `<li>${s}</li>`).join('') : '<li class="t-muted">No CILO on file yet.</li>';
-          descEl.disabled = true;
-          descLabel.textContent = 'Course Description (official — read-only)';
-
-          const weeks = structuredData.teachingPlan.filter((r) => r.type === 'week').length;
-          const milestones = structuredData.teachingPlan.filter((r) => r.type === 'milestone').length;
-          document.getElementById('official-teachingplan-summary').textContent = structuredData.teachingPlan.length
-            ? `${weeks} week${weeks === 1 ? '' : 's'}${milestones ? ` + ${milestones} exam milestone${milestones === 1 ? '' : 's'}` : ''}`
-            : 'Not entered yet.';
-
-          const gradingComps = structuredData.grading.components || [];
-          document.getElementById('official-grading-summary').textContent = gradingComps.length
-            ? gradingComps.map((c) => `${c.name} (${c.weightPct}%)`).join(', ')
-            : 'Not entered yet.';
-
-          const rg = structuredData.referenceGroups || { textbooks: [], onlineResources: [] };
-          const refCount = (rg.textbooks || []).length + (rg.onlineResources || []).length + (rg.journals || []).length;
-          document.getElementById('official-references-summary').textContent = refCount
-            ? `${(rg.textbooks || []).length} textbook(s), ${(rg.onlineResources || []).length} online resource(s)${(rg.journals || []).length ? `, ${rg.journals.length} journal(s)` : ''}`
-            : 'Not entered yet.';
-
-          document.getElementById('official-requirements-summary').textContent = structuredData.courseRequirements.length
-            ? structuredData.courseRequirements.join(', ')
-            : 'Not entered yet.';
-
-          document.getElementById('official-effectivity-summary').textContent = structuredData.effectivityText || 'Not entered yet.';
+          descEl.disabled = !editable;
+          descLabel.textContent = 'Course Description *';
+          renderTemplateChoice();
+          renderOfficialEditor();
+          document.getElementById('official-effectivity-summary').textContent = structuredData.effectivityText || resolvedTemplate.effectivityText || 'Not entered yet.';
         } else {
           officialCard.style.display = 'none';
           legacyGrids.style.display = 'block';
@@ -679,7 +730,7 @@
             return;
           }
           applyTemplateToFields(tpl, force);
-          applyStructuredTemplateData(tpl);
+          applyStructuredTemplateData(tpl, force);
           applyOfficialContentLockState();
           showTemplateStatus(
             resolvedTemplate ? `Official OBTLP template loaded: ${resolvedTemplate.name}.` : 'Course template loaded successfully.',
@@ -695,7 +746,7 @@
       document.getElementById('reload-template-btn').addEventListener('click', () => {
         const code = document.getElementById('f-courseCode').value.trim();
         if (!code) return;
-        if (!confirm('Reload the official template? This replaces your current Course Description, Objectives, Outcomes, Syllabus, Teaching Materials, and References with the template content.')) return;
+        if (!confirm('Reload the official template? This replaces ALL of your OBTLP content — description, CILO, student outcomes map, teaching and learning plan, references, grading and requirements — with the original template content.')) return;
         loadCourseTemplateFor(code, true);
       });
 
@@ -913,6 +964,7 @@
         edits.classPoliciesOverride = structuredData.classPoliciesOverride;
         edits.effectivityText = structuredData.effectivityText;
         edits.officialMeta = structuredData.officialMeta || {};
+        edits.courseCategory = structuredData.courseCategory || '';
         return edits;
       }
 
@@ -1029,7 +1081,8 @@
           { ok: !!(edits.courseCode && edits.courseTitle && edits.academicYear && edits.description), label: 'Course information complete' }
         ];
         if (resolvedTemplate) {
-          items.push({ ok: true, label: `Official "${resolvedTemplate.name}" content loaded (outcomes, teaching plan, grading, references, requirements)` });
+          items.push({ ok: true, label: `Template: ${resolvedTemplate.name}` });
+          window.OBTLPEditor.checks(Object.assign({ outcomes: edits.outcomes }, structuredData)).forEach((c) => items.push(c));
         } else {
           items.push({ ok: edits.outcomes.length > 0, label: 'Intended learning outcomes added' });
         }
@@ -1202,7 +1255,8 @@
 
         if (current.status === 'Revision Required' && current.review && current.review.notes) {
           const banner = document.getElementById('revision-banner');
-          banner.textContent = `Admin feedback — revision requested: ${current.review.notes}`;
+          const by = current.review.requestedByRole ? window.OBTLP_ROLES.label(current.review.requestedByRole) : 'Reviewer';
+          banner.textContent = `Revision requested by the ${by}: ${current.review.notes}`;
           banner.style.display = 'block';
         }
         if (!editable) {

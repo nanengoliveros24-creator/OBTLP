@@ -238,11 +238,11 @@
             </div>
             <div class="table-wrap">
               <table class="data">
-                <thead><tr><th>Code</th><th>Name</th><th>Program</th><th>Version</th><th>Status</th><th class="right">Actions</th></tr></thead>
-                <tbody id="obtlp-template-rows"><tr><td colspan="6" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+                <thead><tr><th>Code</th><th>Name</th><th>For</th><th>Program</th><th>Version</th><th>Status</th><th class="right">Actions</th></tr></thead>
+                <tbody id="obtlp-template-rows"><tr><td colspan="7" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
               </table>
             </div>
-            <p class="section-sub" style="padding:0.75rem 1rem;">The official PnC OBTLP form layout. One template can be shared by many courses and programs — each course's content is in Course Templates. Use "Manage Sections" to control what the generated OBTLP contains and in what order.</p>
+            <p class="section-sub" style="padding:0.75rem 1rem;">The official PnC OBTLP form layout. One template can be shared by many courses and programs — each course's content is in Course Templates. Use "Manage Sections" to control what the generated OBTLP contains and in what order. Templates are marked <b>General Education</b> or <b>Specialized / Professional</b>. Use <b>Generate from this template</b> (copy icon) to make a new template for another college or course type, then adjust it with "Manage Sections".</p>
           </section>
         </div>
       </section>
@@ -352,6 +352,10 @@
           <div class="field"><label class="field-label">Department</label><select class="input select" id="t-departmentId"><option value="">— None —</option></select></div>
           <div class="field"><label class="field-label">Program</label><select class="input select" id="t-programId"><option value="">— None —</option></select></div>
           <div class="field"><label class="field-label">Pre-requisite / Co-requisite</label><input class="input" id="t-prerequisite" placeholder="e.g. none" /></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Course type</label>
+          <select class="input select" id="t-courseCategory"><option value="">Not set</option><option value="gened">General Education</option><option value="specialized">Specialized / Professional</option></select>
         </div>
         <div class="field">
           <label class="field-label">OBTLP Template</label>
@@ -501,6 +505,8 @@
         <div class="field"><label class="field-label">Name</label><input class="input" id="ot-name" required placeholder="e.g. CHED OBTLP (College of Engineering)" /></div>
         <div class="field"><label class="field-label">Department</label><select class="input select" id="ot-departmentId"><option value="">— None —</option></select></div>
         <div class="field"><label class="field-label">Program</label><select class="input select" id="ot-programId"><option value="">— None —</option></select></div>
+        <div class="field"><label class="field-label">Course type</label><select class="input select" id="ot-courseCategory">
+          <option value="">Any course</option><option value="gened">General Education</option><option value="specialized">Specialized / Professional</option></select></div>
         <div class="grid-3" style="gap:1rem;">
           <div class="field"><label class="field-label">Version</label><input class="input" id="ot-version" placeholder="e.g. 1" /></div>
           <div class="field" style="grid-column:span 2;"><label class="field-label">Form Code</label><input class="input" id="ot-formCode" placeholder="e.g. PNC:AA-FO-06 rev.2 08182023" /></div>
@@ -1337,6 +1343,7 @@
         document.getElementById('t-departmentId').value = (tpl && tpl.departmentId) || '';
         document.getElementById('t-programId').value = (tpl && tpl.programId) || '';
         document.getElementById('t-obtlpTemplateId').value = (tpl && tpl.obtlpTemplateId) || '';
+        document.getElementById('t-courseCategory').value = (tpl && tpl.courseCategory) || '';
 
         TEMPLATE_LIST_FIELDS.forEach((k) => { templateListData[k] = ['']; });
         ['objectives', 'outcomes', 'teachingMaterials', 'references', 'courseRequirements'].forEach((k) => {
@@ -1380,6 +1387,7 @@
           departmentId: document.getElementById('t-departmentId').value,
           programId: document.getElementById('t-programId').value,
           obtlpTemplateId: document.getElementById('t-obtlpTemplateId').value,
+          courseCategory: document.getElementById('t-courseCategory').value,
           objectives: templateListData.objectives.map((s) => (s || '').trim()).filter(Boolean),
           outcomes: templateListData.outcomes.map((s) => (s || '').trim()).filter(Boolean),
           teachingMaterials: templateListData.teachingMaterials.map((s) => (s || '').trim()).filter(Boolean),
@@ -1495,16 +1503,19 @@
           : (obtlpTemplatesCache.length
             ? obtlpTemplatesCache.map((t) => {
               const prog = programsCache.find((p) => p.id === t.programId);
+              const cat = { gened: '<span class="badge badge-accent">Gen Ed</span>', specialized: '<span class="badge badge-review">Specialized</span>' }[t.courseCategory] || '<span class="t-muted">Any</span>';
               return `
                 <tr>
-                  <td class="cell-strong">${t.code}</td>
-                  <td class="t-muted">${t.name}</td>
+                  <td class="cell-strong">${esc(t.code)}</td>
+                  <td class="t-muted">${esc(t.name)}</td>
+                  <td>${cat}</td>
                   <td class="t-muted">${prog ? prog.code : (t.departmentId ? 'All programs' : '—')}</td>
                   <td class="t-muted">${t.version || '—'}</td>
                   <td><button type="button" class="badge ${t.active ? 'badge-approved' : 'badge-draft'}" data-toggle-template="${t.id}" style="cursor:pointer;border:none;">${t.active ? 'Active' : 'Inactive'}</button></td>
                   <td>
                     <div class="row-actions">
                       <button class="icon-btn" title="Edit" data-edit-obtlp="${t.id}"><i data-lucide="pencil" class="svg-icon"></i></button>
+                      <button class="icon-btn" title="Generate a new template from this one" data-dup-obtlp="${t.id}"><i data-lucide="copy-plus" class="svg-icon"></i></button>
                       <button class="icon-btn" title="Manage Sections" data-manage-sections="${t.id}"><i data-lucide="layers" class="svg-icon"></i></button>
                       <button class="icon-btn" title="Assign Courses" data-manage-courses="${t.id}"><i data-lucide="book-open-check" class="svg-icon"></i></button>
                       <button class="icon-btn" title="Delete" data-delete-obtlp="${t.id}" data-code="${t.code}"><i data-lucide="trash-2" class="svg-icon"></i></button>
@@ -1513,7 +1524,7 @@
                 </tr>
               `;
             }).join('')
-            : '<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No OBTLP templates yet.</td></tr>');
+            : '<tr><td colspan="7" class="t-muted" style="padding:1.5rem;">No OBTLP templates yet.</td></tr>');
         if (window.lucide) lucide.createIcons();
         tplRows.querySelectorAll('[data-toggle-template]').forEach((btn) => {
           btn.addEventListener('click', async () => {
@@ -1522,6 +1533,19 @@
             try {
               await api.updateObtlpTemplate(tpl.id, { active: !tpl.active });
               loadDepartmentsProgramsTemplates();
+            } catch (err) { ui.notifyError(err); }
+          });
+        });
+        tplRows.querySelectorAll('[data-dup-obtlp]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const src = obtlpTemplatesCache.find((t) => t.id === btn.dataset.dupObtlp);
+            const name = window.prompt(`Generate a new template from "${src.name}".\n\nName of the new template:`, `${src.name} (copy)`);
+            if (name === null) return;
+            try {
+              const copy = await api.duplicateObtlpTemplate(src.id, { name: name.trim() });
+              ui.notify('Template Generated', `${copy.code} was created. Edit it to set its college and course type, and adjust its sections.`);
+              await loadDepartmentsProgramsTemplates();
+              openObtlpTemplateModal(obtlpTemplatesCache.find((t) => t.id === copy.id));
             } catch (err) { ui.notifyError(err); }
           });
         });
@@ -1732,6 +1756,7 @@
         document.getElementById('ot-formCode').value = tpl ? (tpl.formCode || '') : '';
         document.getElementById('ot-effectivityText').value = tpl ? (tpl.effectivityText || '') : '';
         document.getElementById('ot-active').checked = tpl ? !!tpl.active : true;
+        document.getElementById('ot-courseCategory').value = tpl ? (tpl.courseCategory || '') : '';
         document.getElementById('obtlp-template-form-error').style.display = 'none';
         obtlpTemplateModal.style.display = 'flex';
       }
@@ -1750,7 +1775,8 @@
           version: document.getElementById('ot-version').value.trim(),
           formCode: document.getElementById('ot-formCode').value.trim(),
           effectivityText: document.getElementById('ot-effectivityText').value,
-          active: document.getElementById('ot-active').checked
+          active: document.getElementById('ot-active').checked,
+          courseCategory: document.getElementById('ot-courseCategory').value
         };
         if (!body.code || !body.name) {
           errEl.textContent = 'Code and Name are required.';

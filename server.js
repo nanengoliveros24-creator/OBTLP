@@ -667,6 +667,13 @@ function assertDeptProgramLink(db, departmentId, programId) {
   }
 }
 
+// General Education vs Specialized / Professional courses ('' = any).
+const COURSE_CATEGORIES = ['gened', 'specialized'];
+function sanitizeCategory(v) {
+  const c = String(v || '').trim().toLowerCase();
+  return COURSE_CATEGORIES.includes(c) ? c : '';
+}
+
 function blankStructuredFields() {
   return {
     departmentId: '',
@@ -1463,6 +1470,7 @@ const routes = {
         version: String(body.version || '1'),
         formCode: String(body.formCode || ''),
         effectivityText: String(body.effectivityText || ''),
+        courseCategory: sanitizeCategory(body.courseCategory),
         active: body.active !== undefined ? !!body.active : true,
         sections: body.sections,
         createdAt: store.nowIso(),
@@ -1487,6 +1495,7 @@ const routes = {
       if (body.formCode !== undefined) tpl.formCode = String(body.formCode);
       if (body.effectivityText !== undefined) tpl.effectivityText = String(body.effectivityText);
       if (body.active !== undefined) tpl.active = !!body.active;
+      if (body.courseCategory !== undefined) tpl.courseCategory = sanitizeCategory(body.courseCategory);
       if (body.sections !== undefined) {
         if (!Array.isArray(body.sections) || !body.sections.length) {
           throw { status: 400, message: 'A template needs at least one section.' };
@@ -1496,6 +1505,39 @@ const routes = {
       tpl.updatedAt = store.nowIso();
       pushAudit(db, { actor: ctx.user.id, action: 'obtlp-template-update', portfolioId: null, detail: `Updated OBTLP template ${tpl.code}` });
       return { status: 200, data: tpl };
+    }
+  },
+
+  // Generate a new template from an existing one (e.g. a Gen Ed version of
+  // a college's form, or a template for another college), then adjust it.
+  'POST /api/obtlp-templates/:id/duplicate': {
+    auth: true,
+    roles: ['it'],
+    handler: (db, ctx, query, body, params) => {
+      const src = (db.obtlpTemplates || []).find((t) => t.id === params.id);
+      if (!src) throw { status: 404, message: 'OBTLP template not found.' };
+      let code = String(body.code || '').trim() || `${src.code}-COPY`;
+      const taken = (c) => db.obtlpTemplates.some((t) => t.code.toLowerCase() === c.toLowerCase());
+      if (body.code && taken(code)) throw { status: 409, message: `A template with code ${code} already exists.` };
+      for (let n = 2; taken(code); n++) code = `${src.code}-COPY${n}`;
+      const departmentId = body.departmentId !== undefined ? String(body.departmentId || '') : (src.departmentId || '');
+      if (departmentId && !findDepartment(db, departmentId)) throw { status: 400, message: 'Selected department was not found.' };
+      const copy = Object.assign(JSON.parse(JSON.stringify(src)), {
+        id: store.nextId('tpl'),
+        code,
+        name: String(body.name || '').trim() || `${src.name} (copy)`,
+        departmentId,
+        programId: body.departmentId !== undefined && departmentId !== src.departmentId ? '' : (src.programId || ''),
+        courseCategory: body.courseCategory !== undefined ? sanitizeCategory(body.courseCategory) : (src.courseCategory || ''),
+        version: '1',
+        createdAt: store.nowIso(),
+        updatedAt: store.nowIso(),
+        duplicatedFrom: src.id
+      });
+      delete copy.madeDepartmentWide;
+      db.obtlpTemplates.push(copy);
+      pushAudit(db, { actor: ctx.user.id, action: 'obtlp-template-create', portfolioId: null, detail: `Generated OBTLP template ${code} from ${src.code}` });
+      return { status: 201, data: copy };
     }
   },
 
@@ -1543,7 +1585,7 @@ const routes = {
 
   'POST /api/course-templates': {
     auth: true,
-    roles: ['admin', 'it'],
+    roles: ['it'],
     handler: (db, ctx, query, body) => {
       const courseCode = String(body.courseCode || '').trim();
       if (!courseCode) throw { status: 400, message: 'Course code is required.' };
@@ -1573,6 +1615,7 @@ const routes = {
         departmentId: String(body.departmentId || ''),
         programId: String(body.programId || ''),
         obtlpTemplateId: String(body.obtlpTemplateId || ''),
+        courseCategory: sanitizeCategory(body.courseCategory),
         prerequisite: String(body.prerequisite || ''),
         soMap: sanitizeSoMap(body.soMap),
         teachingPlan: sanitizeTeachingPlan(body.teachingPlan),
@@ -1594,7 +1637,7 @@ const routes = {
 
   'PUT /api/course-templates/:id': {
     auth: true,
-    roles: ['admin', 'it'],
+    roles: ['it'],
     handler: (db, ctx, query, body, params) => {
       const tpl = (db.courseTemplates || []).find((t) => t.id === params.id);
       if (!tpl) throw { status: 404, message: 'Course template not found.' };
@@ -1615,6 +1658,7 @@ const routes = {
       if (body.departmentId !== undefined) tpl.departmentId = String(body.departmentId || '');
       if (body.programId !== undefined) tpl.programId = String(body.programId || '');
       if (body.obtlpTemplateId !== undefined) tpl.obtlpTemplateId = String(body.obtlpTemplateId || '');
+      if (body.courseCategory !== undefined) tpl.courseCategory = sanitizeCategory(body.courseCategory);
       if (body.prerequisite !== undefined) tpl.prerequisite = String(body.prerequisite || '');
       if (body.soMap !== undefined) tpl.soMap = sanitizeSoMap(body.soMap);
       if (body.teachingPlan !== undefined) tpl.teachingPlan = sanitizeTeachingPlan(body.teachingPlan);
@@ -1633,7 +1677,7 @@ const routes = {
 
   'DELETE /api/course-templates/:id': {
     auth: true,
-    roles: ['admin', 'it'],
+    roles: ['it'],
     handler: (db, ctx, query, body, params) => {
       const tpl = (db.courseTemplates || []).find((t) => t.id === params.id);
       if (!tpl) throw { status: 404, message: 'Course template not found.' };
@@ -1704,9 +1748,13 @@ const routes = {
         'facultyDepartment', 'facultyUnits', 'facultySchedule', 'syllabus', 'notes',
         'departmentId', 'programId', 'templateId', 'prerequisite', 'classPoliciesOverride', 'effectivityText'
       ];
+      if (body.templateId && !(db.obtlpTemplates || []).some((t) => t.id === String(body.templateId))) {
+        throw { status: 400, message: 'Selected OBTLP template was not found.' };
+      }
       stringFields.forEach((k) => {
         if (body[k] !== undefined) p[k] = String(body[k]);
       });
+      if (body.courseCategory !== undefined) p.courseCategory = sanitizeCategory(body.courseCategory);
       const listFields = ['objectives', 'outcomes', 'teachingMaterials', 'references', 'courseRequirements'];
       listFields.forEach((k) => {
         if (body[k] !== undefined) p[k] = sanitizeStrList(body[k]);
@@ -2659,6 +2707,9 @@ store.initDbIfMissing()
   .then(() => require('./seed-coed').ensureCoedTemplates(store))
   // The six colleges (CCS, COED, CAS, CHAS, COE, CBAA) — see seed-departments.js.
   .then(() => require('./seed-departments').ensureDepartments(store))
+  // General Education vs Specialized / Professional templates — see
+  // seed-course-categories.js.
+  .then(() => require('./seed-course-categories').ensureCourseCategories(store))
   // Built-in IT Administrator from DEFAULT_IT_EMAIL / DEFAULT_IT_PASSWORD
   // (see seed-admin.js) — public sign-up only creates Faculty accounts.
   .then(() => require('./seed-admin').ensureDefaultItAdmin(store))

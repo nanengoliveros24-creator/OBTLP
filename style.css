@@ -967,3 +967,45 @@ table.data th.center, table.data td.center { text-align: center; }
 .deadline-banner.is-overdue > .svg-icon { color: var(--destructive); }
 .deadline-banner.is-done { border-color: color-mix(in oklch, var(--success) 40%, transparent); background: color-mix(in oklch, var(--success) 8%, transparent); }
 .deadline-banner.is-done > .svg-icon { color: var(--success); }
+
+/* ---------- Editable OBTLP content (wizard) ---------- */
+.oe-head { display: grid; grid-template-columns: 1fr minmax(14rem, 22rem); gap: 1.25rem; align-items: start; margin-bottom: 1rem; }
+.oe-template { margin: 0; }
+.oe-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+.oe-tabs button { position: relative; border: 0; background: transparent; padding: 0.55rem 0.8rem; font: inherit; font-size: 0.8125rem; font-weight: 600; color: var(--muted-foreground); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; }
+.oe-tabs button:hover { color: var(--foreground); }
+.oe-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); }
+.oe-count { font-size: 0.6875rem; font-weight: 600; padding: 0 0.4rem; border-radius: 999px; background: var(--secondary); color: var(--secondary-foreground); }
+.oe-fb-dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; background: #e6b800; box-shadow: 0 0 0 2px color-mix(in oklch, #e6b800 35%, transparent); }
+.oe-help { font-size: 0.8125rem; color: var(--muted-foreground); margin: 0 0 0.75rem; }
+.oe-panel .textarea { width: 100%; }
+.oe-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.oe-so { display: grid; gap: 0.4rem; margin-bottom: 0.75rem; }
+.oe-so-row { display: grid; grid-template-columns: 6rem 1fr repeat(3, 3rem) 2rem; gap: 0.5rem; align-items: center; }
+.oe-so-head { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-foreground); }
+.oe-c { text-align: center; }
+.oe-c input { width: 1rem; height: 1rem; accent-color: var(--primary); }
+.oe-so-row .input.input-sm { max-width: none; }
+.oe-plan { display: grid; gap: 0.4rem; margin-bottom: 0.75rem; }
+.oe-week { border: 1px solid var(--border); border-radius: 0.625rem; background: var(--card); }
+.oe-week > summary { display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 0.8rem; cursor: pointer; list-style: none; font-size: 0.875rem; }
+.oe-week > summary::-webkit-details-marker { display: none; }
+.oe-week > summary .t-muted { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oe-week[open] > summary { border-bottom: 1px solid var(--border); }
+.oe-week-body { display: grid; grid-template-columns: 7rem repeat(5, minmax(0, 1fr)); gap: 0.6rem; padding: 0.8rem; }
+.oe-week-body .field { margin: 0; }
+.oe-week-body .input.input-sm { max-width: none; }
+.oe-tools { display: inline-flex; gap: 0.15rem; margin-left: auto; }
+.oe-milestone { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.8rem; border: 1px dashed color-mix(in oklch, var(--primary) 35%, var(--border)); border-radius: 0.625rem; background: color-mix(in oklch, var(--primary) 5%, transparent); }
+.oe-milestone .input.input-sm { max-width: 22rem; font-weight: 600; }
+.oe-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.oe-comp { border: 1px solid var(--border); border-radius: 0.625rem; padding: 0.75rem; margin-bottom: 0.75rem; }
+.oe-comp-head { display: grid; grid-template-columns: 1fr 6rem 1fr 2rem; gap: 0.5rem; align-items: center; margin-bottom: 0.6rem; }
+.oe-comp-head .input.input-sm, .oe-item .input.input-sm { max-width: none; }
+.oe-pct { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8125rem; }
+.oe-items { display: grid; gap: 0.35rem; }
+.oe-item { display: grid; grid-template-columns: 1.2fr 1fr 5rem 2rem; gap: 0.5rem; align-items: center; }
+.oe-item-head { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-foreground); }
+.oe-sum { font-size: 0.75rem; margin: 0.15rem 0 0.35rem; }
+@media (max-width: 1100px) { .oe-week-body { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .oe-head, .oe-grid2 { grid-template-columns: 1fr; } .oe-week-body { grid-template-columns: 1fr; } .oe-so-row { grid-template-columns: 4.5rem 1fr repeat(3, 2.2rem) 2rem; } .oe-comp-head, .oe-item { grid-template-columns: 1fr 1fr; } }
