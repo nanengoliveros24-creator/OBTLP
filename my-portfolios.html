@@ -7,7 +7,7 @@
   <title>My Portfolios · OBTLP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -69,7 +69,7 @@
           <table class="data">
             <thead>
               <tr>
-                <th>Course</th><th>Faculty</th><th>Created</th><th>Updated</th><th>Status</th><th class="right">Actions</th>
+                <th>Course</th><th>Term</th><th>Created</th><th>Updated</th><th>Status</th><th class="right">Actions</th>
               </tr>
             </thead>
             <tbody id="portfolio-rows">
@@ -186,7 +186,7 @@
       tbody.innerHTML = rows.map((p) => `
         <tr>
           <td><p class="cell-strong">${p.courseCode || 'Untitled'}</p><p class="cell-sub">${p.courseTitle || ''}</p></td>
-          <td class="t-muted">${session.name || '—'}</td>
+          <td class="t-muted">${p.semester || ''}${p.academicYear ? ` · ${p.academicYear}` : ''}</td>
           <td class="t-muted">${fmtWhen(p.createdAt)}</td>
           <td class="t-muted">${fmtWhen(p.updatedAt)}</td>
           <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${window.OBTLP_ROLES.statusText(p)}</span>${p.archived ? ' <span class="badge badge-draft">Archived</span>' : ''}${p.late ? ' <span class="badge badge-revision" title="Submitted after the deadline">Late</span>' : ''}</td>

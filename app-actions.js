@@ -619,31 +619,33 @@
   // New pages use <nav class="nav" data-auto-nav>, built here from the
   // signed-in role. Older pages keep their own links; the links added
   // later (Reports, Archive) are filled in here so every page has them.
+  // `section` starts a labelled group in the sidebar (UI/UX feedback:
+  // clearer menus).
   const NAV = {
     faculty: [
-      { href: 'dashboard.html', icon: 'layout-dashboard', label: 'Dashboard' },
-      { href: 'my-portfolios.html', icon: 'folder-open', label: 'My Portfolios' },
+      { section: 'My OBTLPs', href: 'dashboard.html', icon: 'layout-dashboard', label: 'Dashboard' },
       { href: 'portfolio-new.html', icon: 'file-plus-2', label: 'Create New Portfolio' },
+      { href: 'my-portfolios.html', icon: 'folder-open', label: 'My Portfolios' },
       { href: 'my-portfolios.html?filter=submitted', icon: 'send', label: 'Submitted Portfolios' },
-      { href: 'archive.html', icon: 'archive', label: 'Archive' },
-      { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
+      { section: 'Records', href: 'archive.html', icon: 'archive', label: 'Archive' },
+      { section: 'Account', href: 'profile.html', icon: 'user-cog', label: 'Profile' },
       { action: 'notifications', icon: 'bell', label: 'Notifications' }
     ],
     reviewer: [
-      { href: 'admin.html', icon: 'clipboard-list', label: 'Review Queue' },
+      { section: 'Review', href: 'admin.html', icon: 'clipboard-list', label: 'Review Queue' },
       { href: 'admin.html?view=faculty', icon: 'users', label: 'Faculty' },
-      { href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
+      { section: 'Monitoring', href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
       { href: 'curriculum.html', icon: 'library', label: 'Curriculum' },
       { href: 'archive.html', icon: 'archive', label: 'Archive' },
-      { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
+      { section: 'Account', href: 'profile.html', icon: 'user-cog', label: 'Profile' },
       { action: 'notifications', icon: 'bell', label: 'Notifications' }
     ],
     it: [
-      { href: 'it-admin.html', icon: 'shield-check', label: 'System Overview' },
-      { href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
+      { section: 'Administration', href: 'it-admin.html', icon: 'shield-check', label: 'System Overview' },
+      { section: 'Monitoring', href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
       { href: 'curriculum.html', icon: 'library', label: 'Curriculum' },
       { href: 'archive.html', icon: 'archive', label: 'Archive' },
-      { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
+      { section: 'Account', href: 'profile.html', icon: 'user-cog', label: 'Profile' },
       { action: 'notifications', icon: 'bell', label: 'Notifications' }
     ]
   };
@@ -654,6 +656,10 @@
   }
   function navItemHtml(it, active) {
     const cls = `nav-link${active ? ' active' : ''}`;
+    const head = it.section ? `<p class="nav-section">${it.section}</p>` : '';
+    return head + navLinkHtml(it, cls);
+  }
+  function navLinkHtml(it, cls) {
     if (it.action) return `<span class="${cls}" data-action="${it.action}"><i data-lucide="${it.icon}" class="svg-icon"></i> ${it.label}</span>`;
     return `<a href="${it.href}" class="${cls}"><i data-lucide="${it.icon}" class="svg-icon"></i> ${it.label}</a>`;
   }
@@ -663,26 +669,41 @@
     if (!s || !nav) return;
     const here = (location.pathname.split('/').pop() || 'index.html');
     const items = navFor(s.role);
+    // Every page except the IT console (whose sidebar holds its own tabs)
+    // gets the same grouped menu for the signed-in role.
+    if (!nav.hasAttribute('data-auto-nav') && here !== 'it-admin.html') {
+      nav.setAttribute('data-auto-nav', '');
+      nav.dataset.rebuilt = '1';
+    }
     if (nav.hasAttribute('data-auto-nav')) {
-      nav.innerHTML = items.map((it) => navItemHtml(it, it.href && it.href.split('?')[0] === here && !it.href.includes('?'))).join('');
+      const q = location.search;
+      const isActive = (it) => {
+        if (!it.href) return false;
+        const [file, qs] = it.href.split('?');
+        if (file !== here) return false;
+        if (qs) return q.includes(qs);
+        return !items.some((o) => o !== it && o.href && o.href.split('?')[0] === here && o.href.includes('?') && q.includes(o.href.split('?')[1]));
+      };
+      nav.innerHTML = items.map((it) => navItemHtml(it, isActive(it))).join('');
       const brand = document.querySelector('.sidebar-head .brand');
       if (brand && window.OBTLP_ROLES) brand.setAttribute('href', window.OBTLP_ROLES.home(s.role));
     } else {
       ['reports.html', 'curriculum.html', 'archive.html'].forEach((href) => {
         const it = items.find((x) => x.href === href);
         if (!it || nav.querySelector(`a[href="${href}"]`)) return;
-        const before = nav.querySelector('a[href="profile.html"]') || nav.querySelector('[data-action="notifications"]');
+        const before = nav.querySelector('[data-account-section]') || nav.querySelector('a[href="profile.html"]') || nav.querySelector('[data-action="notifications"]');
         const tmp = document.createElement('div');
-        tmp.innerHTML = navItemHtml(it, href === here);
+        tmp.innerHTML = navLinkHtml(it, `nav-link${href === here ? ' active' : ''}`);
         nav.insertBefore(tmp.firstChild, before || null);
       });
     }
+    const auto = nav.hasAttribute('data-auto-nav') && !nav.dataset.rebuilt;
     const roleEl = document.querySelector('.sidebar .user-role');
-    if (roleEl && nav.hasAttribute('data-auto-nav') && window.OBTLP_ROLES) roleEl.textContent = window.OBTLP_ROLES.label(s.role);
+    if (roleEl && auto && window.OBTLP_ROLES) roleEl.textContent = window.OBTLP_ROLES.label(s.role);
     const nameEl = document.querySelector('.sidebar .user-name');
-    if (nameEl && nav.hasAttribute('data-auto-nav')) nameEl.textContent = s.name || '—';
+    if (nameEl && auto) nameEl.textContent = s.name || '—';
     const av = document.querySelector('.sidebar .avatar');
-    if (av && nav.hasAttribute('data-auto-nav')) av.textContent = (s.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+    if (av && auto) av.textContent = (s.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
     if (window.lucide) lucide.createIcons();
   }
 

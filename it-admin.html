@@ -7,7 +7,7 @@
   <title>IT Administrator · System Overview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -20,11 +20,15 @@
         </a>
       </div>
       <nav class="nav">
+        <p class="nav-section">Administration</p>
         <span class="nav-link active" data-tab="overview"><i data-lucide="shield-check" class="svg-icon"></i> System Overview</span>
         <span class="nav-link" data-tab="users"><i data-lucide="users" class="svg-icon"></i> User Accounts</span>
         <span class="nav-link" data-tab="settings"><i data-lucide="settings" class="svg-icon"></i> Settings</span>
+        <p class="nav-section">Templates</p>
         <span class="nav-link" data-tab="templates"><i data-lucide="book-open" class="svg-icon"></i> Course Templates</span>
         <span class="nav-link" data-tab="obtlp-templates"><i data-lucide="layout-template" class="svg-icon"></i> Departments &amp; OBTLP Templates</span>
+        <p class="nav-section">Monitoring</p>
+        <p class="nav-section" data-account-section>Account</p>
         <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
         <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
       </nav>
@@ -77,7 +81,7 @@
             <div class="promo">
               <div class="glow"></div>
               <h3>RBAC Active</h3>
-              <p style="margin-bottom:0;" id="rbac-summary">Role-based access enforcement is protecting portfolios, documents, and settings across 3 user roles.</p>
+              <p style="margin-bottom:0;" id="rbac-summary">Role-based access enforcement is protecting portfolios, documents, and settings across 5 user roles: Faculty, Department Chair, Dean, VPAA and IT Administrator.</p>
             </div>
           </section>
         </div>
