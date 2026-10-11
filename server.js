@@ -731,6 +731,157 @@ function buildCatalog(db) {
   };
 }
 
+
+// ---------- Deadlines, reports, archive and versions (panel feedback) ----------
+// - Deadlines: the Dean / VPAA / IT set when OBTLPs for a term are due
+//   (per college or for every college); faculty who still need to submit
+//   get reminders 7, 3 and 1 day(s) before and once when it is overdue.
+// - Reports: late submissions, faculty who haven't submitted, and the
+//   status of every OBTLP for a term.
+// - Archive: approved OBTLPs from past terms are archived (kept read-only
+//   and searchable) and can be reused as the basis of a new OBTLP.
+// - Versions: every (re)submission keeps a snapshot so old and new can be
+//   compared side by side.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SEMESTERS = ['1st Semester', '2nd Semester', 'Summer'];
+
+function deadlineDueAt(d) {
+  // End of the due date, Philippine time.
+  return new Date(`${d.dueDate}T23:59:59+08:00`).getTime();
+}
+
+function sameTerm(p, academicYear, semester) {
+  return String(p.academicYear || '').trim() === String(academicYear || '').trim()
+    && String(p.semester || '').trim() === String(semester || '').trim();
+}
+
+// The deadline that applies to a portfolio: its college's own deadline
+// for that term, otherwise a deadline for every college.
+function deadlineFor(db, academicYear, semester, departmentId) {
+  const list = (db.deadlines || []).filter((d) => d.academicYear === academicYear && d.semester === semester);
+  return list.find((d) => d.departmentId && d.departmentId === departmentId) || list.find((d) => !d.departmentId) || null;
+}
+
+function portfolioDeadline(db, p) {
+  return deadlineFor(db, String(p.academicYear || '').trim(), String(p.semester || '').trim(), portfolioDepartmentId(db, p));
+}
+
+function isLateSubmission(db, p) {
+  const d = portfolioDeadline(db, p);
+  const t = p.firstSubmittedAt || p.submittedAt;
+  return !!(d && t && new Date(t).getTime() > deadlineDueAt(d));
+}
+
+function facultyForDeadline(db, d) {
+  return (db.users || []).filter((u) => u.role === 'faculty' && (!d.departmentId || u.departmentId === d.departmentId));
+}
+
+// What a faculty member has for one term.
+function facultyTermStatus(db, u, academicYear, semester) {
+  const mine = (db.portfolios || []).filter((p) => p.facultyId === u.id && sameTerm(p, academicYear, semester));
+  const submitted = mine.filter((p) => p.status !== 'Draft');
+  const drafts = mine.filter((p) => p.status === 'Draft');
+  const revision = mine.filter((p) => p.status === 'Revision Required');
+  return { mine, submitted, drafts, revision, needsAction: !submitted.length || drafts.length > 0 || revision.length > 0 };
+}
+
+function fmtDue(d) {
+  return new Date(`${d.dueDate}T12:00:00+08:00`).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
+}
+
+function reminderBucket(msLeft) {
+  if (msLeft < 0) return 'overdue';
+  if (msLeft <= DAY_MS) return '1';
+  if (msLeft <= 3 * DAY_MS) return '3';
+  if (msLeft <= 7 * DAY_MS) return '7';
+  return null;
+}
+
+// Sends the reminders that are due now (each faculty member gets each
+// reminder once). Returns email jobs to run after the write is saved.
+function runDeadlineSweep(db, now) {
+  const t = now || Date.now();
+  const jobs = [];
+  let sent = 0;
+  (db.deadlines || []).forEach((d) => {
+    const msLeft = deadlineDueAt(d) - t;
+    if (msLeft < -14 * DAY_MS) return; // long past — stop reminding
+    const bucket = reminderBucket(msLeft);
+    if (!bucket) return;
+    if (!d.reminded || typeof d.reminded !== 'object') d.reminded = {};
+    facultyForDeadline(db, d).forEach((u) => {
+      const st = facultyTermStatus(db, u, d.academicYear, d.semester);
+      if (!st.needsAction) return;
+      const already = d.reminded[u.id] || [];
+      if (already.includes(bucket)) return;
+      d.reminded[u.id] = already.concat(bucket);
+      const term = `${d.semester} ${d.academicYear}`;
+      const parts = [];
+      if (st.drafts.length) parts.push(`${st.drafts.length} draft${st.drafts.length === 1 ? ' is' : 's are'} not submitted yet`);
+      if (st.revision.length) parts.push(`${st.revision.length} OBTLP${st.revision.length === 1 ? ' needs' : 's need'} revision`);
+      const what = parts.length
+        ? `${parts.join(' and ')}.`.replace(/^./, (c) => c.toUpperCase())
+        : 'You have not submitted an OBTLP for this term yet.';
+      const title = bucket === 'overdue' ? 'OBTLP Deadline Passed' : 'OBTLP Deadline Reminder';
+      const when = bucket === 'overdue'
+        ? `was due on ${fmtDue(d)}`
+        : `is due on ${fmtDue(d)} (${bucket === '1' ? 'tomorrow or today' : `in ${bucket} days or less`})`;
+      const message = `Your OBTLP for ${term} ${when}. ${what}`;
+      pushNotification(db, { userId: u.id, title, message, portfolioId: null });
+      sent++;
+      if (bucket !== '7') {
+        const job = accountNotice(u, `${title}: ${term}`, [message, 'Sign in to the OBTLP Generator System to finish and submit it.']);
+        if (job) jobs.push(job);
+      }
+    });
+  });
+  return { sent, jobs };
+}
+
+function sweepDeadlinesNow() {
+  return store.transact((db) => runDeadlineSweep(db))
+    .then(({ result }) => Promise.all(result.jobs.map((j) => j())).then(() => result.sent))
+    .catch((err) => { console.error('[deadlines] reminder sweep failed:', (err && err.message) || err); return 0; });
+}
+
+// Fields compared between versions / terms.
+const SNAPSHOT_FIELDS = ['courseCode', 'courseTitle', 'semester', 'academicYear', 'description', 'prerequisite',
+  'objectives', 'outcomes', 'soMap', 'teachingPlan', 'referenceGroups', 'references', 'grading',
+  'courseRequirements', 'classPoliciesOverride', 'templateId', 'facultyUnits', 'facultySchedule'];
+const MAX_VERSIONS = 15;
+
+function snapshotOf(p) {
+  const snap = {};
+  SNAPSHOT_FIELDS.forEach((k) => { if (p[k] !== undefined) snap[k] = JSON.parse(JSON.stringify(p[k])); });
+  return snap;
+}
+
+// The portfolio as sent in /api/state: without the stored version
+// snapshots (fetched on demand by the Compare page).
+function lightPortfolio(db, p) {
+  const copy = Object.assign({}, p);
+  copy.versionCount = Array.isArray(p.versions) ? p.versions.length : 0;
+  delete copy.versions;
+  if (p.status !== 'Draft') copy.late = isLateSubmission(db, p);
+  return copy;
+}
+
+// Dean, VPAA or IT; or a faculty member for their own OBTLP.
+function canArchive(db, ctx, p) {
+  if (p.facultyId === ctx.user.id) return true;
+  if (['admin', 'vpaa', 'it'].includes(ctx.user.role)) return inAdminScope(db, ctx.user, p);
+  return false;
+}
+
+function deadlineScopeFor(db, user, requested) {
+  // Chairs and Deans set deadlines for their own college only.
+  const own = adminDepartmentId(db, user);
+  if (own) return own;
+  const dep = String(requested || '');
+  if (dep && !findDepartment(db, dep)) throw { status: 400, message: 'Selected department was not found.' };
+  return dep;
+}
+
 // ---------- route table ----------
 // Each entry: { auth: bool, roles: [optional array], handler(db, ctx, query, body, params) }
 
@@ -1054,9 +1205,9 @@ const routes = {
     handler: (db, ctx) => {
       const isStaff = isReviewer(ctx.user) || ctx.user.role === 'it';
       const scope = adminDepartmentId(db, ctx.user);
-      const portfolios = isStaff
+      const portfolios = (isStaff
         ? (db.portfolios || []).filter((p) => inAdminScope(db, ctx.user, p))
-        : (db.portfolios || []).filter((p) => p.facultyId === ctx.user.id);
+        : (db.portfolios || []).filter((p) => p.facultyId === ctx.user.id)).map((p) => lightPortfolio(db, p));
       const notifications = (db.notifications || []).filter(
         (n) => n.userId === ctx.user.id
           || (n.role === ctx.user.role && (!scope || !n.departmentId || n.departmentId === scope))
@@ -1078,6 +1229,12 @@ const routes = {
           // The approval steps in order, e.g. ['chair', 'admin'], or
           // ['chair', 'admin', 'vpaa'] when the VPAA step is on.
           approvalChain: approvalChain(db),
+          // Submission deadlines that apply to this user.
+          deadlines: (db.deadlines || []).filter((d) => {
+            if (ctx.user.role === 'faculty') return !d.departmentId || d.departmentId === ctx.user.departmentId;
+            const own = adminDepartmentId(db, ctx.user);
+            return !own || !d.departmentId || d.departmentId === own;
+          }).map((d) => ({ id: d.id, academicYear: d.academicYear, semester: d.semester, departmentId: d.departmentId || '', dueDate: d.dueDate, note: d.note || '' })),
           notifications,
           // Faculty get only their own activity (their sign-ins/edits and what
           // happened to their portfolios) for the dashboard timeline.
@@ -1645,7 +1802,12 @@ const routes = {
         p.reviewStage = nextStage(db, p, 0);
         p.approvals = [];
         p.submittedAt = store.nowIso();
+        if (!p.firstSubmittedAt) p.firstSubmittedAt = p.submittedAt;
         pushHistory(p, { action: wasRevision ? 'resubmit' : 'submit', by: ctx.user.id, byName: ctx.user.name, role: 'faculty' });
+        // Keep what was submitted, so old and new versions can be compared.
+        if (!Array.isArray(p.versions)) p.versions = [];
+        p.versions.push({ no: (p.versions.length ? p.versions[p.versions.length - 1].no : 0) + 1, at: p.submittedAt, label: wasRevision ? 'Resubmitted' : 'Submitted', snapshot: snapshotOf(p) });
+        p.versions = p.versions.slice(-MAX_VERSIONS);
         // Auto-fill the "Prepared by" signatory with the submitting faculty
         // member — the rest (Reviewed/Concurred/Approved) are filled in
         // during administrative review.
@@ -2030,6 +2192,261 @@ const routes = {
     }
   },
 
+
+  // ---- submission deadlines ----
+  'GET /api/deadlines': {
+    auth: true,
+    handler: (db, ctx) => {
+      const own = ctx.user.role === 'faculty' ? (ctx.user.departmentId || '') : adminDepartmentId(db, ctx.user);
+      const list = (db.deadlines || []).filter((d) => !own || !d.departmentId || d.departmentId === own || (ctx.user.role === 'faculty' && !ctx.user.departmentId));
+      return { status: 200, data: list.map((d) => Object.assign({}, d, { reminded: undefined })) };
+    }
+  },
+
+  'POST /api/deadlines': {
+    auth: true,
+    roles: ['chair', 'admin', 'vpaa', 'it'],
+    handler: (db, ctx, query, body) => {
+      const academicYear = String(body.academicYear || '').trim();
+      const semester = String(body.semester || '').trim();
+      const dueDate = String(body.dueDate || '').trim();
+      if (!/^\d{4}-\d{4}$/.test(academicYear)) throw { status: 400, message: 'Academic year must look like 2026-2027.' };
+      if (!SEMESTERS.includes(semester)) throw { status: 400, message: 'Please choose a semester.' };
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || Number.isNaN(new Date(`${dueDate}T00:00:00Z`).getTime())) {
+        throw { status: 400, message: 'Please choose a valid due date.' };
+      }
+      const departmentId = deadlineScopeFor(db, ctx.user, body.departmentId);
+      if (!db.deadlines) db.deadlines = [];
+      let d = db.deadlines.find((x) => x.academicYear === academicYear && x.semester === semester && (x.departmentId || '') === departmentId);
+      const isNew = !d;
+      if (!d) {
+        d = { id: store.nextId('dl'), academicYear, semester, departmentId, createdAt: store.nowIso(), createdBy: ctx.user.id };
+        db.deadlines.push(d);
+      }
+      if (d.dueDate !== dueDate) d.reminded = {};
+      d.dueDate = dueDate;
+      d.note = String(body.note || '').trim().slice(0, 500);
+      d.updatedAt = store.nowIso();
+      d.updatedBy = ctx.user.id;
+      const dept = departmentId ? findDepartment(db, departmentId) : null;
+      const term = `${semester} ${academicYear}`;
+      facultyForDeadline(db, d).forEach((u) => pushNotification(db, {
+        userId: u.id,
+        title: isNew ? 'New OBTLP Deadline' : 'OBTLP Deadline Changed',
+        message: `OBTLPs for ${term} are due on ${fmtDue(d)}.${d.note ? ` ${d.note}` : ''}`,
+        portfolioId: null
+      }));
+      pushAudit(db, { actor: ctx.user.id, action: 'deadline', portfolioId: null, detail: `Set the OBTLP deadline for ${term}${dept ? ` (${dept.code})` : ' (all colleges)'} to ${dueDate}` });
+      return { status: isNew ? 201 : 200, data: Object.assign({}, d, { reminded: undefined }) };
+    }
+  },
+
+  'DELETE /api/deadlines/:id': {
+    auth: true,
+    roles: ['chair', 'admin', 'vpaa', 'it'],
+    handler: (db, ctx, query, body, params) => {
+      const d = (db.deadlines || []).find((x) => x.id === params.id);
+      if (!d) throw { status: 404, message: 'Deadline not found.' };
+      const own = adminDepartmentId(db, ctx.user);
+      if (own && d.departmentId !== own) throw { status: 403, message: 'You can only remove your own college\'s deadlines.' };
+      db.deadlines = db.deadlines.filter((x) => x.id !== d.id);
+      pushAudit(db, { actor: ctx.user.id, action: 'deadline', portfolioId: null, detail: `Removed the OBTLP deadline for ${d.semester} ${d.academicYear}` });
+      return { status: 200, data: { ok: true } };
+    }
+  },
+
+  // Sends any reminders that are due right now (they are also sent
+  // automatically every hour).
+  'POST /api/deadlines/send-reminders': {
+    auth: true,
+    roles: ['admin', 'vpaa', 'it'],
+    handler: (db) => {
+      const { sent, jobs } = runDeadlineSweep(db);
+      return { status: 200, data: { sent }, afterCommit: jobs.length ? () => Promise.all(jobs.map((j) => j())) : null };
+    }
+  },
+
+  // ---- reports (late / unsubmitted / status) ----
+  'GET /api/reports': {
+    auth: true,
+    roles: ['chair', 'admin', 'vpaa', 'it'],
+    handler: (db, ctx, query) => {
+      const own = adminDepartmentId(db, ctx.user);
+      const deptFilter = own || String(query.get('departmentId') || '');
+      const inScope = (db.portfolios || []).filter((p) => inAdminScope(db, ctx.user, p)
+        && (!deptFilter || portfolioDepartmentId(db, p) === deptFilter));
+
+      // Terms that exist (from deadlines and OBTLPs), newest first.
+      const termKey = (ay, sem) => `${ay}|${sem}`;
+      const terms = new Map();
+      (db.deadlines || []).forEach((d) => terms.set(termKey(d.academicYear, d.semester), { academicYear: d.academicYear, semester: d.semester }));
+      inScope.forEach((p) => { if (p.academicYear) terms.set(termKey(p.academicYear, p.semester), { academicYear: p.academicYear, semester: p.semester }); });
+      const termList = Array.from(terms.values()).sort((a, b) => b.academicYear.localeCompare(a.academicYear) || SEMESTERS.indexOf(b.semester) - SEMESTERS.indexOf(a.semester));
+      const academicYear = String(query.get('academicYear') || (termList[0] && termList[0].academicYear) || '');
+      const semester = String(query.get('semester') || (termList[0] && termList[0].semester) || '1st Semester');
+
+      const deadline = deadlineFor(db, academicYear, semester, deptFilter);
+      const termPortfolios = inScope.filter((p) => sameTerm(p, academicYear, semester));
+      const userById = new Map((db.users || []).map((u) => [u.id, u]));
+      const deptOf = (id) => { const d = findDepartment(db, id); return d ? d.code : ''; };
+
+      const facultyUsers = (db.users || []).filter((u) => u.role === 'faculty' && (!deptFilter || u.departmentId === deptFilter));
+      const now = Date.now();
+      const obtlps = termPortfolios.filter((p) => p.status !== 'Draft').map((p) => {
+        const d = portfolioDeadline(db, p);
+        const late = isLateSubmission(db, p);
+        const submittedAt = p.firstSubmittedAt || p.submittedAt || null;
+        return {
+          id: p.id, courseCode: p.courseCode, courseTitle: p.courseTitle,
+          faculty: (userById.get(p.facultyId) || {}).name || 'Faculty Member', facultyId: p.facultyId,
+          department: deptOf(portfolioDepartmentId(db, p)),
+          status: p.status, stage: currentStage(p), archived: !!p.archived,
+          submittedAt, approvedAt: (p.review && p.review.approvedAt) || null,
+          dueDate: d ? d.dueDate : null, late,
+          daysLate: late && d ? Math.ceil((new Date(submittedAt).getTime() - deadlineDueAt(d)) / DAY_MS) : 0
+        };
+      });
+      const faculty = facultyUsers.map((u) => {
+        const st = facultyTermStatus(db, u, academicYear, semester);
+        const mine = obtlps.filter((o) => o.facultyId === u.id);
+        const first = mine.map((o) => o.submittedAt).filter(Boolean).sort()[0] || null;
+        return {
+          id: u.id, name: u.name, department: deptOf(u.departmentId),
+          submitted: st.submitted.length, drafts: st.drafts.length,
+          approved: mine.filter((o) => o.status === 'Approved').length,
+          pending: mine.filter((o) => o.stage).length,
+          revision: mine.filter((o) => o.status === 'Revision Required').length,
+          late: mine.filter((o) => o.late).length,
+          firstSubmittedAt: first,
+          lastActiveAt: u.lastLoginAt || null,
+          state: !st.submitted.length ? 'Not submitted' : (st.drafts.length ? 'Has unsubmitted drafts' : 'Submitted')
+        };
+      }).sort((a, b) => a.name.localeCompare(b.name));
+      const unsubmitted = faculty.filter((f) => f.state !== 'Submitted').map((f) => Object.assign({}, f, {
+        draftCourses: termPortfolios.filter((p) => p.facultyId === f.id && p.status === 'Draft').map((p) => p.courseCode || 'Untitled')
+      }));
+      const late = obtlps.filter((o) => o.late).sort((a, b) => b.daysLate - a.daysLate);
+
+      const byDepartment = (own ? (db.departments || []).filter((d) => d.id === own) : (db.departments || []))
+        .filter((d) => !deptFilter || d.id === deptFilter)
+        .map((d) => {
+          const fac = faculty.filter((f) => f.department === d.code);
+          const obs = obtlps.filter((o) => o.department === d.code);
+          return {
+            code: d.code, name: d.name, faculty: fac.length,
+            submittedFaculty: fac.filter((f) => f.state === 'Submitted').length,
+            unsubmittedFaculty: fac.filter((f) => f.state !== 'Submitted').length,
+            obtlps: obs.length, approved: obs.filter((o) => o.status === 'Approved').length,
+            pending: obs.filter((o) => o.stage).length, revision: obs.filter((o) => o.status === 'Revision Required').length,
+            late: obs.filter((o) => o.late).length
+          };
+        });
+
+      return {
+        status: 200,
+        data: {
+          term: { academicYear, semester }, terms: termList, departmentId: deptFilter,
+          deadline: deadline ? { dueDate: deadline.dueDate, note: deadline.note || '', departmentId: deadline.departmentId || '', overdue: deadlineDueAt(deadline) < now } : null,
+          summary: {
+            faculty: faculty.length,
+            submittedFaculty: faculty.filter((f) => f.state === 'Submitted').length,
+            unsubmittedFaculty: unsubmitted.length,
+            obtlps: obtlps.length,
+            approved: obtlps.filter((o) => o.status === 'Approved').length,
+            pending: obtlps.filter((o) => o.stage).length,
+            revision: obtlps.filter((o) => o.status === 'Revision Required').length,
+            late: late.length,
+            drafts: termPortfolios.filter((p) => p.status === 'Draft').length
+          },
+          faculty, unsubmitted, late, obtlps, byDepartment
+        }
+      };
+    }
+  },
+
+  // ---- archive (past OBTLPs) ----
+  'POST /api/portfolios/:id/archive': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      if (!canArchive(db, ctx, p)) throw { status: 403, message: 'You do not have permission to archive this OBTLP.' };
+      const archive = body.archived !== false;
+      if (archive && p.status !== 'Approved') throw { status: 409, message: 'Only approved OBTLPs can be archived.' };
+      p.archived = archive;
+      if (archive) { p.archivedAt = store.nowIso(); p.archivedBy = ctx.user.name; } else { delete p.archivedAt; delete p.archivedBy; }
+      pushAudit(db, { actor: ctx.user.id, action: 'archive', portfolioId: p.id, detail: `${archive ? 'Archived' : 'Restored from the archive'} ${p.courseCode} (${p.semester} ${p.academicYear})` });
+      return { status: 200, data: lightPortfolio(db, p) };
+    }
+  },
+
+  // Archive every approved OBTLP of a past term at once.
+  'POST /api/archive/term': {
+    auth: true,
+    roles: ['admin', 'vpaa', 'it'],
+    handler: (db, ctx, query, body) => {
+      const academicYear = String(body.academicYear || '').trim();
+      const semester = String(body.semester || '').trim();
+      if (!academicYear || !SEMESTERS.includes(semester)) throw { status: 400, message: 'Choose the academic year and semester to archive.' };
+      let count = 0;
+      (db.portfolios || []).forEach((p) => {
+        if (p.status === 'Approved' && !p.archived && sameTerm(p, academicYear, semester) && inAdminScope(db, ctx.user, p)) {
+          p.archived = true; p.archivedAt = store.nowIso(); p.archivedBy = ctx.user.name; count++;
+        }
+      });
+      pushAudit(db, { actor: ctx.user.id, action: 'archive', portfolioId: null, detail: `Archived ${count} approved OBTLP${count === 1 ? '' : 's'} for ${semester} ${academicYear}` });
+      return { status: 200, data: { archived: count } };
+    }
+  },
+
+  // Start a new OBTLP from an earlier one (e.g. last year's archived OBTLP),
+  // optionally for another term or on another OBTLP template.
+  'POST /api/portfolios/:id/duplicate': {
+    auth: true,
+    roles: ['faculty'],
+    handler: (db, ctx, query, body, params) => {
+      const src = ownedPortfolio(db, params.id, ctx);
+      if (src.facultyId !== ctx.user.id) throw { status: 403, message: 'You can only reuse your own OBTLPs.' };
+      const templateId = body.templateId !== undefined ? String(body.templateId || '') : src.templateId;
+      if (templateId && !(db.obtlpTemplates || []).some((t) => t.id === templateId)) throw { status: 400, message: 'Selected template was not found.' };
+      const copy = JSON.parse(JSON.stringify(src));
+      ['versions', 'reviewHistory', 'approvals', 'reviewStage', 'archived', 'archivedAt', 'archivedBy', 'submittedAt',
+        'firstSubmittedAt', 'resubmitted', 'facultyEmail', 'inlineComments'].forEach((k) => delete copy[k]);
+      Object.assign(copy, {
+        id: store.nextId('p'),
+        status: 'Draft',
+        templateId,
+        academicYear: body.academicYear !== undefined ? String(body.academicYear || '').trim() : '',
+        semester: SEMESTERS.includes(String(body.semester || '')) ? String(body.semester) : src.semester,
+        documents: [], documentCount: 0, notes: '',
+        signatories: { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] },
+        review: { notes: '', requestedRevisionAt: null, approvedAt: null },
+        basedOn: { id: src.id, courseCode: src.courseCode, academicYear: src.academicYear, semester: src.semester },
+        createdAt: store.nowIso(), updatedAt: store.nowIso()
+      });
+      db.portfolios.push(copy);
+      pushAudit(db, { actor: ctx.user.id, action: 'create', portfolioId: copy.id, detail: `Started a new OBTLP for ${copy.courseCode} from the ${src.semester} ${src.academicYear} version` });
+      return { status: 201, data: copy };
+    }
+  },
+
+  // ---- versions (compare old and new) ----
+  'GET /api/portfolios/:id/versions': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      const versions = (p.versions || []).map((v) => ({ no: v.no, at: v.at, label: v.label, snapshot: v.snapshot }));
+      return {
+        status: 200,
+        data: {
+          id: p.id, courseCode: p.courseCode, courseTitle: p.courseTitle, academicYear: p.academicYear, semester: p.semester,
+          status: p.status, archived: !!p.archived,
+          versions,
+          current: snapshotOf(p)
+        }
+      };
+    }
+  },
+
   // ---- backup (IT admin only) ----
   'POST /api/backup': {
     auth: true,
@@ -2250,6 +2667,11 @@ store.initDbIfMissing()
       console.log(`OBTLP app running at: http://localhost:${PORT}`);
       console.log(`Open http://localhost:${PORT} in your browser to view the app.`);
     });
+    // Deadline reminders: shortly after start-up, then every hour.
+    if (process.env.OBTLP_DEADLINE_SWEEP !== 'off') {
+      setTimeout(sweepDeadlinesNow, 10 * 1000).unref();
+      setInterval(sweepDeadlinesNow, 60 * 60 * 1000).unref();
+    }
   })
   .catch((err) => {
     console.error('[db] Failed to initialize the database — server not started:', err);

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OBTLP Archive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="index.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav" data-auto-nav></nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar">–</div>
+          <div><p class="user-name">–</p><p class="user-role">–</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">OBTLP Archive</h1>
+          <p class="page-subtitle" id="arc-subtitle">Approved OBTLPs from past terms, kept read-only. Open, compare, or reuse one as the starting point of a new OBTLP.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" id="btn-archive-term" style="display:none;"><i data-lucide="archive" class="svg-icon"></i> Archive a Term</button>
+        </div>
+      </header>
+
+      <section class="card" style="overflow:hidden;">
+        <div class="section-head" style="flex-wrap:wrap;gap:0.75rem;">
+          <select class="input select" id="arc-term" style="max-width:16rem;"></select>
+          <input class="input input-search" id="arc-search" placeholder="Search course or faculty…" />
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Course</th><th id="th-faculty">Faculty</th><th>Term</th><th>Approved</th><th>Archived</th><th class="right">Actions</th></tr></thead>
+            <tbody id="arc-rows"><tr><td colspan="6" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card card-pad" style="margin-top:1.5rem;" id="ready-card">
+        <h3 class="card-title" style="margin-bottom:0.25rem;">Approved, not archived yet</h3>
+        <p class="section-sub" style="margin-bottom:0.75rem;">Archive an approved OBTLP once its term is over. It stays viewable and can still be reused.</p>
+        <ul class="deadline-list" id="ready-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <!-- Reuse as a new OBTLP -->
+  <div class="modal-overlay" id="reuse-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title">Use as Basis for a New OBTLP</h3>
+        <button type="button" class="modal-close" data-close="reuse-overlay"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="reuse-form" class="form-stack">
+        <p class="section-sub" id="reuse-what"></p>
+        <div class="field"><label class="field-label" for="r-ay">New Academic Year</label><input class="input" id="r-ay" placeholder="2027-2028" required pattern="\d{4}-\d{4}" /></div>
+        <div class="field"><label class="field-label" for="r-sem">Semester</label><select class="input select" id="r-sem"><option>1st Semester</option><option>2nd Semester</option><option>Summer</option></select></div>
+        <div class="field"><label class="field-label" for="r-tpl">OBTLP Template</label><select class="input select" id="r-tpl"></select>
+          <p class="section-sub" style="margin-top:0.35rem;">Keep the same template, or move the content onto another official template.</p></div>
+        <div class="form-error" id="reuse-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full">Create Draft</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Archive a whole term -->
+  <div class="modal-overlay" id="term-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="card-title">Archive a Term</h3>
+        <button type="button" class="modal-close" data-close="term-overlay"><i data-lucide="x" class="svg-icon"></i></button>
+      </div>
+      <form id="term-form" class="form-stack">
+        <p class="section-sub">Every <b>approved</b> OBTLP of this term that you handle will be archived. Pending and revision items are not touched.</p>
+        <div class="field"><label class="field-label" for="t-ay">Academic Year</label><input class="input" id="t-ay" placeholder="2025-2026" required pattern="\d{4}-\d{4}" /></div>
+        <div class="field"><label class="field-label" for="t-sem">Semester</label><select class="input select" id="t-sem"><option>1st Semester</option><option>2nd Semester</option><option>Summer</option></select></div>
+        <div class="form-error" id="term-error" style="display:none;"></div>
+        <button type="submit" class="btn btn-primary w-full">Archive Approved OBTLPs</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    const api = window.__OBTLP_API__;
+    const ui = () => window.__OBTLP_UI__;
+    const session = api.getSession();
+    if (!session) window.location.href = 'index.html';
+    const role = session ? session.role : '';
+    const isFaculty = role === 'faculty';
+    const canArchiveTerm = ['admin', 'vpaa', 'it'].includes(role);
+
+    let portfolios = [];
+    let users = [];
+    let templates = [];
+    let reuseSource = null;
+
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function day(iso) { return iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; }
+    const nameOf = (id) => (users.find((u) => u.id === id) || {}).name || 'Faculty Member';
+    const termOf = (p) => `${p.semester || ''} · ${p.academicYear || '—'}`;
+    const mine = (p) => p.facultyId === session.userId;
+    const canRestore = (p) => mine(p) || ['admin', 'vpaa', 'it'].includes(role);
+
+    function render() {
+      const term = document.getElementById('arc-term').value;
+      const q = document.getElementById('arc-search').value.trim().toLowerCase();
+      const rows = portfolios.filter((p) => p.archived)
+        .filter((p) => !term || `${p.academicYear}|${p.semester}` === term)
+        .filter((p) => !q || `${p.courseCode} ${p.courseTitle} ${nameOf(p.facultyId)}`.toLowerCase().includes(q))
+        .sort((a, b) => String(b.academicYear).localeCompare(String(a.academicYear)) || String(a.courseCode).localeCompare(String(b.courseCode)));
+      const tbody = document.getElementById('arc-rows');
+      tbody.innerHTML = rows.length ? rows.map((p) => `
+        <tr>
+          <td><p class="cell-strong">${esc(p.courseCode)}</p><p class="cell-sub">${esc(p.courseTitle)}</p></td>
+          <td class="t-muted col-faculty">${esc(nameOf(p.facultyId))}</td>
+          <td class="t-muted">${esc(termOf(p))}</td>
+          <td class="t-muted">${esc(day(p.review && p.review.approvedAt))}</td>
+          <td class="t-muted">${esc(day(p.archivedAt))}${p.archivedBy ? `<br><span class="cell-sub">by ${esc(p.archivedBy)}</span>` : ''}</td>
+          <td><div class="row-actions">
+            <a class="icon-btn" title="View" href="portfolio-preview.html?id=${encodeURIComponent(p.id)}"><i data-lucide="eye" class="svg-icon"></i></a>
+            <a class="icon-btn" title="Compare with another version or term" href="compare.html?id=${encodeURIComponent(p.id)}"><i data-lucide="git-compare" class="svg-icon"></i></a>
+            ${isFaculty && mine(p) ? `<button class="icon-btn" title="Use as basis for a new OBTLP" data-reuse="${esc(p.id)}"><i data-lucide="copy-plus" class="svg-icon"></i></button>` : ''}
+            ${canRestore(p) ? `<button class="icon-btn" title="Restore from the archive" data-restore="${esc(p.id)}"><i data-lucide="archive-restore" class="svg-icon"></i></button>` : ''}
+          </div></td>
+        </tr>`).join('')
+        : `<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">${q || term ? 'No archived OBTLP matches.' : 'Nothing archived yet.'}</td></tr>`;
+      if (isFaculty) document.querySelectorAll('.col-faculty, #th-faculty').forEach((el) => { el.style.display = 'none'; });
+
+      const ready = portfolios.filter((p) => p.status === 'Approved' && !p.archived && (mine(p) || canArchiveTerm));
+      document.getElementById('ready-list').innerHTML = ready.length ? ready.map((p) => `
+        <li><div><b>${esc(p.courseCode)} — ${esc(p.courseTitle)}</b><br><span class="t-muted">${esc(termOf(p))}${isFaculty ? '' : ` · ${esc(nameOf(p.facultyId))}`}</span></div>
+        <button class="btn btn-outline btn-sm" data-archive="${esc(p.id)}"><i data-lucide="archive" class="svg-icon"></i> Archive</button></li>`).join('')
+        : '<li class="t-muted">No approved OBTLP waiting to be archived.</li>';
+
+      if (window.lucide) lucide.createIcons();
+      document.querySelectorAll('[data-restore]').forEach((b) => b.addEventListener('click', () => setArchived(b.dataset.restore, false)));
+      document.querySelectorAll('[data-archive]').forEach((b) => b.addEventListener('click', () => setArchived(b.dataset.archive, true)));
+      document.querySelectorAll('[data-reuse]').forEach((b) => b.addEventListener('click', () => openReuse(b.dataset.reuse)));
+    }
+
+    async function setArchived(id, archived) {
+      const p = portfolios.find((x) => x.id === id);
+      if (!archived && !confirm(`Restore ${p.courseCode} (${termOf(p)}) from the archive?`)) return;
+      try {
+        await api.archivePortfolio(id, archived);
+        ui().notify(archived ? 'Archived' : 'Restored', `${p.courseCode} (${termOf(p)}) ${archived ? 'was moved to the archive' : 'is back with the active OBTLPs'}.`);
+        load();
+      } catch (err) { ui().notifyError(err); }
+    }
+
+    function openReuse(id) {
+      reuseSource = portfolios.find((x) => x.id === id);
+      document.getElementById('reuse-what').textContent = `Copies the content of ${reuseSource.courseCode} — ${reuseSource.courseTitle} (${termOf(reuseSource)}) into a new draft you can edit and submit.`;
+      const nextAy = /^(\d{4})-(\d{4})$/.exec(reuseSource.academicYear || '');
+      document.getElementById('r-ay').value = nextAy ? `${Number(nextAy[1]) + 1}-${Number(nextAy[2]) + 1}` : '';
+      document.getElementById('r-sem').value = reuseSource.semester || '1st Semester';
+      document.getElementById('r-tpl').innerHTML = `<option value="${esc(reuseSource.templateId || '')}">Same template${reuseSource.templateId ? ` (${esc((templates.find((t) => t.id === reuseSource.templateId) || {}).name || 'current')})` : ''}</option>`
+        + templates.filter((t) => t.id !== reuseSource.templateId && t.active !== false).map((t) => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('');
+      document.getElementById('reuse-error').style.display = 'none';
+      document.getElementById('reuse-overlay').style.display = 'flex';
+    }
+    document.getElementById('reuse-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const copy = await api.duplicatePortfolio(reuseSource.id, {
+          academicYear: document.getElementById('r-ay').value.trim(),
+          semester: document.getElementById('r-sem').value,
+          templateId: document.getElementById('r-tpl').value
+        });
+        window.location.href = `portfolio-new.html?id=${encodeURIComponent(copy.id)}`;
+      } catch (err) {
+        const el = document.getElementById('reuse-error');
+        el.textContent = err.message || 'Could not create the draft.';
+        el.style.display = 'block';
+      }
+    });
+
+    document.getElementById('btn-archive-term').addEventListener('click', () => {
+      document.getElementById('term-error').style.display = 'none';
+      document.getElementById('term-overlay').style.display = 'flex';
+    });
+    document.getElementById('term-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const r = await api.archiveTerm({ academicYear: document.getElementById('t-ay').value.trim(), semester: document.getElementById('t-sem').value });
+        document.getElementById('term-overlay').style.display = 'none';
+        ui().notify('Term Archived', `${r.archived} approved OBTLP${r.archived === 1 ? '' : 's'} archived.`);
+        load();
+      } catch (err) {
+        const el = document.getElementById('term-error');
+        el.textContent = err.message || 'Could not archive the term.';
+        el.style.display = 'block';
+      }
+    });
+    document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { document.getElementById(b.dataset.close).style.display = 'none'; }));
+    document.querySelectorAll('.modal-overlay').forEach((o) => o.addEventListener('click', (e) => { if (e.target === o) o.style.display = 'none'; }));
+
+    async function load() {
+      try {
+        const state = await api.getState();
+        portfolios = state.portfolios || [];
+        users = state.users || [];
+        const terms = Array.from(new Set(portfolios.filter((p) => p.archived).map((p) => `${p.academicYear}|${p.semester}`))).sort().reverse();
+        const sel = document.getElementById('arc-term');
+        const keep = sel.value;
+        sel.innerHTML = '<option value="">All terms</option>' + terms.map((t) => { const [ay, sem] = t.split('|'); return `<option value="${esc(t)}">${esc(sem)} · ${esc(ay)}</option>`; }).join('');
+        if (terms.includes(keep)) sel.value = keep;
+        render();
+      } catch (err) { ui().notifyError(err); }
+    }
+    document.getElementById('arc-term').addEventListener('change', render);
+    document.getElementById('arc-search').addEventListener('input', render);
+
+    if (session) {
+      if (canArchiveTerm) document.getElementById('btn-archive-term').style.display = '';
+      if (role === 'chair') document.getElementById('ready-card').style.display = 'none';
+      if (isFaculty) api.getObtlpTemplates().then((t) => { templates = t || []; }).catch(() => {});
+      load();
+    }
+  </script>
+</body>
+</html>

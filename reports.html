@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OBTLP Reports</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="print-report">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="admin.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav" data-auto-nav></nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar">–</div>
+          <div><p class="user-name">–</p><p class="user-role">–</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Reports</h1>
+          <p class="page-subtitle" id="rep-subtitle">Late submissions, faculty who have not submitted, and where every OBTLP stands for a term.</p>
+        </div>
+        <div class="header-actions no-print">
+          <button class="btn btn-outline" id="btn-print"><i data-lucide="printer" class="svg-icon"></i> Print</button>
+        </div>
+      </header>
+
+      <!-- Term / college filters -->
+      <section class="card card-pad report-filters no-print">
+        <div class="field"><label class="field-label" for="f-term">Term</label><select class="input select" id="f-term"></select></div>
+        <div class="field" id="f-dept-field" style="display:none;"><label class="field-label" for="f-dept">College</label><select class="input select" id="f-dept"></select></div>
+        <div class="deadline-box" id="deadline-box"></div>
+      </section>
+
+      <h2 class="print-only print-title" id="print-title"></h2>
+
+      <section class="stats-grid stats-grid-5" id="rep-stats"></section>
+
+      <section class="card" style="overflow:hidden;">
+        <div class="section-head" style="flex-wrap:wrap;gap:0.75rem;">
+          <h2 class="card-title" id="rep-table-title">Not Yet Submitted</h2>
+          <div class="filter-tabs no-print" id="rep-tabs" style="flex-wrap:wrap;">
+            <button class="active" data-rep="unsubmitted">Unsubmitted <span class="tab-count" id="c-unsubmitted"></span></button>
+            <button data-rep="late">Late <span class="tab-count" id="c-late"></span></button>
+            <button data-rep="obtlps">All OBTLPs <span class="tab-count" id="c-obtlps"></span></button>
+            <button data-rep="faculty">Per Faculty <span class="tab-count" id="c-faculty"></span></button>
+            <button data-rep="colleges" id="tab-colleges">Per College</button>
+          </div>
+          <button class="btn btn-outline btn-sm no-print" id="btn-csv"><i data-lucide="download" class="svg-icon"></i> Export CSV</button>
+        </div>
+        <p class="section-sub tab-help" id="rep-help"></p>
+        <div class="table-wrap"><table class="data" id="rep-table"><thead></thead><tbody><tr><td class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody></table></div>
+      </section>
+
+      <!-- Deadlines (Dean / VPAA / IT; Chair can set their own college's) -->
+      <section class="card card-pad no-print" style="margin-top:1.5rem;" id="deadline-card">
+        <div class="section-head" style="padding:0;border:0;margin-bottom:0.75rem;">
+          <div>
+            <h2 class="card-title">Submission Deadlines</h2>
+            <p class="section-sub">Faculty are notified when a deadline is set, and reminded 7, 3 and 1 day(s) before it and once when it passes (until they submit).</p>
+          </div>
+          <button class="btn btn-outline btn-sm" id="btn-remind" style="display:none;"><i data-lucide="bell-ring" class="svg-icon"></i> Send Reminders Now</button>
+        </div>
+        <form id="deadline-form" class="deadline-form">
+          <div class="field"><label class="field-label" for="d-ay">Academic Year</label><input class="input" id="d-ay" placeholder="2026-2027" pattern="\d{4}-\d{4}" required /></div>
+          <div class="field"><label class="field-label" for="d-sem">Semester</label>
+            <select class="input select" id="d-sem"><option>1st Semester</option><option>2nd Semester</option><option>Summer</option></select></div>
+          <div class="field"><label class="field-label" for="d-due">Due Date</label><input class="input" id="d-due" type="date" required /></div>
+          <div class="field" id="d-dept-field" style="display:none;"><label class="field-label" for="d-dept">College</label><select class="input select" id="d-dept"></select></div>
+          <div class="field" style="grid-column:1/-1;"><label class="field-label" for="d-note">Note to faculty (optional)</label><input class="input" id="d-note" maxlength="500" placeholder="e.g. Submit through the system; printed copies are not needed." /></div>
+          <div class="form-error" id="d-error" style="display:none;grid-column:1/-1;"></div>
+          <div style="grid-column:1/-1;"><button type="submit" class="btn btn-primary"><i data-lucide="calendar-check" class="svg-icon"></i> Save Deadline</button></div>
+        </form>
+        <ul class="deadline-list" id="deadline-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    const api = window.__OBTLP_API__;
+    const ui = () => window.__OBTLP_UI__;
+    const R = window.OBTLP_ROLES;
+    const session = api.getSession();
+    if (!session) window.location.href = 'index.html';
+    else if (session.role === 'faculty') window.location.href = 'dashboard.html';
+    const role = session ? session.role : '';
+    const university = role === 'vpaa' || role === 'it';
+
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function day(iso) { return iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'; }
+    function dueText(d) { return new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }); }
+
+    let report = null;
+    let tab = 'unsubmitted';
+    let departments = [];
+
+    const TABLES = {
+      unsubmitted: {
+        title: 'Not Yet Submitted',
+        help: 'Faculty with no submitted OBTLP for this term, or with drafts they have not submitted yet.',
+        cols: ['Faculty', 'College', 'Status', 'Unsubmitted drafts', 'Last active'],
+        rows: (r) => r.unsubmitted.map((f) => [f.name, f.department || '—', f.state, f.draftCourses.join(', ') || '—', f.lastActiveAt ? day(f.lastActiveAt) : 'Never']),
+        badge: 2
+      },
+      late: {
+        title: 'Late Submissions',
+        help: 'OBTLPs first submitted after the due date.',
+        cols: ['Course', 'Faculty', 'College', 'Due', 'Submitted', 'Days late', 'Status'],
+        rows: (r) => r.late.map((o) => [`${o.courseCode} — ${o.courseTitle}`, o.faculty, o.department || '—', o.dueDate ? day(o.dueDate) : '—', day(o.submittedAt), String(o.daysLate), statusOf(o)])
+      },
+      obtlps: {
+        title: 'All Submitted OBTLPs',
+        help: 'Every OBTLP submitted for this term and where it is in the approval chain.',
+        cols: ['Course', 'Faculty', 'College', 'Submitted', 'On time?', 'Status'],
+        rows: (r) => r.obtlps.map((o) => [`${o.courseCode} — ${o.courseTitle}`, o.faculty, o.department || '—', day(o.submittedAt), o.dueDate ? (o.late ? 'Late' : 'On time') : 'No deadline', statusOf(o)])
+      },
+      faculty: {
+        title: 'Per Faculty',
+        help: 'OBTLP counts for each faculty member this term.',
+        cols: ['Faculty', 'College', 'Submitted', 'Approved', 'In approval', 'For revision', 'Drafts', 'Late', 'First submitted'],
+        rows: (r) => r.faculty.map((f) => [f.name, f.department || '—', String(f.submitted), String(f.approved), String(f.pending), String(f.revision), String(f.drafts), String(f.late), f.firstSubmittedAt ? day(f.firstSubmittedAt) : '—'])
+      },
+      colleges: {
+        title: 'Per College',
+        help: 'Submission status by college.',
+        cols: ['College', 'Faculty', 'Submitted', 'Not submitted', 'OBTLPs', 'Approved', 'In approval', 'For revision', 'Late'],
+        rows: (r) => r.byDepartment.map((d) => [`${d.code} — ${d.name}`, String(d.faculty), String(d.submittedFaculty), String(d.unsubmittedFaculty), String(d.obtlps), String(d.approved), String(d.pending), String(d.revision), String(d.late)])
+      }
+    };
+    function statusOf(o) {
+      if (o.stage) return `Pending – ${R.label(o.stage)}`;
+      return o.archived ? `${o.status} (archived)` : o.status;
+    }
+
+    function renderStats() {
+      const s = report.summary;
+      const card = (label, value, cls, jump) => `<div class="stat ${jump ? 'stat-link' : ''}" ${jump ? `data-jump="${jump}"` : ''}><div class="stat-top"><p class="stat-label">${label}</p></div><p class="stat-value ${cls || ''}">${value}</p></div>`;
+      document.getElementById('rep-stats').innerHTML = [
+        card('Faculty', s.faculty, '', 'faculty'),
+        card('Submitted', `${s.submittedFaculty}<span class="stat-of">/${s.faculty}</span>`, 't-success', 'faculty'),
+        card('Not Submitted', s.unsubmittedFaculty, s.unsubmittedFaculty ? 't-destructive' : '', 'unsubmitted'),
+        card('Late OBTLPs', s.late, s.late ? 't-warning' : '', 'late'),
+        card('Approved OBTLPs', `${s.approved}<span class="stat-of">/${s.obtlps}</span>`, '', 'obtlps')
+      ].join('');
+      document.querySelectorAll('#rep-stats [data-jump]').forEach((el) => el.addEventListener('click', () => setTab(el.dataset.jump)));
+      document.getElementById('c-unsubmitted').textContent = `(${report.unsubmitted.length})`;
+      document.getElementById('c-late').textContent = `(${report.late.length})`;
+      document.getElementById('c-obtlps').textContent = `(${report.obtlps.length})`;
+      document.getElementById('c-faculty').textContent = `(${report.faculty.length})`;
+    }
+
+    function renderTable() {
+      const t = TABLES[tab];
+      document.getElementById('rep-table-title').textContent = t.title;
+      document.getElementById('rep-help').textContent = t.help;
+      const rows = t.rows(report);
+      const table = document.getElementById('rep-table');
+      table.querySelector('thead').innerHTML = `<tr>${t.cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr>`;
+      table.querySelector('tbody').innerHTML = rows.length
+        ? rows.map((r) => `<tr>${r.map((v, i) => `<td class="${i === 0 ? 'cell-strong' : ''}">${esc(v)}</td>`).join('')}</tr>`).join('')
+        : `<tr><td colspan="${t.cols.length}" class="t-muted" style="padding:1.5rem;">${tab === 'unsubmitted' ? 'Everyone has submitted. 🎉' : tab === 'late' ? 'No late submissions.' : 'Nothing to show for this term.'}</td></tr>`;
+    }
+
+    function setTab(t) {
+      tab = t;
+      document.querySelectorAll('#rep-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.rep === t));
+      renderTable();
+    }
+    document.querySelectorAll('#rep-tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.rep)));
+
+    function renderDeadlineBox() {
+      const box = document.getElementById('deadline-box');
+      const d = report.deadline;
+      if (!d) { box.innerHTML = '<p class="t-muted">No deadline set for this term.</p>'; return; }
+      const days = Math.floor((new Date(`${d.dueDate}T23:59:59+08:00`).getTime() - Date.now()) / 86400000);
+      box.innerHTML = `<p class="section-sub">Deadline</p><p class="deadline-date ${d.overdue ? 't-destructive' : ''}">${esc(dueText(d.dueDate))}</p>
+        <p class="section-sub">${d.overdue ? `Passed ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago` : days <= 0 ? 'Due today' : `${days} day${days === 1 ? '' : 's'} left`}</p>`;
+    }
+
+    async function load(params) {
+      const q = new URLSearchParams(params || {});
+      try {
+        report = await api.getReport(q.toString());
+      } catch (err) { ui().notifyError(err); return; }
+      const termSel = document.getElementById('f-term');
+      const key = `${report.term.academicYear}|${report.term.semester}`;
+      const terms = report.terms.length ? report.terms : [report.term];
+      termSel.innerHTML = terms.map((t) => `<option value="${esc(t.academicYear)}|${esc(t.semester)}" ${`${t.academicYear}|${t.semester}` === key ? 'selected' : ''}>${esc(t.semester)} · ${esc(t.academicYear || '—')}</option>`).join('');
+      const deptName = report.departmentId ? (departments.find((d) => d.id === report.departmentId) || {}).code : (university ? 'All colleges' : '');
+      document.getElementById('print-title').textContent = `OBTLP Report · ${report.term.semester} ${report.term.academicYear}${deptName ? ` · ${deptName}` : ''}`;
+      renderDeadlineBox();
+      renderStats();
+      renderTable();
+    }
+    function currentParams() {
+      const [academicYear, semester] = (document.getElementById('f-term').value || '|').split('|');
+      const p = { academicYear, semester };
+      const dep = document.getElementById('f-dept').value;
+      if (university && dep) p.departmentId = dep;
+      return p;
+    }
+    document.getElementById('f-term').addEventListener('change', () => load(currentParams()));
+    document.getElementById('f-dept').addEventListener('change', () => load(currentParams()));
+
+    document.getElementById('btn-print').addEventListener('click', () => window.print());
+    document.getElementById('btn-csv').addEventListener('click', () => {
+      const t = TABLES[tab];
+      const rows = [t.cols].concat(t.rows(report));
+      const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `OBTLP_${tab}_${report.term.academicYear}_${report.term.semester.replace(/\s+/g, '')}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    });
+
+    // ---- deadlines ----
+    async function loadDeadlines() {
+      const list = await api.getDeadlines().catch(() => []);
+      const ul = document.getElementById('deadline-list');
+      if (!list.length) { ul.innerHTML = '<li class="t-muted">No deadlines yet.</li>'; return; }
+      list.sort((a, b) => String(b.dueDate).localeCompare(String(a.dueDate)));
+      ul.innerHTML = list.map((d) => {
+        const dept = d.departmentId ? (departments.find((x) => x.id === d.departmentId) || {}).code || 'College' : 'All colleges';
+        const past = new Date(`${d.dueDate}T23:59:59+08:00`).getTime() < Date.now();
+        return `<li><div><b>${esc(d.semester)} · ${esc(d.academicYear)}</b> <span class="badge ${past ? 'badge-draft' : 'badge-pending'}">${past ? 'Passed' : 'Upcoming'}</span><br>
+          <span class="t-muted">Due ${esc(dueText(d.dueDate))} · ${esc(dept)}${d.note ? ` · ${esc(d.note)}` : ''}</span></div>
+          <div class="row-actions"><button class="icon-btn" title="Edit" data-edit="${esc(d.id)}"><i data-lucide="pencil" class="svg-icon"></i></button>
+          <button class="icon-btn" title="Remove" data-del="${esc(d.id)}"><i data-lucide="trash-2" class="svg-icon"></i></button></div></li>`;
+      }).join('');
+      if (window.lucide) lucide.createIcons();
+      ul.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => {
+        const d = list.find((x) => x.id === b.dataset.edit);
+        document.getElementById('d-ay').value = d.academicYear;
+        document.getElementById('d-sem').value = d.semester;
+        document.getElementById('d-due').value = d.dueDate;
+        document.getElementById('d-note').value = d.note || '';
+        document.getElementById('d-dept').value = d.departmentId || '';
+        document.getElementById('d-due').focus();
+      }));
+      ul.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('Remove this deadline? Faculty will no longer get reminders for it.')) return;
+        try { await api.deleteDeadline(b.dataset.del); loadDeadlines(); load(currentParams()); } catch (err) { ui().notifyError(err); }
+      }));
+    }
+    document.getElementById('deadline-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = document.getElementById('d-error');
+      err.style.display = 'none';
+      try {
+        const body = {
+          academicYear: document.getElementById('d-ay').value.trim(),
+          semester: document.getElementById('d-sem').value,
+          dueDate: document.getElementById('d-due').value,
+          note: document.getElementById('d-note').value.trim()
+        };
+        if (university) body.departmentId = document.getElementById('d-dept').value;
+        await api.saveDeadline(body);
+        ui().notify('Deadline Saved', 'Faculty were notified of the deadline.');
+        loadDeadlines();
+        load({ academicYear: body.academicYear, semester: body.semester, departmentId: university ? body.departmentId : undefined });
+      } catch (ex) {
+        err.textContent = ex.message || 'Could not save the deadline.';
+        err.style.display = 'block';
+      }
+    });
+    document.getElementById('btn-remind').addEventListener('click', async () => {
+      try {
+        const r = await api.sendDeadlineReminders();
+        ui().notify('Reminders', r.sent ? `${r.sent} reminder${r.sent === 1 ? '' : 's'} sent.` : 'Nobody needs a reminder right now (reminders go out 7, 3 and 1 day(s) before the deadline and once after it).');
+      } catch (err) { ui().notifyError(err); }
+    });
+
+    (async function init() {
+      if (!session || role === 'faculty') return;
+      if (role !== 'chair') document.getElementById('btn-remind').style.display = '';
+      departments = await fetch('/api/public/departments').then((r) => r.json()).catch(() => []);
+      if (university) {
+        const opts = '<option value="">All colleges</option>' + departments.map((d) => `<option value="${esc(d.id)}">${esc(d.code)} — ${esc(d.name)}</option>`).join('');
+        document.getElementById('f-dept').innerHTML = opts;
+        document.getElementById('d-dept').innerHTML = opts;
+        document.getElementById('f-dept-field').style.display = '';
+        document.getElementById('d-dept-field').style.display = '';
+      } else {
+        document.getElementById('tab-colleges').style.display = 'none';
+      }
+      await load({});
+      loadDeadlines();
+    })();
+  </script>
+</body>
+</html>

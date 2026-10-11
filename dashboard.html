@@ -63,6 +63,8 @@
         Please choose your <b>department</b> in <a href="profile.html" class="link-primary">Profile</a> so your college's administrator sees you in their Faculty list.
       </div>
 
+      <div class="deadline-banner" id="deadline-banner" style="display:none;"></div>
+
       <!-- Stats -->
       <section class="stats-grid">
         <div class="stat stat-link active" data-status-filter="All" role="button" tabindex="0" title="Show all portfolios"><div class="stat-top"><p class="stat-label">Total Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-total">0</p></div>
@@ -275,6 +277,7 @@
 
         updateStats();
         setStatusFilter(new URLSearchParams(window.location.search).get('show') || 'All');
+        renderDeadline(state.deadlines || []);
 
         const timeline = document.getElementById('timeline');
         const myLogs = (state.auditLogs || []).filter((l) => l.portfolioId && allPortfolios.some((p) => p.id === l.portfolioId)).slice(0, 6);
@@ -292,6 +295,36 @@
       } catch (err) {
         window.__OBTLP_UI__.notifyError(err);
       }
+    }
+
+    // The nearest OBTLP deadline and what is still missing for it.
+    function renderDeadline(deadlines) {
+      const box = document.getElementById('deadline-banner');
+      const dueAt = (d) => new Date(`${d.dueDate}T23:59:59+08:00`).getTime();
+      const now = Date.now();
+      const relevant = deadlines.filter((d) => dueAt(d) > now - 14 * 86400000).sort((a, b) => dueAt(a) - dueAt(b));
+      const upcoming = relevant.find((d) => dueAt(d) >= now) || relevant[relevant.length - 1];
+      if (!upcoming) { box.style.display = 'none'; return; }
+      const term = allPortfolios.filter((p) => p.academicYear === upcoming.academicYear && p.semester === upcoming.semester);
+      const submitted = term.filter((p) => p.status !== 'Draft');
+      const drafts = term.filter((p) => p.status === 'Draft');
+      const revision = term.filter((p) => p.status === 'Revision Required');
+      const days = Math.floor((dueAt(upcoming) - now) / 86400000);
+      const overdue = dueAt(upcoming) < now;
+      const done = submitted.length && !drafts.length && !revision.length;
+      const dateText = new Date(`${upcoming.dueDate}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+      const when = overdue ? `was due ${dateText}` : days <= 1 ? `is due ${days <= 0 ? 'today' : 'tomorrow'} (${dateText})` : `is due ${dateText} · <b>${days} days left</b>`;
+      const todo = done ? 'All your OBTLPs for this term are submitted. ✓'
+        : [!submitted.length ? 'You have not submitted an OBTLP for this term yet.' : '',
+          drafts.length ? `${drafts.length} draft${drafts.length === 1 ? ' is' : 's are'} not submitted yet.` : '',
+          revision.length ? `${revision.length} OBTLP${revision.length === 1 ? ' needs' : 's need'} revision.` : ''].filter(Boolean).join(' ');
+      box.className = `deadline-banner ${done ? 'is-done' : overdue ? 'is-overdue' : days <= 3 ? 'is-soon' : ''}`;
+      box.innerHTML = `<i data-lucide="${done ? 'calendar-check' : 'calendar-clock'}" class="svg-icon"></i>
+        <div><p><b>OBTLP deadline · ${esc(upcoming.semester)} ${esc(upcoming.academicYear)}</b> ${when}</p>
+        <p class="t-muted">${esc(todo)}${upcoming.note ? ` · ${esc(upcoming.note)}` : ''}</p></div>
+        ${done ? '' : `<a class="btn btn-sm ${overdue || days <= 3 ? 'btn-primary' : 'btn-outline'}" href="${drafts.length || revision.length ? 'my-portfolios.html' : 'portfolio-new.html'}">${drafts.length || revision.length ? 'Open My Portfolios' : 'Create OBTLP'}</a>`}`;
+      box.style.display = '';
+      if (window.lucide) lucide.createIcons();
     }
 
     const searchInput = document.getElementById('portfolio-search');

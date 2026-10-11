@@ -498,8 +498,8 @@
         <li data-id="${n.id}" style="cursor:pointer;${n.read ? '' : 'background:color-mix(in oklch, var(--primary) 6%, transparent);'}">
           <span class="dot ${n.read ? 'dot-muted' : 'dot-primary'}"></span>
           <div style="flex:1;min-width:0;">
-            <p style="font-weight:600;white-space:normal;">${n.title}</p>
-            <p style="color:var(--muted-foreground);white-space:normal;">${n.message}</p>
+            <p style="font-weight:600;white-space:normal;">${escHtml(n.title)}</p>
+            <p style="color:var(--muted-foreground);white-space:normal;">${escHtml(n.message)}</p>
           </div>
           <span class="section-sub" style="white-space:nowrap;">${timeAgo(n.createdAt)}</span>
         </li>
@@ -611,7 +611,81 @@
     if (window.lucide) lucide.createIcons();
   }
 
+  function escHtml(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // ---------- sidebar navigation (shared) ----------
+  // New pages use <nav class="nav" data-auto-nav>, built here from the
+  // signed-in role. Older pages keep their own links; the links added
+  // later (Reports, Archive) are filled in here so every page has them.
+  const NAV = {
+    faculty: [
+      { href: 'dashboard.html', icon: 'layout-dashboard', label: 'Dashboard' },
+      { href: 'my-portfolios.html', icon: 'folder-open', label: 'My Portfolios' },
+      { href: 'portfolio-new.html', icon: 'file-plus-2', label: 'Create New Portfolio' },
+      { href: 'my-portfolios.html?filter=submitted', icon: 'send', label: 'Submitted Portfolios' },
+      { href: 'archive.html', icon: 'archive', label: 'Archive' },
+      { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
+      { action: 'notifications', icon: 'bell', label: 'Notifications' }
+    ],
+    reviewer: [
+      { href: 'admin.html', icon: 'clipboard-list', label: 'Review Queue' },
+      { href: 'admin.html?view=faculty', icon: 'users', label: 'Faculty' },
+      { href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
+      { href: 'archive.html', icon: 'archive', label: 'Archive' },
+      { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
+      { action: 'notifications', icon: 'bell', label: 'Notifications' }
+    ],
+    it: [
+      { href: 'it-admin.html', icon: 'shield-check', label: 'System Overview' },
+      { href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
+      { href: 'archive.html', icon: 'archive', label: 'Archive' },
+      { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
+      { action: 'notifications', icon: 'bell', label: 'Notifications' }
+    ]
+  };
+  function navFor(role) {
+    if (role === 'faculty') return NAV.faculty;
+    if (role === 'it') return NAV.it;
+    return NAV.reviewer;
+  }
+  function navItemHtml(it, active) {
+    const cls = `nav-link${active ? ' active' : ''}`;
+    if (it.action) return `<span class="${cls}" data-action="${it.action}"><i data-lucide="${it.icon}" class="svg-icon"></i> ${it.label}</span>`;
+    return `<a href="${it.href}" class="${cls}"><i data-lucide="${it.icon}" class="svg-icon"></i> ${it.label}</a>`;
+  }
+  function syncNav() {
+    const s = currentSession();
+    const nav = document.querySelector('.sidebar .nav');
+    if (!s || !nav) return;
+    const here = (location.pathname.split('/').pop() || 'index.html');
+    const items = navFor(s.role);
+    if (nav.hasAttribute('data-auto-nav')) {
+      nav.innerHTML = items.map((it) => navItemHtml(it, it.href && it.href.split('?')[0] === here && !it.href.includes('?'))).join('');
+      const brand = document.querySelector('.sidebar-head .brand');
+      if (brand && window.OBTLP_ROLES) brand.setAttribute('href', window.OBTLP_ROLES.home(s.role));
+    } else {
+      ['reports.html', 'archive.html'].forEach((href) => {
+        const it = items.find((x) => x.href === href);
+        if (!it || nav.querySelector(`a[href="${href}"]`)) return;
+        const before = nav.querySelector('a[href="profile.html"]') || nav.querySelector('[data-action="notifications"]');
+        const tmp = document.createElement('div');
+        tmp.innerHTML = navItemHtml(it, href === here);
+        nav.insertBefore(tmp.firstChild, before || null);
+      });
+    }
+    const roleEl = document.querySelector('.sidebar .user-role');
+    if (roleEl && nav.hasAttribute('data-auto-nav') && window.OBTLP_ROLES) roleEl.textContent = window.OBTLP_ROLES.label(s.role);
+    const nameEl = document.querySelector('.sidebar .user-name');
+    if (nameEl && nav.hasAttribute('data-auto-nav')) nameEl.textContent = s.name || '—';
+    const av = document.querySelector('.sidebar .avatar');
+    if (av && nav.hasAttribute('data-auto-nav')) av.textContent = (s.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '–';
+    if (window.lucide) lucide.createIcons();
+  }
+
   function ensureHandlers() {
+    syncNav();
     initMobileNav();
     // Notifications
     document.querySelectorAll('[data-action="notifications"]').forEach((el) => {
@@ -665,7 +739,7 @@
   }
 
   // Expose small shared helpers other inline page scripts can reuse.
-  window.__OBTLP_UI__ = { notify, notifyError, buildPdfFilename, downloadPdf };
+  window.__OBTLP_UI__ = { notify, notifyError, buildPdfFilename, downloadPdf, escHtml };
 
   // Accounts with a password older than the strong-password rule see a
   // reminder on every page until they change it (Profile → Change Password).

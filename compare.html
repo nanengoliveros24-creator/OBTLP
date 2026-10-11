@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compare OBTLPs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="index.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav" data-auto-nav></nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar">–</div>
+          <div><p class="user-name">–</p><p class="user-role">–</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Compare OBTLPs</h1>
+          <p class="page-subtitle" id="cmp-subtitle">See exactly what changed between two versions of an OBTLP, or between terms.</p>
+        </div>
+        <div class="header-actions">
+          <a class="btn btn-outline" id="cmp-back" href="javascript:history.back()"><i data-lucide="arrow-left" class="svg-icon"></i> Back</a>
+        </div>
+      </header>
+
+      <section class="card card-pad cmp-pickers">
+        <div class="field"><label class="field-label" for="cmp-left">Older</label><select class="input select" id="cmp-left"></select></div>
+        <div class="cmp-arrow"><i data-lucide="arrow-right" class="svg-icon"></i></div>
+        <div class="field"><label class="field-label" for="cmp-right">Newer</label><select class="input select" id="cmp-right"></select></div>
+        <label class="check-row cmp-only"><input type="checkbox" id="cmp-only" checked /> <span>Show only changes</span></label>
+      </section>
+
+      <div class="cmp-summary" id="cmp-summary"></div>
+      <div id="cmp-body"><p class="t-muted">Loading…</p></div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    const api = window.__OBTLP_API__;
+    const ui = () => window.__OBTLP_UI__;
+    const session = api.getSession();
+    if (!session) window.location.href = 'index.html';
+    const id = new URLSearchParams(location.search).get('id');
+
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function day(iso) { return iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''; }
+
+    // ---------- diff helpers ----------
+    // Longest common subsequence alignment of two arrays.
+    function lcsOps(a, b, eq) {
+      const n = a.length, m = b.length;
+      if (n * m > 4000000) return a.map((x) => ({ op: 'del', a: x })).concat(b.map((y) => ({ op: 'ins', b: y })));
+      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+      for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) {
+        dp[i][j] = eq(a[i], b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+      const ops = [];
+      let i = 0, j = 0;
+      while (i < n && j < m) {
+        if (eq(a[i], b[j])) { ops.push({ op: 'same', a: a[i], b: b[j] }); i++; j++; }
+        else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ op: 'del', a: a[i] }); i++; }
+        else { ops.push({ op: 'ins', b: b[j] }); j++; }
+      }
+      while (i < n) ops.push({ op: 'del', a: a[i++] });
+      while (j < m) ops.push({ op: 'ins', b: b[j++] });
+      return ops;
+    }
+    // Word-level highlight: returns [oldHtml, newHtml].
+    function wordDiff(oldText, newText) {
+      const tok = (s) => String(s || '').split(/(\s+)/).filter((t) => t !== '');
+      const ops = lcsOps(tok(oldText), tok(newText), (x, y) => x === y);
+      const L = [], Rt = [];
+      ops.forEach((o) => {
+        if (o.op === 'same') { L.push({ t: o.a, k: 'same' }); Rt.push({ t: o.b, k: 'same' }); }
+        else if (o.op === 'del') L.push({ t: o.a, k: 'del' });
+        else Rt.push({ t: o.b, k: 'ins' });
+      });
+      // Join neighbouring changed words (and the spaces between them) into
+      // one highlight, so a rewritten phrase reads as one block.
+      function toHtml(parts, kind, tag) {
+        parts.forEach((p, i) => {
+          if (p.k === 'same' && /^\s+$/.test(p.t) && parts[i - 1] && parts[i + 1] && parts[i - 1].k === kind && parts[i + 1].k === kind) p.k = kind;
+        });
+        let html = '', run = '';
+        parts.forEach((p, i) => {
+          if (p.k === kind) { run += p.t; if (!parts[i + 1] || parts[i + 1].k !== kind) { html += `<${tag}>${esc(run)}</${tag}>`; run = ''; } }
+          else html += esc(p.t);
+        });
+        return html;
+      }
+      return [toHtml(L, 'del', 'del'), toHtml(Rt, 'ins', 'ins')];
+    }
+    // Align two lists; neighbouring removed/added items become "changed".
+    function listRows(a, b) {
+      const ops = lcsOps(a, b, (x, y) => x.trim() === y.trim());
+      const rows = [];
+      for (let k = 0; k < ops.length; k++) {
+        const o = ops[k];
+        if (o.op === 'same') { rows.push({ kind: 'same', a: o.a, b: o.b }); continue; }
+        const dels = [], ins = [];
+        while (k < ops.length && ops[k].op !== 'same') { (ops[k].op === 'del' ? dels : ins).push(ops[k][ops[k].op === 'del' ? 'a' : 'b']); k++; }
+        k--;
+        const n = Math.max(dels.length, ins.length);
+        for (let x = 0; x < n; x++) {
+          if (x < dels.length && x < ins.length) rows.push({ kind: 'changed', a: dels[x], b: ins[x] });
+          else if (x < dels.length) rows.push({ kind: 'removed', a: dels[x], b: '' });
+          else rows.push({ kind: 'added', a: '', b: ins[x] });
+        }
+      }
+      return rows;
+    }
+
+    // ---------- snapshot → comparable sections ----------
+    const arr = (v) => (Array.isArray(v) ? v : []).map((x) => String(x || '').trim()).filter(Boolean);
+    function sectionsOf(s) {
+      s = s || {};
+      const plan = (s.teachingPlan || []).map((r) => r.type === 'milestone'
+        ? { key: `— ${r.label}`, text: r.label }
+        : {
+          key: `Week ${r.week || '?'}`,
+          text: [['Topics', r.topics], ['ILO', r.ilo], ['TLA', r.tla], ['Materials', r.instructionalMaterials], ['Assessment', r.assessmentTasks]]
+            .filter(([, v]) => arr(v).length).map(([k, v]) => `${k}: ${arr(v).join('; ')}`).join('\n')
+        });
+      const refs = s.referenceGroups || {};
+      const grading = ((s.grading && s.grading.components) || []).map((c) => `${c.name} (${c.weightPct || 0}%)${(c.items || []).length ? ': ' + c.items.map((i) => `${i.item} ${i.pct ? i.pct + '%' : ''}`.trim()).join(', ') : ''}`);
+      return [
+        { title: 'Course Information', type: 'fields', fields: [
+          ['Course Code', s.courseCode], ['Course Title', s.courseTitle], ['Semester', s.semester], ['Academic Year', s.academicYear],
+          ['Prerequisite', s.prerequisite], ['Units', s.facultyUnits], ['Schedule', s.facultySchedule], ['Course Description', s.description]
+        ] },
+        { title: 'Course Intended Learning Outcomes', type: 'list', items: arr(s.outcomes) },
+        { title: 'Course Objectives', type: 'list', items: arr(s.objectives) },
+        { title: 'Student Outcomes Map', type: 'list', items: (s.soMap || []).map((r) => `${r.soCode}${r.intensity ? ` (${r.intensity})` : ''}${r.description ? ` — ${r.description}` : ''}`) },
+        { title: 'Teaching and Learning Plan', type: 'keyed', rows: plan },
+        { title: 'References', type: 'list', items: [].concat(
+          arr(refs.textbooks).map((x) => `Textbook: ${x}`), arr(refs.onlineResources).map((x) => `Online: ${x}`),
+          arr(refs.journals).map((x) => `Journal: ${x}`), arr(refs.suggested).map((x) => `Suggested: ${x}`), arr(s.references)) },
+        { title: 'Grading System', type: 'list', items: grading },
+        { title: 'Course Requirements', type: 'list', items: arr(s.courseRequirements) },
+        { title: 'Course Policies (custom)', type: 'fields', fields: [['Policies', s.classPoliciesOverride]] }
+      ];
+    }
+
+    function compare(oldSnap, newSnap) {
+      const A = sectionsOf(oldSnap), B = sectionsOf(newSnap);
+      return A.map((sa, idx) => {
+        const sb = B[idx];
+        let rows = [];
+        if (sa.type === 'fields') {
+          rows = sa.fields.map(([label, va], i) => {
+            const vb = sb.fields[i][1];
+            const x = String(va || '').trim(), y = String(vb || '').trim();
+            const kind = x === y ? 'same' : !x ? 'added' : !y ? 'removed' : 'changed';
+            return { kind, label, a: x, b: y };
+          }).filter((r) => r.a || r.b);
+        } else if (sa.type === 'list') {
+          rows = listRows(sa.items, sb.items);
+        } else {
+          const keys = [];
+          sa.rows.concat(sb.rows).forEach((r) => { if (!keys.includes(r.key)) keys.push(r.key); });
+          rows = keys.map((k) => {
+            const ra = sa.rows.find((r) => r.key === k), rb = sb.rows.find((r) => r.key === k);
+            const x = ra ? ra.text : '', y = rb ? rb.text : '';
+            return { kind: !ra ? 'added' : !rb ? 'removed' : x === y ? 'same' : 'changed', label: k, a: x, b: y };
+          });
+        }
+        return { title: sa.title, rows };
+      });
+    }
+
+    const KIND_LABEL = { added: 'Added', removed: 'Removed', changed: 'Changed', same: '' };
+    function render(oldSnap, newSnap) {
+      const only = document.getElementById('cmp-only').checked;
+      const sections = compare(oldSnap, newSnap);
+      const counts = { added: 0, removed: 0, changed: 0 };
+      sections.forEach((s) => s.rows.forEach((r) => { if (counts[r.kind] !== undefined) counts[r.kind]++; }));
+      const total = counts.added + counts.removed + counts.changed;
+      document.getElementById('cmp-summary').innerHTML = total
+        ? `<span class="cmp-chip changed">${counts.changed} changed</span><span class="cmp-chip added">${counts.added} added</span><span class="cmp-chip removed">${counts.removed} removed</span>`
+        : '<span class="cmp-chip">No differences — the two are identical.</span>';
+      document.getElementById('cmp-body').innerHTML = sections.map((s) => {
+        const rows = only ? s.rows.filter((r) => r.kind !== 'same') : s.rows;
+        const changed = s.rows.filter((r) => r.kind !== 'same').length;
+        if (only && !rows.length) return '';
+        return `<section class="card cmp-section">
+          <div class="cmp-head"><h2 class="card-title">${esc(s.title)}</h2><span class="section-sub">${changed ? `${changed} difference${changed === 1 ? '' : 's'}` : 'No changes'}</span></div>
+          ${rows.length ? `<div class="cmp-grid">${rows.map((r) => {
+            const [l, rr] = r.kind === 'changed' ? wordDiff(r.a, r.b) : [esc(r.a), esc(r.b)];
+            return `<div class="cmp-row ${r.kind}">
+              ${r.label ? `<div class="cmp-label">${esc(r.label)} ${KIND_LABEL[r.kind] ? `<span class="cmp-tag ${r.kind}">${KIND_LABEL[r.kind]}</span>` : ''}</div>` : (KIND_LABEL[r.kind] ? `<div class="cmp-label"><span class="cmp-tag ${r.kind}">${KIND_LABEL[r.kind]}</span></div>` : '')}
+              <div class="cmp-cell old">${l || '<span class="t-muted">—</span>'}</div>
+              <div class="cmp-cell new">${rr || '<span class="t-muted">—</span>'}</div>
+            </div>`;
+          }).join('')}</div>` : '<p class="t-muted" style="padding:0 1.5rem 1.25rem;">Empty in both.</p>'}
+        </section>`;
+      }).join('') || '<p class="t-muted">No differences to show.</p>';
+    }
+
+    // ---------- choices ----------
+    const sources = new Map(); // value → { label, snapshot | loader }
+    const cache = new Map();
+    async function snapshotFor(value) {
+      if (cache.has(value)) return cache.get(value);
+      const [pid, which] = value.split('::');
+      let data = cache.get(`data:${pid}`);
+      if (!data) { data = await api.getVersions(pid); cache.set(`data:${pid}`, data); }
+      const snap = which === 'current' ? data.current : (data.versions.find((v) => String(v.no) === which) || {}).snapshot;
+      cache.set(value, snap);
+      return snap;
+    }
+
+    async function refresh() {
+      const l = document.getElementById('cmp-left').value, r = document.getElementById('cmp-right').value;
+      try {
+        const [a, b] = await Promise.all([snapshotFor(l), snapshotFor(r)]);
+        render(a, b);
+      } catch (err) { ui().notifyError(err); }
+    }
+
+    (async function init() {
+      if (!id) { document.getElementById('cmp-body').innerHTML = '<p class="t-muted">Open Compare from an OBTLP (My Portfolios, the review page or the Archive).</p>'; return; }
+      try {
+        const [main, state] = await Promise.all([api.getVersions(id), api.getState()]);
+        cache.set(`data:${id}`, main);
+        document.getElementById('cmp-subtitle').textContent = `${main.courseCode} — ${main.courseTitle}`;
+        const opts = [];
+        main.versions.forEach((v) => opts.push({ value: `${id}::${v.no}`, label: `This term · v${v.no} ${v.label} (${day(v.at)})` }));
+        opts.push({ value: `${id}::current`, label: `This term · Latest (${main.status}${main.archived ? ', archived' : ''})` });
+        // The same course in other terms (e.g. last year's archived OBTLP).
+        const code = String(main.courseCode || '').trim().toLowerCase();
+        (state.portfolios || [])
+          .filter((p) => p.id !== id && code && String(p.courseCode || '').trim().toLowerCase() === code)
+          .sort((a, b) => String(a.academicYear).localeCompare(String(b.academicYear)))
+          .forEach((p) => opts.push({ value: `${p.id}::current`, label: `${p.semester} ${p.academicYear || ''} · ${p.status}${p.archived ? ' (archived)' : ''}` }));
+        const html = opts.map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('');
+        const left = document.getElementById('cmp-left'), right = document.getElementById('cmp-right');
+        left.innerHTML = html; right.innerHTML = html;
+        right.value = `${id}::current`;
+        // Default "older": the version before the latest submission, else
+        // another term of the same course, else the first version.
+        const prevVersion = main.versions.length >= 2 ? `${id}::${main.versions[main.versions.length - 2].no}` : null;
+        const otherTerm = opts.find((o) => !o.value.startsWith(`${id}::`));
+        left.value = prevVersion || (otherTerm && otherTerm.value) || (main.versions[0] ? `${id}::${main.versions[0].no}` : `${id}::current`);
+        if (opts.length < 2) {
+          document.getElementById('cmp-summary').innerHTML = '<span class="cmp-chip">There is only one version so far. After a revision is resubmitted, or once there is an OBTLP for this course from another term, you can compare them here.</span>';
+        }
+        left.addEventListener('change', refresh);
+        right.addEventListener('change', refresh);
+        document.getElementById('cmp-only').addEventListener('change', refresh);
+        refresh();
+      } catch (err) {
+        document.getElementById('cmp-body').innerHTML = `<p class="t-destructive">${esc(err.message || 'Could not load this OBTLP.')}</p>`;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -61,6 +61,7 @@
             <button data-filter="review">Pending Review</button>
             <button data-filter="approved">Approved</button>
             <button data-filter="revision">Returned for Revision</button>
+            <button data-filter="archived">Archived</button>
           </div>
           <input class="input input-search" id="portfolio-search" placeholder="Search portfolios…" />
         </div>
@@ -105,6 +106,7 @@
     };
     const EDITABLE_STATUSES = ['Draft', 'Revision Required'];
 
+    // Archived OBTLPs only show under "Archived" (and on the Archive page).
     const FILTER_DEFS = {
       all: (s) => true,
       draft: (s) => s === 'Draft',
@@ -113,8 +115,10 @@
       // an old status nothing sets any more; it counts as pending too.)
       review: (s) => s === 'Pending Review' || s === 'In Review',
       approved: (s) => s === 'Approved',
-      revision: (s) => s === 'Revision Required'
+      revision: (s) => s === 'Revision Required',
+      archived: () => true
     };
+    const inFilter = (p) => (activeFilter === 'archived' ? !!p.archived : !p.archived && FILTER_DEFS[activeFilter](p.status));
 
     let allPortfolios = [];
     let activeFilter = 'all';
@@ -144,11 +148,21 @@
       const deleteBtn = canEdit
         ? `<button type="button" class="icon-btn" data-delete="${p.id}" data-label="${p.courseCode || 'this portfolio'}" title="Delete"><i data-lucide="trash-2" class="svg-icon"></i></button>`
         : '';
+      const compareLink = p.status !== 'Draft'
+        ? `<a href="compare.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="Compare old and new"><i data-lucide="git-compare" class="svg-icon"></i></a>`
+        : '';
+      const archiveBtn = p.status === 'Approved' && !p.archived
+        ? `<button type="button" class="icon-btn" data-archive="${p.id}" title="Move to Archive"><i data-lucide="archive" class="svg-icon"></i></button>`
+        : '';
+      const reuseLink = p.status === 'Approved'
+        ? `<button type="button" class="icon-btn" data-reuse="${p.id}" title="Use as basis for a new OBTLP"><i data-lucide="copy-plus" class="svg-icon"></i></button>`
+        : '';
       return `
         <div class="row-actions">
           <a href="portfolio-preview.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="Preview"><i data-lucide="eye" class="svg-icon"></i></a>
           ${editLink}
           <a href="portfolio-preview.html?id=${encodeURIComponent(p.id)}&print=1" class="icon-btn" title="Download PDF"><i data-lucide="download" class="svg-icon"></i></a>
+          ${compareLink}${reuseLink}${archiveBtn}
           ${deleteBtn}
         </div>
       `;
@@ -158,7 +172,7 @@
       const tbody = document.getElementById('portfolio-rows');
       const term = (filterText || '').trim().toLowerCase();
       const rows = allPortfolios
-        .filter((p) => FILTER_DEFS[activeFilter](p.status))
+        .filter(inFilter)
         .filter((p) => !term || p.courseCode.toLowerCase().includes(term) || p.courseTitle.toLowerCase().includes(term));
 
       if (!rows.length) {
@@ -175,12 +189,36 @@
           <td class="t-muted">${session.name || '—'}</td>
           <td class="t-muted">${fmtWhen(p.createdAt)}</td>
           <td class="t-muted">${fmtWhen(p.updatedAt)}</td>
-          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${window.OBTLP_ROLES.statusText(p)}</span></td>
+          <td><span class="badge ${badgeClassFor[p.status] || 'badge-draft'}">${window.OBTLP_ROLES.statusText(p)}</span>${p.archived ? ' <span class="badge badge-draft">Archived</span>' : ''}${p.late ? ' <span class="badge badge-revision" title="Submitted after the deadline">Late</span>' : ''}</td>
           <td>${actionsCellFor(p)}</td>
         </tr>
       `).join('');
       if (window.lucide) lucide.createIcons();
 
+      tbody.querySelectorAll('[data-archive]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const p = allPortfolios.find((x) => x.id === btn.dataset.archive);
+          if (!confirm(`Move ${p.courseCode} (${p.semester} ${p.academicYear}) to the Archive? It stays viewable there and can still be reused.`)) return;
+          try {
+            const updated = await api.archivePortfolio(p.id, true);
+            Object.assign(p, updated);
+            ui.notify('Archived', `${p.courseCode} was moved to the Archive.`);
+            renderRows(searchInput ? searchInput.value : '');
+          } catch (err) { ui.notifyError(err); }
+        });
+      });
+      tbody.querySelectorAll('[data-reuse]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const p = allPortfolios.find((x) => x.id === btn.dataset.reuse);
+          const m = /^(\d{4})-(\d{4})$/.exec(p.academicYear || '');
+          const ay = window.prompt(`Start a new OBTLP from ${p.courseCode} (${p.semester} ${p.academicYear}).\n\nAcademic year for the new OBTLP:`, m ? `${Number(m[1]) + 1}-${Number(m[2]) + 1}` : '');
+          if (ay === null) return;
+          try {
+            const copy = await api.duplicatePortfolio(p.id, { academicYear: ay.trim(), semester: p.semester });
+            window.location.href = `portfolio-new.html?id=${encodeURIComponent(copy.id)}`;
+          } catch (err) { ui.notifyError(err); }
+        });
+      });
       tbody.querySelectorAll('[data-delete]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           if (!confirm(`Delete the draft "${btn.dataset.label}"? This cannot be undone.`)) return;

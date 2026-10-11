@@ -204,6 +204,17 @@
     requestRevision: (id, comment) =>
       req(`/api/portfolios/${encodeURIComponent(id)}/actions`, { method: 'POST', body: JSON.stringify({ action: 'request-revision', comment }) }),
 
+    // ---- deadlines / reports / archive / versions ----
+    getDeadlines: () => req('/api/deadlines'),
+    saveDeadline: (body) => req('/api/deadlines', { method: 'POST', body: JSON.stringify(body) }),
+    deleteDeadline: (id) => req(`/api/deadlines/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    sendDeadlineReminders: () => req('/api/deadlines/send-reminders', { method: 'POST' }),
+    getReport: (qs) => req(`/api/reports${qs ? `?${qs}` : ''}`),
+    archivePortfolio: (id, archived) => req(`/api/portfolios/${encodeURIComponent(id)}/archive`, { method: 'POST', body: JSON.stringify({ archived: archived !== false }) }),
+    archiveTerm: (body) => req('/api/archive/term', { method: 'POST', body: JSON.stringify(body) }),
+    duplicatePortfolio: (id, body) => req(`/api/portfolios/${encodeURIComponent(id)}/duplicate`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    getVersions: (id) => req(`/api/portfolios/${encodeURIComponent(id)}/versions`),
+
     // ---- documents ----
     uploadDocument: (portfolioId, { name, dataBase64 }) =>
       req(`/api/portfolios/${encodeURIComponent(portfolioId)}/documents`, { method: 'POST', body: JSON.stringify({ name, dataBase64 }) }),

@@ -85,7 +85,10 @@
             <h3 class="card-title" style="margin-bottom:0.25rem;">Active Review</h3>
             <p class="section-sub" style="margin-bottom:1rem;" id="active-review-label">Select a submission to review</p>
 
-            <a href="#" id="view-portfolio-link" class="btn btn-outline btn-sm" style="margin-bottom:1rem;display:none;"><i data-lucide="eye" class="svg-icon"></i> View Full Portfolio</a>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+              <a href="#" id="view-portfolio-link" class="btn btn-outline btn-sm" style="display:none;"><i data-lucide="eye" class="svg-icon"></i> View Full Portfolio</a>
+              <a href="#" id="compare-link" class="btn btn-outline btn-sm" style="display:none;"><i data-lucide="git-compare" class="svg-icon"></i> Compare Versions</a>
+            </div>
 
             <div class="compliance">
               <p style="font-weight:500;margin-bottom:0.25rem;">Compliance Check</p>
@@ -282,7 +285,8 @@
         `${['Teacher'].concat(chain.map(R.label)).join(' → ')}. You are the ${roleName}: act on what is waiting for you, and follow the rest.`;
       const next = nextAfterMe();
       document.getElementById('btn-approve-label').textContent = next ? `Approve → ${R.label(next)}` : 'Final Approve';
-      allItems = latestPortfolios
+      // Archived OBTLPs live on the Archive page.
+      allItems = latestPortfolios.filter((p) => !p.archived)
         .map((p) => ({ p, bucket: bucketOf(p) }))
         .filter((it) => it.bucket)
         .sort((a, b) => String(b.p.updatedAt || '').localeCompare(String(a.p.updatedAt || '')));
@@ -331,6 +335,7 @@
         const [badgeClass, defaultText] = BADGE[bucket];
         const badgeText = bucket === 'Progress' ? R.statusText(p).replace('Pending – ', 'At ') : (bucket === 'Pending' && p.resubmitted ? 'Resubmitted' : defaultText);
         const name = nameOf(p.facultyId);
+        const lateTag = p.late ? ' · <span class="t-destructive">late</span>' : '';
         const sub = bucket === 'Approved'
           ? `approved ${when(p.review && p.review.approvedAt || p.updatedAt)}`
           : bucket === 'Revision'
@@ -339,7 +344,7 @@
         return `
           <li class="${p.id === selectedId ? 'is-selected' : ''}">
             <div class="avatar-sec">${esc(initialsOf(name))}</div>
-            <div style="flex:1;min-width:0;"><p class="cell-strong">${esc(p.courseCode)} — ${esc(p.courseTitle)}</p><p class="cell-sub">${esc(name)} · ${sub}</p></div>
+            <div style="flex:1;min-width:0;"><p class="cell-strong">${esc(p.courseCode)} — ${esc(p.courseTitle)}</p><p class="cell-sub">${esc(name)} · ${sub}${lateTag}</p></div>
             <span class="badge ${badgeClass}">${badgeText}</span>
             <button class="btn btn-outline btn-sm" data-id="${esc(p.id)}">${bucket === 'Pending' ? 'Review' : 'View'}</button>
           </li>`;
@@ -407,6 +412,10 @@
       const viewLink = document.getElementById('view-portfolio-link');
       viewLink.href = `portfolio-preview.html?id=${encodeURIComponent(id)}`;
       viewLink.style.display = 'inline-flex';
+      const cmp = document.getElementById('compare-link');
+      cmp.href = `compare.html?id=${encodeURIComponent(id)}`;
+      cmp.style.display = (p.versionCount || 0) >= 2 || latestPortfolios.some((x) => x.id !== p.id && x.courseCode && x.courseCode === p.courseCode) ? 'inline-flex' : 'none';
+      cmp.title = (p.versionCount || 0) >= 2 ? 'See what changed since the last submission' : 'Compare with this course\'s OBTLP from another term';
       renderCompliance(p);
 
       // Approve only at your own level; you (or anyone above) can send it
@@ -576,12 +585,15 @@
       document.getElementById('btn-approve').style.display = '';
       document.getElementById('btn-delete').style.display = 'none';
       document.getElementById('view-portfolio-link').style.display = 'none';
+      document.getElementById('compare-link').style.display = 'none';
       document.getElementById('compliance-list').innerHTML = '<li><i data-lucide="minus" class="svg-icon"></i> Select a submission to review</li>';
       if (window.lucide) lucide.createIcons();
     }
 
-    const startTab = new URLSearchParams(window.location.search).get('tab');
+    const startParams = new URLSearchParams(window.location.search);
+    const startTab = startParams.get('tab');
     if (startTab && TAB_TITLE[startTab]) setFilter(startTab);
+    if (startParams.get('view') === 'faculty') showTab('faculty');
     loadAll();
   </script>
 </body>

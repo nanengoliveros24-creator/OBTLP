@@ -50,6 +50,7 @@
         <div class="header-actions">
           <button class="btn btn-outline" data-action="download-pdf"><i data-lucide="download" class="svg-icon"></i> Download PDF</button>
           <a href="admin.html" id="back-link" class="btn btn-outline" style="display:none;"><i data-lucide="arrow-left" class="svg-icon"></i> Back to Review Queue</a>
+          <a href="#" id="compare-link" class="btn btn-outline" style="display:none;"><i data-lucide="git-compare" class="svg-icon"></i> Compare</a>
           <a href="portfolio-new.html" id="edit-link" class="btn btn-outline"><i data-lucide="pencil" class="svg-icon"></i> Edit</a>
           <button class="btn btn-primary" data-action="submit-for-review" id="submit-btn"><i data-lucide="send" class="svg-icon"></i> Submit for Review</button>
         </div>
@@ -285,7 +286,12 @@
         document.getElementById('pdf-title').textContent = p.courseTitle || 'Untitled Course';
         document.getElementById('pdf-meta').textContent = `${p.courseCode || 'UNTITLED'} · ${p.semester || ''} · ${p.academicYear || ''}`;
         document.getElementById('pdf-status').textContent = p.status;
-        document.getElementById('submission-status').textContent = p.status;
+        document.getElementById('submission-status').textContent = window.OBTLP_ROLES.statusText(p) + (p.archived ? ' (archived)' : '');
+        if (p.status !== 'Draft') {
+          const cmp = document.getElementById('compare-link');
+          cmp.href = `compare.html?id=${encodeURIComponent(p.id)}`;
+          cmp.style.display = 'inline-flex';
+        }
         document.getElementById('f-notes').value = p.notes || '';
 
         function buildRenderModel() {
