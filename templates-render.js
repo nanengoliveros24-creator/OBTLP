@@ -267,6 +267,37 @@
       ${(rule.rows || []).map((r) => `<tr>${r.map((v) => `<td>${escapeHtml(v)}</td>`).join('')}</tr>`).join('')}</table>`;
   }
 
+  // ---------------------------------------------------------------------
+  // Reviewer feedback inside the document (panel feedback, Oct 2026).
+  // data.feedback = [{ part, text, byName, role, resolved }]. Open notes
+  // are numbered 1..n; the part of the document they are about is outlined
+  // in yellow with the numbered notes right above it, and the PDF gets a
+  // yellow bar in the margin plus a "Reviewer Feedback" page.
+  // ---------------------------------------------------------------------
+  const FEEDBACK_LABEL = {
+    general: 'General', courseInfo: 'Course Information', outcomes: 'Learning Outcomes (CILO)', soMap: 'Student Outcomes Map',
+    plan: 'Teaching and Learning Plan', references: 'References', grading: 'Grading / Course Requirements', policies: 'Course Policies'
+  };
+  const FEEDBACK_ROLE = { chair: 'Department Chair', admin: 'Dean', vpaa: 'VPAA' };
+  function openFeedback(data) {
+    return (data.feedback || []).filter((f) => !f.resolved).map((f, i) => Object.assign({ n: i + 1 }, f));
+  }
+  function fbFor(data, parts) { return openFeedback(data).filter((f) => parts.includes(f.part)); }
+  function fbNotesHtml(list) {
+    return `<div class="oo-fb">${list.map((f) => `<div class="oo-fb-note"><span class="oo-fb-n">${f.n}</span><div>
+      <p class="oo-fb-meta">${escapeHtml(FEEDBACK_LABEL[f.part] || 'General')} · ${escapeHtml(FEEDBACK_ROLE[f.role] || 'Reviewer')}${f.byName ? ` (${escapeHtml(f.byName)})` : ''}</p>
+      <p>${escapeHtml(f.text)}</p></div></div>`).join('')}</div>`;
+  }
+  function fbWrap(data, parts, html) {
+    const list = fbFor(data, parts);
+    if (!list.length) return html;
+    return `<div class="oo-fb-part">${fbNotesHtml(list)}<div class="oo-fb-target">${html}</div></div>`;
+  }
+  function fbGeneral(data) {
+    const list = fbFor(data, ['general']);
+    return list.length ? fbNotesHtml(list) : '';
+  }
+
   function renderSectionsHtml(template, data) {
     if (!template) return '';
     if (template.layout === 'course-outline') return renderCourseOutlineHtml(template, data);
@@ -304,7 +335,7 @@
       const program = data.program || {};
       const sos = soRows(data);
       const cols = (plan.soSection && plan.soSection.columns) || ['I/L', 'E/P', 'D/O'];
-      p2 += `
+      p2 += fbWrap(data, ['outcomes', 'soMap'], `
         <table class="oo-table oo-outcomes">
           <colgroup><col style="width:16%"><col style="width:7%"><col><col style="width:6%"><col style="width:6%"><col style="width:6%"></colgroup>
           <tr><th class="oo-rowlabel">Program Educational Objectives</th>
@@ -316,16 +347,16 @@
           ${sos.length ? sos.map((so) => `<tr><td>${escapeHtml(formatSoCode(so.code))}</td><td>${escapeHtml(so.description)}</td>${cols.map((c) => `<td class="oo-center oo-check">${so.intensity.includes(c.toUpperCase()) ? '&#10003;' : ''}</td>`).join('')}</tr>`).join('')
             : `<tr><td colspan="${2 + cols.length}" class="t-muted">No student outcomes mapped yet.</td></tr>`}
         </table>
-        <div class="oo-legend">Legend:<br>I/L – Introductory/Learning<br>E/P – Enabling/Practice<br>D/O – Demonstrating/Opportunity</div>`;
+        <div class="oo-legend">Legend:<br>I/L – Introductory/Learning<br>E/P – Enabling/Practice<br>D/O – Demonstrating/Opportunity</div>`);
     }
     if (plan.courseInfo) {
-      p2 += `
+      p2 += fbWrap(data, ['courseInfo'], `
         <table class="oo-table oo-courseinfo">
           <colgroup><col style="width:16%"><col style="width:18%"><col style="width:24%"><col></colgroup>
           <tr><th>COURSE/SUBJECT CODE</th><td>${escapeHtml(data.courseCode)}</td><th>COURSE/SUBJECT TITLE</th><td class="oo-strong">${escapeHtml(String(data.courseTitle || '').toUpperCase())}</td></tr>
           <tr><th>CREDIT UNITS</th><td>${escapeHtml(creditUnits(data))}</td><th>COURSE/SUBJECT PRE-REQUISITE/CO-REQUISITE</th><td>${escapeHtml(data.prerequisite || 'None')}</td></tr>
           <tr><th>COURSE/SUBJECT DESCRIPTION</th><td colspan="3">${escapeHtml(data.description || '')}</td></tr>
-        </table>`;
+        </table>`);
     }
     if (p2) pages.push(p2);
 
@@ -343,13 +374,13 @@
           <td>${htmlItems(row.assessmentTasks)}</td>
         </tr>`;
       }).join('');
-      pages.push(`
+      pages.push(fbWrap(data, ['plan'], `
         <div class="oo-section-title">TEACHING AND LEARNING PLAN</div>
         <table class="oo-table oo-plan">
           <colgroup>${TLP_FRACTIONS.map((f) => `<col style="width:${f * 100}%">`).join('')}</colgroup>
           <thead><tr>${cols.map((c) => `<th class="oo-center">${escapeHtml(c)}</th>`).join('')}</tr></thead>
           <tbody>${rows || '<tr><td colspan="6" class="t-muted">No teaching plan entered yet.</td></tr>'}</tbody>
-        </table>`);
+        </table>`));
     }
 
     // References / Grading / Requirements / Policies / Effectivity
@@ -394,7 +425,7 @@
         html += `<tr><th class="oo-rowlabel">${escapeHtml(bottomLabel(s))}</th><td>${body}</td></tr>`;
       }
       html += '</table>';
-      pages.push(html);
+      pages.push(fbWrap(data, ['references', 'grading', 'policies'], html));
     }
 
     if (plan.signature) {
@@ -410,6 +441,7 @@
         </div>`).join('')}</div>`);
     }
 
+    if (pages.length) pages[0] = fbGeneral(data) + pages[0];
     return `<div class="obtlp-official">${pages.map((content, idx) => `
       <section class="oo-page">
         ${htmlLetterhead(data, idx + 1, formCode)}
@@ -821,6 +853,77 @@
     ctx.y = maxY;
   }
 
+  // ---------- reviewer feedback in the PDF ----------
+  // Records where each part of the document was drawn (page + y), so the
+  // parts with open feedback get a yellow bar in the left margin with the
+  // note numbers, and the notes themselves are listed on a final
+  // "Reviewer Feedback" page.
+  function pdfRegions(ctx) {
+    const regions = [];
+    return {
+      regions,
+      run(parts, safe, name, fn) {
+        const doc = ctx.doc;
+        const sp = doc.internal.getCurrentPageInfo().pageNumber;
+        const sy = ctx.y;
+        safe(name, fn);
+        regions.push({ parts, sp, sy, ep: doc.internal.getCurrentPageInfo().pageNumber, ey: ctx.y });
+      }
+    };
+  }
+
+  function pdfMarkFeedback(ctx, regions) {
+    const doc = ctx.doc;
+    const open = openFeedback(ctx.data);
+    if (!open.length) return;
+    const last = doc.getNumberOfPages();
+    regions.forEach((r) => {
+      const list = open.filter((f) => r.parts.includes(f.part));
+      if (!list.length) return;
+      // The part may start at the very bottom of a page and continue on the
+      // next one; skip slivers so the mark sits next to the actual content.
+      const segs = [];
+      for (let pg = r.sp; pg <= r.ep; pg++) {
+        const y1 = pg === r.sp ? r.sy : PT.contentTop;
+        const y2 = pg === r.ep ? r.ey : PT.contentBottom;
+        if (y2 - y1 >= 24) segs.push({ pg, y1, y2 });
+      }
+      segs.forEach((s) => {
+        doc.setPage(s.pg);
+        doc.setFillColor(255, 214, 0);
+        doc.rect(PT.marginX - 13, s.y1, 6, s.y2 - s.y1, 'F');
+      });
+      if (!segs.length) return;
+      doc.setPage(segs[0].pg);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(180, 0, 0);
+      doc.text(`FEEDBACK #${list.map((f) => f.n).join(', #')}`, PT.marginX - 22, segs[0].y1 + 2, { angle: -90 });
+      doc.setTextColor(0, 0, 0);
+    });
+    doc.setPage(last);
+  }
+
+  function pdfFeedbackPage(ctx) {
+    const open = openFeedback(ctx.data);
+    if (!open.length) return;
+    const doc = ctx.doc;
+    ctx.newPage();
+    const W = ctx.width, X = ctx.x0;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
+    doc.text('REVIEWER FEEDBACK', X + W / 2, ctx.y + 8, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    doc.text(`${ctx.data.courseCode || ''} – ${ctx.data.courseTitle || ''} · notes to be addressed before approval (the parts are marked with a yellow bar in the margin)`, X + W / 2, ctx.y + 20, { align: 'center' });
+    ctx.y += 30;
+    const YEL = [255, 236, 140];
+    const rows = [{ cells: ['#', 'Part of the OBTLP', 'Feedback', 'From'].map((h) => ({ items: [P(h, { bold: true })], raw: true, fill: YEL })) }]
+      .concat(open.map((f) => ({ cells: [
+        { items: [P(String(f.n), { bold: true, align: 'center' })], raw: true, fill: YEL },
+        { items: [P(FEEDBACK_LABEL[f.part] || 'General')], raw: true },
+        { items: [P(f.text)], raw: true },
+        { items: [P(`${FEEDBACK_ROLE[f.role] || 'Reviewer'}${f.byName ? ` – ${f.byName}` : ''}`), P(f.at ? new Date(f.at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '')], raw: true }
+      ] })));
+    drawTable(ctx, [W * 0.05, W * 0.19, W * 0.54, W * 0.22], rows, { fs: 8.5, lh: 10.6, pad: 4 });
+  }
+
   function buildOfficialPdf(jsPDFCtor, data, logoDataUrl) {
     const template = data.template;
     if (template && template.layout === 'course-outline') return buildCourseOutlinePdf(jsPDFCtor, data, logoDataUrl);
@@ -830,12 +933,14 @@
     const plan = planDocument(template);
     const safe = (name, fn) => { try { fn(); } catch (e) { console.error(`[OBTLP PDF] ${name} failed`, e); } };
 
+    const reg = pdfRegions(ctx);
     if (plan.org) { safe('org', () => pdfTitleAndOrg(ctx)); ctx.newPage(); }
-    if (plan.outcomes) safe('outcomes', () => pdfOutcomes(ctx, plan));
-    if (plan.courseInfo) { ctx.y += 4; safe('courseInfo', () => pdfCourseInfo(ctx)); }
-    if (plan.plan) { ctx.y += 12; safe('plan', () => pdfPlan(ctx, plan.plan)); }
-    if (plan.bottom.length) { ctx.y += 8; safe('bottom', () => pdfBottom(ctx, plan)); }
+    if (plan.outcomes) reg.run(['outcomes', 'soMap'], safe, 'outcomes', () => pdfOutcomes(ctx, plan));
+    if (plan.courseInfo) { ctx.y += 4; reg.run(['courseInfo'], safe, 'courseInfo', () => pdfCourseInfo(ctx)); }
+    if (plan.plan) { ctx.y += 12; reg.run(['plan'], safe, 'plan', () => pdfPlan(ctx, plan.plan)); }
+    if (plan.bottom.length) { ctx.y += 8; reg.run(['references', 'grading', 'policies'], safe, 'bottom', () => pdfBottom(ctx, plan)); }
     if (plan.signature) safe('signatures', () => pdfSignatures(ctx, plan.signature));
+    safe('feedback', () => { pdfMarkFeedback(ctx, reg.regions); pdfFeedbackPage(ctx); });
 
     const n = doc.internal.getNumberOfPages();
     const formCode = template.formCode || 'PNC:AA-FO-06 rev.2 08182023';
@@ -969,27 +1074,27 @@
     // Page 2 — course info, CILO, SO map
     const sos = soRows(data);
     const soCols = ['I/L', 'E/P', 'D/O'];
-    pages.push(`
+    pages.push(fbWrap(data, ['courseInfo'], `
       <table class="co-info">
         <colgroup><col style="width:24%"><col></colgroup>
         <tr><td class="co-label">COURSE TITLE:</td><td class="co-underline">${escapeHtml(data.courseTitle || '')}</td></tr>
         <tr><td class="co-label">COURSE DESCRIPTION:</td><td class="co-justify">${meta.descriptionLead ? `<span class="co-lead">${escapeHtml(meta.descriptionLead)}</span> ` : ''}${escapeHtml(data.description || '')}</td></tr>
         <tr><td class="co-label">SCHEDULE:</td><td class="co-underline">${escapeHtml(data.schedule || '') || '&nbsp;'}<div class="co-caption">(CLASS SCHEDULES)</div></td></tr>
         <tr><td class="co-label">FACULTY:</td><td class="co-underline">${escapeHtml(coFaculty(data)) || '&nbsp;'}<div class="co-caption">NAME OF FACULTY / EMAIL</div></td></tr>
-      </table>
+      </table>`) + fbWrap(data, ['outcomes'], `
       <div class="co-bar">COURSE INTENDED LEARNING OUTCOMES (CILO):</div>
       <table class="co-table">
         <colgroup><col style="width:16%"><col></colgroup>
         <tr><td colspan="2" class="oo-center">On the completion of the course, student is expected to be able to do the following:</td></tr>
         ${(data.outcomes || []).map((v, i) => `<tr><td class="oo-center">CO${i + 1}</td><td>${escapeHtml(v)}</td></tr>`).join('') || '<tr><td colspan="2" class="t-muted">No CILO on file yet.</td></tr>'}
-      </table>
+      </table>`) + fbWrap(data, ['soMap'], `
       <table class="co-table co-somap">
         <colgroup><col style="width:19%"><col style="width:9%"><col><col style="width:7%"><col style="width:7%"><col style="width:7%"></colgroup>
         <tr><th class="co-gray" rowspan="${Math.max(1, sos.length) + 1}">Student Outcomes Map Addressed by the Course</th><td colspan="2"></td>${soCols.map((c) => `<th class="oo-center">${c}</th>`).join('')}</tr>
         ${sos.length ? sos.map((so, i) => `<tr><td>${escapeHtml(String(so.code || '').replace(/^SO\s*/i, 'SO #. '))}</td><td>${(data.soMap[i] && data.soMap[i].group) ? `<div class="co-italic">${escapeHtml(data.soMap[i].group)}</div>` : ''}${escapeHtml(so.description)}</td>${soCols.map((c) => `<td class="oo-center oo-middle">${so.intensity.includes(c) ? '/' : ''}</td>`).join('')}</tr>`).join('')
           : `<tr><td colspan="5" class="t-muted">No student outcomes mapped yet.</td></tr>`}
       </table>
-      <p class="co-legend">Legend: &nbsp;I/L – Introductory/Learning &nbsp; E/P – Enabling/Practice &nbsp; D/O – Demonstrating/Opportunity</p>`);
+      <p class="co-legend">Legend: &nbsp;I/L – Introductory/Learning &nbsp; E/P – Enabling/Practice &nbsp; D/O – Demonstrating/Opportunity</p>`));
 
     // Page 3 — course outline and time-frame
     const weeks = (data.teachingPlan || []).map((r) => {
@@ -1003,13 +1108,13 @@
       if (inList) html += '</ul>';
       return `<tr><td>${escapeHtml(r.week)}</td><td>${html}</td></tr>`;
     }).join('');
-    pages.push(`
+    pages.push(fbWrap(data, ['plan'], `
       <div class="co-bar">COURSE OUTLINE AND TIME-FRAME</div>
       <table class="co-table co-weeks">
         <colgroup><col style="width:14%"><col></colgroup>
         <thead><tr><th class="co-dark oo-center">WEEK</th><th class="co-dark oo-center">TOPIC</th></tr></thead>
         <tbody>${weeks || '<tr><td colspan="2" class="t-muted">No topics entered yet.</td></tr>'}</tbody>
-      </table>`);
+      </table>`));
 
     // Page 4 — references, requirements, grading, policies
     const rg = data.referenceGroups || {};
@@ -1020,11 +1125,11 @@
       ? (comps[0].items || [])
       : comps.map((c) => ({ item: c.name, source: (c.items || []).map((it) => `${it.item} – ${it.pct}%`).join('\n'), pct: c.weightPct }));
     const pol = coPolicies(data);
-    pages.push(`
+    pages.push(fbWrap(data, ['references'], `
       <div class="co-bar">TEXTBOOK:</div>
       ${textbooks.map((t) => `<p class="co-ref">${escapeHtml(t)}</p>`).join('') || '<p class="t-muted">None listed.</p>'}
       <div class="co-bar">SUGGESTED READINGS AND REFERENCES:</div>
-      ${suggested.map((t) => `<p class="co-ref">${escapeHtml(t)}</p>`).join('') || '<p class="t-muted">None listed.</p>'}
+      ${suggested.map((t) => `<p class="co-ref">${escapeHtml(t)}</p>`).join('') || '<p class="t-muted">None listed.</p>'}`) + fbWrap(data, ['grading'], `
       <div class="co-bar">COURSE REQUIREMENTS:</div>
       ${(data.courseRequirements || []).map((t) => `<p class="co-tight">${escapeHtml(t)}</p>`).join('') || '<p class="t-muted">None listed.</p>'}
       <div class="co-bar">GRADING SYSTEM:</div>
@@ -1034,15 +1139,16 @@
         <tr><td class="oo-center">Assessment Item</td><td class="oo-center">Grade Source</td><td class="oo-center">Percentage</td></tr>
         ${gradingRows.map((it) => `<tr><td>${escapeHtml(it.item)}</td><td>${String(it.source || '').split('\n').map(escapeHtml).join('<br>')}</td><td class="oo-center">${escapeHtml(it.pct)}%</td></tr>`).join('')}
       </table>
-      ${(meta.gradingNotes || []).map((t) => `<p class="co-tight">${escapeHtml(t)}</p>`).join('')}
+      ${(meta.gradingNotes || []).map((t) => `<p class="co-tight">${escapeHtml(t)}</p>`).join('')}`) + fbWrap(data, ['policies'], `
       <div class="co-bar">COURSE POLICIES:</div>
       <p class="co-tight">${escapeHtml(pol.attendanceHeading)}</p><p class="co-indent">${escapeHtml(pol.attendanceText)}</p>
       <p>${escapeHtml(pol.dishonestyIntro)}</p>${coHtmlList(pol.dishonestyItems, 'alpha')}
       <p class="co-tight">${escapeHtml(pol.submissionHeading)}</p><p class="co-indent">${escapeHtml(pol.submissionText)}</p>
       ${data.classPoliciesOverride ? `<p class="co-tight">Additional Notes</p><p class="co-indent">${escapeHtml(data.classPoliciesOverride)}</p>` : ''}
       <p class="co-tight">Faculty Consultation Hours</p>
-      <p class="co-indent">The Faculty Consultation/Advising hours schedule is available at the <span class="co-fill">${escapeHtml(pol.office)}</span> office, and at the <span class="co-fill">${escapeHtml(pol.office)}</span> bulletin board.</p>`);
+      <p class="co-indent">The Faculty Consultation/Advising hours schedule is available at the <span class="co-fill">${escapeHtml(pol.office)}</span> office, and at the <span class="co-fill">${escapeHtml(pol.office)}</span> bulletin board.</p>`));
 
+    if (pages.length) pages[0] = fbGeneral(data) + pages[0];
     return `<div class="obtlp-official co-doc">${pages.map((content, idx) => `
       <section class="oo-page co-page">
         ${coHtmlLetterhead(data, template)}
@@ -1200,8 +1306,9 @@
         ctx.y += 20;
       });
 
+      const reg = pdfRegions(ctx);
       // Course info / CILO / SO map
-      safe('courseInfo', () => {
+      reg.run(['courseInfo', 'outcomes', 'soMap'], safe, 'courseInfo', () => {
         const label = (t) => ({ items: [T(t)], raw: true, fill: GRAY });
         const descItems = (meta.descriptionLead ? [T(`${meta.descriptionLead} ${data.description || ''}`)] : [T(data.description || '')]);
         drawTable(ctx, [W * 0.24, W * 0.76], [
@@ -1236,7 +1343,7 @@
       });
 
       // Course outline and time-frame
-      safe('weeks', () => {
+      reg.run(['plan'], safe, 'weeks', () => {
         ctx.y += 4;
         bar('COURSE OUTLINE AND TIME-FRAME');
         const rows = [{ cells: [
@@ -1251,7 +1358,7 @@
       });
 
       // References / requirements / grading / policies
-      safe('bottom', () => {
+      reg.run(['references', 'grading', 'policies'], safe, 'bottom', () => {
         const rg = data.referenceGroups || {};
         const suggested = (rg.suggested || []).concat(rg.onlineResources || [], rg.journals || []);
         ctx.y += 6;
@@ -1293,6 +1400,7 @@
         flow([T(`The Faculty Consultation/Advising hours schedule is available at the ${pol.office} office, and at the ${pol.office} bulletin board.`)], { indent: 6 });
       });
 
+      safe('feedback', () => { pdfMarkFeedback(ctx, reg.regions); pdfFeedbackPage(ctx); });
       coDrawFooters(doc, data, template);
       return doc;
     } finally {

@@ -851,6 +851,53 @@ function sweepDeadlinesNow() {
     .catch((err) => { console.error('[deadlines] reminder sweep failed:', (err && err.message) || err); return 0; });
 }
 
+// Reviewer feedback written on parts of the OBTLP itself (panel feedback:
+// "feedback should be included inside the actual document and highlighted
+// in the PDF / hard copy").
+const FEEDBACK_PARTS = ['general', 'courseInfo', 'outcomes', 'soMap', 'plan', 'references', 'grading', 'policies'];
+
+function findFeedback(p, fid) {
+  const f = (p.feedback || []).find((x) => x.id === fid);
+  if (!f) throw { status: 404, message: 'Feedback not found.' };
+  return f;
+}
+
+// ---------- Curriculum / Plan of Study ----------
+// Each program keeps its plan of study: which courses are taken in which
+// year level and semester. OBTLPs are tied to it ("the OBTLP should be
+// related to the curriculum of the college"), and the coverage view shows
+// whether every course in the plan has an OBTLP for a term ("there should
+// be a copy of the OBTLP per plan of study").
+function sanitizeCurriculum(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list.slice(0, 400).map((r) => ({
+    id: String((r && r.id) || '') || store.nextId('cur'),
+    yearLevel: Math.min(6, Math.max(1, parseInt(r && r.yearLevel, 10) || 1)),
+    semester: SEMESTERS.includes(String(r && r.semester)) ? String(r.semester) : '1st Semester',
+    courseCode: String((r && r.courseCode) || '').trim().slice(0, 40),
+    courseTitle: String((r && r.courseTitle) || '').trim().slice(0, 200),
+    units: String((r && r.units) || '').trim().slice(0, 20),
+    courseCategory: sanitizeCategory(r && r.courseCategory)
+  })).filter((r) => {
+    const key = `${r.yearLevel}|${r.semester}|${r.courseCode.toLowerCase()}`;
+    if (!r.courseCode || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function canEditCurriculum(db, user, program) {
+  if (user.role === 'it') return true;
+  if (user.role === 'admin') return !user.departmentId || user.departmentId === program.departmentId;
+  if (user.role === 'chair') {
+    return (!user.departmentId || user.departmentId === program.departmentId) && (!user.programId || user.programId === program.id);
+  }
+  return false;
+}
+
+const STATUS_RANK = { Approved: 4, 'Pending Review': 3, 'In Review': 3, 'Revision Required': 2, Draft: 1 };
+
 // Fields compared between versions / terms.
 const SNAPSHOT_FIELDS = ['courseCode', 'courseTitle', 'semester', 'academicYear', 'description', 'prerequisite',
   'objectives', 'outcomes', 'soMap', 'teachingPlan', 'referenceGroups', 'references', 'grading',
@@ -1420,6 +1467,66 @@ const routes = {
     }
   },
 
+  // Department Chair (own program/college), Dean (own college) or IT.
+  'PUT /api/programs/:id/curriculum': {
+    auth: true,
+    roles: ['chair', 'admin', 'it'],
+    handler: (db, ctx, query, body, params) => {
+      const program = (db.programs || []).find((p) => p.id === params.id);
+      if (!program) throw { status: 404, message: 'Program not found.' };
+      if (!canEditCurriculum(db, ctx.user, program)) throw { status: 403, message: 'You can only manage the curriculum of your own college or program.' };
+      program.curriculum = sanitizeCurriculum(body.curriculum);
+      program.curriculumUpdatedAt = store.nowIso();
+      program.curriculumUpdatedBy = ctx.user.name;
+      pushAudit(db, { actor: ctx.user.id, action: 'curriculum-update', portfolioId: null, detail: `Updated the ${program.code} plan of study (${program.curriculum.length} courses)` });
+      return { status: 200, data: program };
+    }
+  },
+
+  // Which courses in a program's plan of study have an OBTLP for a term.
+  'GET /api/curriculum/coverage': {
+    auth: true,
+    roles: ['chair', 'admin', 'vpaa', 'it'],
+    handler: (db, ctx, query) => {
+      const program = (db.programs || []).find((p) => p.id === String(query.get('programId') || ''));
+      if (!program) throw { status: 404, message: 'Program not found.' };
+      const academicYear = String(query.get('academicYear') || '').trim();
+      const semester = String(query.get('semester') || '').trim();
+      const userById = new Map((db.users || []).map((u) => [u.id, u]));
+      const rows = (program.curriculum || []).filter((r) => !semester || r.semester === semester).map((r) => {
+        const code = r.courseCode.toLowerCase();
+        const matches = (db.portfolios || []).filter((p) => String(p.courseCode || '').trim().toLowerCase() === code
+          && inAdminScope(db, ctx.user, p)
+          && (!academicYear || String(p.academicYear || '').trim() === academicYear)
+          && (!semester || String(p.semester || '').trim() === semester)
+          && (!p.programId || p.programId === program.id));
+        const best = matches.slice().sort((a, b) => (STATUS_RANK[b.status] || 0) - (STATUS_RANK[a.status] || 0))[0] || null;
+        return Object.assign({}, r, {
+          obtlps: matches.length,
+          status: best ? best.status : 'No OBTLP',
+          stage: best ? currentStage(best) : null,
+          portfolioId: best ? best.id : null,
+          faculty: best ? ((userById.get(best.facultyId) || {}).name || '') : ''
+        });
+      });
+      const count = (fn) => rows.filter(fn).length;
+      return {
+        status: 200,
+        data: {
+          program: { id: program.id, code: program.code, name: program.name },
+          term: { academicYear, semester },
+          rows,
+          summary: {
+            courses: rows.length,
+            approved: count((r) => r.status === 'Approved'),
+            inProgress: count((r) => ['Pending Review', 'In Review', 'Revision Required', 'Draft'].includes(r.status)),
+            missing: count((r) => r.status === 'No OBTLP')
+          }
+        }
+      };
+    }
+  },
+
   'DELETE /api/programs/:id': {
     auth: true,
     roles: ['it'],
@@ -1913,6 +2020,8 @@ const routes = {
         }
         p.status = 'Approved';
         p.reviewStage = null;
+        // The final, approved document carries no open review notes.
+        (p.feedback || []).forEach((f) => { if (!f.resolved) { f.resolved = true; f.resolvedAt = store.nowIso(); f.resolvedBy = 'Final approval'; } });
         p.review = { notes: comment, requestedRevisionAt: null, approvedAt: store.nowIso(), approvedBy: ctx.user.name, approvedByRole: stage };
         pushAudit(db, { actor: ctx.user.id, action: 'approve', portfolioId: p.id, detail: `Final approval of ${p.courseCode} by the ${ROLE_LABEL[stage]}` });
         pushNotification(db, {
@@ -1941,10 +2050,11 @@ const routes = {
         p.review = { notes: comment, requestedRevisionAt: store.nowIso(), approvedAt: null, requestedBy: ctx.user.name, requestedByRole: ctx.user.role };
         pushHistory(p, { action: 'request-revision', stage, by: ctx.user.id, byName: ctx.user.name, role: ctx.user.role, note: comment });
         pushAudit(db, { actor: ctx.user.id, action: 'request-revision', portfolioId: p.id, detail: `${ROLE_LABEL[ctx.user.role]} requested revision on ${p.courseCode}${comment ? ': ' + comment : ''}` });
+        const openNotes = (p.feedback || []).filter((f) => !f.resolved).length;
         pushNotification(db, {
           userId: p.facultyId,
           title: 'Revision Requested',
-          message: `${p.courseCode} needs changes (${ROLE_LABEL[ctx.user.role]}): ${comment}`,
+          message: `${p.courseCode} needs changes (${ROLE_LABEL[ctx.user.role]}): ${comment}${openNotes ? ` — ${openNotes} note${openNotes === 1 ? '' : 's'} highlighted in the document` : ''}`,
           portfolioId: p.id
         });
         return { status: 200, data: p };
@@ -2458,7 +2568,7 @@ const routes = {
       if (templateId && !(db.obtlpTemplates || []).some((t) => t.id === templateId)) throw { status: 400, message: 'Selected template was not found.' };
       const copy = JSON.parse(JSON.stringify(src));
       ['versions', 'reviewHistory', 'approvals', 'reviewStage', 'archived', 'archivedAt', 'archivedBy', 'submittedAt',
-        'firstSubmittedAt', 'resubmitted', 'facultyEmail', 'inlineComments'].forEach((k) => delete copy[k]);
+        'firstSubmittedAt', 'resubmitted', 'facultyEmail', 'feedback'].forEach((k) => delete copy[k]);
       Object.assign(copy, {
         id: store.nextId('p'),
         status: 'Draft',
@@ -2474,6 +2584,52 @@ const routes = {
       db.portfolios.push(copy);
       pushAudit(db, { actor: ctx.user.id, action: 'create', portfolioId: copy.id, detail: `Started a new OBTLP for ${copy.courseCode} from the ${src.semester} ${src.academicYear} version` });
       return { status: 201, data: copy };
+    }
+  },
+
+  // ---- reviewer feedback inside the document ----
+  'POST /api/portfolios/:id/feedback': {
+    auth: true,
+    roles: ['chair', 'admin', 'vpaa'],
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      if (!currentStage(p)) throw { status: 409, message: 'Feedback can be added while the OBTLP is being reviewed.' };
+      const part = String(body.part || 'general');
+      if (!FEEDBACK_PARTS.includes(part)) throw { status: 400, message: 'Please choose which part of the OBTLP the feedback is about.' };
+      const text = String(body.text || '').trim().slice(0, 2000);
+      if (!text) throw { status: 400, message: 'Please write the feedback.' };
+      if (!Array.isArray(p.feedback)) p.feedback = [];
+      const f = { id: store.nextId('fb'), part, text, by: ctx.user.id, byName: ctx.user.name, role: ctx.user.role, at: store.nowIso(), resolved: false };
+      p.feedback.push(f);
+      p.feedback = p.feedback.slice(-200);
+      pushAudit(db, { actor: ctx.user.id, action: 'feedback', portfolioId: p.id, detail: `Added feedback on ${p.courseCode}` });
+      return { status: 201, data: f };
+    }
+  },
+
+  // The faculty member marks a note as addressed (or reopens it); reviewers can too.
+  'PUT /api/portfolios/:id/feedback/:fid': {
+    auth: true,
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      if (p.facultyId !== ctx.user.id && !isReviewer(ctx.user)) throw { status: 403, message: 'You do not have permission to change this feedback.' };
+      const f = findFeedback(p, params.fid);
+      f.resolved = !!body.resolved;
+      if (f.resolved) { f.resolvedAt = store.nowIso(); f.resolvedBy = ctx.user.name; } else { delete f.resolvedAt; delete f.resolvedBy; }
+      return { status: 200, data: f };
+    }
+  },
+
+  'DELETE /api/portfolios/:id/feedback/:fid': {
+    auth: true,
+    roles: ['chair', 'admin', 'vpaa'],
+    handler: (db, ctx, query, body, params) => {
+      const p = ownedPortfolio(db, params.id, ctx);
+      const f = findFeedback(p, params.fid);
+      if (f.by !== ctx.user.id) throw { status: 403, message: 'You can only remove your own feedback.' };
+      if (p.status === 'Approved') throw { status: 409, message: 'Feedback on an approved OBTLP is kept for the record.' };
+      p.feedback = p.feedback.filter((x) => x.id !== f.id);
+      return { status: 200, data: { ok: true } };
     }
   },
 

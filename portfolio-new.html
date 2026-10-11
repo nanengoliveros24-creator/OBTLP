@@ -77,7 +77,8 @@
           <div class="step" data-step="3"><span class="step-num">3</span><span class="step-label">Submit</span></div>
         </div>
 
-        <div id="revision-banner" class="form-error" style="display:none;margin-bottom:1.5rem;"></div>
+        <div id="revision-banner" class="form-error" style="display:none;margin-bottom:1rem;"></div>
+        <div id="revision-feedback" style="display:none;margin-bottom:1.5rem;"></div>
         <div id="locked-banner" class="form-success" style="display:none;margin-bottom:1.5rem;"></div>
 
         <!-- ===== STEP 1: Course / Portfolio Information ===== -->
@@ -101,6 +102,7 @@
                 <label class="field-label">Course *</label>
                 <button type="button" class="select" id="course-select"></button>
                 <div id="template-status" class="field-hint" style="display:none;"></div>
+                <div id="curriculum-hint" class="field-hint" style="display:none;"></div>
                 <button type="button" class="btn btn-outline btn-sm" id="reload-template-btn" style="display:none;margin-top:0.5rem;">
                   <i data-lucide="refresh-cw" class="svg-icon"></i> Reload Official Template
                 </button>
@@ -608,6 +610,54 @@
         resolvedTemplate = null;
       }
 
+      // ---------- reviewer feedback (highlighted notes from the review) ----------
+      // Notes about a part of the OBTLP show inside the matching editor tab;
+      // general / course-information notes show under the revision banner.
+      const FB_TAB_PARTS = { cilo: ['outcomes'], so: ['soMap'], plan: ['plan'], refs: ['references'], grading: ['grading'], req: ['policies'] };
+      function openFeedback() {
+        if (!current || current.status === 'Approved') return [];
+        return (current.feedback || []).filter((f) => !f.resolved).map((f, i) => Object.assign({ n: i + 1 }, f));
+      }
+      function feedbackNoteHtml(f) {
+        const parts = window.OBTLP_FEEDBACK_PARTS || {};
+        return `<div class="oo-fb-note"><span class="oo-fb-n">${f.n}</span><div style="flex:1;">
+          <p class="oo-fb-meta">${escHtml(parts[f.part] || 'General')} · ${escHtml(window.OBTLP_ROLES.label(f.role))}${f.byName ? ` (${escHtml(f.byName)})` : ''}</p>
+          <p>${escHtml(f.text)}</p></div>
+          ${editable ? `<button type="button" class="btn btn-outline btn-sm" data-fb-resolve="${escHtml(f.id)}">Mark as addressed</button>` : ''}</div>`;
+      }
+      window.__OBTLP_FEEDBACK_PARTS__ = () => {
+        const open = openFeedback();
+        const r = {};
+        Object.keys(FB_TAB_PARTS).forEach((k) => { r[k] = open.filter((f) => FB_TAB_PARTS[k].includes(f.part)).length; });
+        return r;
+      };
+      window.__OBTLP_FEEDBACK_HTML__ = (tab) => {
+        const list = openFeedback().filter((f) => (FB_TAB_PARTS[tab] || []).includes(f.part));
+        return list.length ? `<div class="oo-fb wiz-fb">${list.map(feedbackNoteHtml).join('')}</div>` : '';
+      };
+      function renderGeneralFeedback() {
+        const box = document.getElementById('revision-feedback');
+        const open = openFeedback();
+        const general = open.filter((f) => f.part === 'general' || f.part === 'courseInfo');
+        const elsewhere = open.length - general.length;
+        if (!open.length) { box.style.display = 'none'; return; }
+        box.innerHTML = `<div class="oo-fb wiz-fb">${general.map(feedbackNoteHtml).join('')}
+          ${elsewhere ? `<p class="section-sub">${elsewhere} more note${elsewhere === 1 ? ' is' : 's are'} shown in the OBTLP Content tabs marked with a yellow dot, and all notes are highlighted in the Preview.</p>` : ''}</div>`;
+        box.style.display = '';
+      }
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-fb-resolve]');
+        if (!btn || !current) return;
+        try {
+          const upd = await api.updateFeedback(current.id, btn.dataset.fbResolve, true);
+          const f = (current.feedback || []).find((x) => x.id === upd.id);
+          if (f) Object.assign(f, upd);
+          renderGeneralFeedback();
+          if (resolvedTemplate) renderOfficialEditor();
+          ui.notify('Marked as Addressed', 'The reviewer will see that you addressed this note.');
+        } catch (err) { ui.notifyError(err); }
+      });
+
       // ---------- editable OBTLP content + template choice ----------
       const CATEGORY_LABEL = { gened: 'General Education', specialized: 'Specialized / Professional' };
       function renderTemplateChoice() {
@@ -699,7 +749,31 @@
         if (window.lucide) lucide.createIcons();
       }
 
+      // "The OBTLP should be related to the curriculum": show where the
+      // course sits in the program's plan of study, or warn if it isn't in it.
+      function updateCurriculumHint() {
+        const el = document.getElementById('curriculum-hint');
+        const code = document.getElementById('f-courseCode').value.trim().toLowerCase();
+        const prog = allPrograms.find((p) => p.id === document.getElementById('f-programId').value);
+        const plan = (prog && prog.curriculum) || [];
+        if (!code || !prog || !plan.length) { el.style.display = 'none'; return; }
+        const rows = plan.filter((r) => String(r.courseCode || '').toLowerCase() === code);
+        const ord = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'];
+        if (rows.length) {
+          el.className = 'field-hint t-success';
+          el.textContent = `In the ${prog.code} plan of study: ${rows.map((r) => `${ord[r.yearLevel]} Year · ${r.semester}`).join('; ')}.`;
+          const sem = document.getElementById('f-semester').value;
+          if (!rows.some((r) => r.semester === sem)) el.textContent += ` (You chose ${sem}.)`;
+        } else {
+          el.className = 'field-hint t-destructive';
+          el.textContent = `This course is not in the ${prog.code} plan of study. Check the course and program, or ask your Department Chair to add it to the curriculum.`;
+        }
+        el.style.display = 'block';
+      }
+      document.getElementById('f-semester').addEventListener('change', updateCurriculumHint);
+
       function loadCourseTemplateFor(courseCode, force) {
+        setTimeout(updateCurriculumHint, 0);
         const reloadBtn = document.getElementById('reload-template-btn');
         if (!courseCode) {
           showTemplateStatus('', null);
@@ -1010,7 +1084,8 @@
           program: resolvedProgram,
           orgProfile: orgProfile,
           signatories: current.signatories || { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] },
-          template: resolvedTemplate
+          template: resolvedTemplate,
+          feedback: current.status === 'Approved' ? [] : (current.feedback || [])
         };
       }
 
@@ -1270,6 +1345,7 @@
 
         fillFormFromPortfolio(current);
         LIST_FIELDS.forEach(renderList);
+        renderGeneralFeedback();
         // Non-destructive: only surfaces template status/"Reload" for an
         // already-selected course, and only fills fields that are blank —
         // an existing portfolio's saved content is left untouched.

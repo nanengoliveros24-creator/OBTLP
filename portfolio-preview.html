@@ -86,7 +86,7 @@
                 <p class="pdf-meta" id="pdf-meta">Course Code · Semester · Academic Year</p>
 
                 <div class="pdf-section" id="revision-notice" style="display:none;border-color:var(--destructive);">
-                  <h3 style="color:var(--destructive);">Admin Feedback — Revision Requested</h3>
+                  <h3 style="color:var(--destructive);" id="revision-notice-title">Revision Requested</h3>
                   <p id="revision-notice-text"></p>
                 </div>
 
@@ -152,6 +152,23 @@
           </div>
 
           <aside class="space-y-6">
+            <!-- Reviewer feedback written on parts of the OBTLP. Open notes are
+                 numbered and highlighted inside the document and the PDF. -->
+            <div class="card card-pad fb-card" id="feedback-card" style="display:none;">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+                <i data-lucide="message-square-text" class="svg-icon" style="width:1.25rem;height:1.25rem;color:#b38f00;"></i>
+                <h3 class="card-title">Reviewer Feedback</h3>
+                <span class="badge badge-pending" id="fb-open-count" style="margin-left:auto;"></span>
+              </div>
+              <p class="section-sub" id="fb-help" style="margin-bottom:0.75rem;"></p>
+              <ol class="fb-list" id="fb-list"></ol>
+              <form id="fb-form" class="form-stack" style="display:none;margin-top:0.75rem;">
+                <div class="field"><label class="field-label" for="fb-part">Part of the OBTLP</label><select class="input select" id="fb-part"></select></div>
+                <div class="field"><label class="field-label" for="fb-text">Feedback</label><textarea class="textarea" rows="3" id="fb-text" maxlength="2000" placeholder="e.g. Week 5 TLA does not support CILO 2."></textarea></div>
+                <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="message-square-plus" class="svg-icon"></i> Add to Document</button>
+              </form>
+            </div>
+
             <div class="card card-pad">
               <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
                 <i data-lucide="shield-check" class="svg-icon t-success" style="width:1.25rem;height:1.25rem;"></i>
@@ -330,7 +347,10 @@
             program: resolvedProgram,
             orgProfile: orgProfile,
             signatories: p.signatories || { preparedBy: [], reviewedBy: null, concurredBy: null, approvedBy: [] },
-            template: resolvedTemplate
+            template: resolvedTemplate,
+            // Open reviewer notes are highlighted in the document and PDF;
+            // the final approved OBTLP carries none.
+            feedback: p.status === 'Approved' ? [] : (p.feedback || [])
           };
         }
         const model = buildRenderModel();
@@ -348,6 +368,84 @@
           templateCaption.textContent = `Follows the official "${resolvedTemplate.name}" OBTLP format.`;
           templateCaption.style.display = 'block';
         }
+
+        function rerenderDocument() {
+          if (resolvedTemplate && window.__OBTLP_TEMPLATE_RENDERER__) {
+            generatedEl.innerHTML = window.__OBTLP_TEMPLATE_RENDERER__.renderSectionsHtml(resolvedTemplate, buildRenderModel());
+          }
+        }
+
+        // ---------- reviewer feedback ----------
+        const PARTS = window.OBTLP_FEEDBACK_PARTS;
+        const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        function renderFeedbackCard() {
+          const card = document.getElementById('feedback-card');
+          const all = p.feedback || [];
+          const canAdd = R.isReviewer(session.role) && !!R.stageOf(p);
+          if (!all.length && !canAdd) { card.style.display = 'none'; return; }
+          card.style.display = '';
+          let n = 0;
+          const items = all.map((f) => Object.assign({ n: f.resolved ? null : ++n }, f));
+          const open = items.filter((f) => !f.resolved);
+          document.getElementById('fb-open-count').textContent = open.length ? `${open.length} open` : 'All addressed';
+          document.getElementById('fb-help').textContent = isOwner
+            ? (open.length ? 'Each note is numbered and highlighted in yellow in the document and the PDF. Fix the part, then mark the note as addressed.' : 'Every note has been addressed.')
+            : (canAdd ? 'Write feedback on a specific part of the OBTLP. It appears inside the document, highlighted, and on the PDF.' : 'Notes left by the reviewers.');
+          const when = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
+          document.getElementById('fb-list').innerHTML = items.length ? items.map((f) => `
+            <li class="fb-item ${f.resolved ? 'is-resolved' : ''}" data-fb-n="${f.n || ''}">
+              <span class="oo-fb-n">${f.resolved ? '✓' : f.n}</span>
+              <div style="flex:1;min-width:0;">
+                <p class="fb-meta">${esc(PARTS[f.part] || 'General')} · ${esc(R.label(f.role))}${f.byName ? ` (${esc(f.byName)})` : ''} · ${esc(when(f.at))}</p>
+                <p class="fb-text">${esc(f.text)}</p>
+                ${f.resolved ? `<p class="fb-meta">Addressed${f.resolvedBy ? ` · ${esc(f.resolvedBy)}` : ''}</p>` : ''}
+                <div class="fb-actions">
+                  ${p.status !== 'Approved' && (isOwner || R.isReviewer(session.role)) ? `<button type="button" class="btn btn-outline btn-sm" data-fb-toggle="${esc(f.id)}">${f.resolved ? 'Reopen' : 'Mark as addressed'}</button>` : ''}
+                  ${f.by === session.userId && p.status !== 'Approved' ? `<button type="button" class="btn btn-sm delete-sub-btn" data-fb-del="${esc(f.id)}">Remove</button>` : ''}
+                </div>
+              </div>
+            </li>`).join('') : '<li class="t-muted" style="list-style:none;">No feedback yet.</li>';
+          const form = document.getElementById('fb-form');
+          form.style.display = canAdd ? '' : 'none';
+          const sel = document.getElementById('fb-part');
+          if (!sel.options.length) sel.innerHTML = Object.keys(PARTS).map((k) => `<option value="${k}">${esc(PARTS[k])}</option>`).join('');
+          document.querySelectorAll('[data-fb-toggle]').forEach((b) => b.addEventListener('click', async () => {
+            const f = all.find((x) => x.id === b.dataset.fbToggle);
+            try {
+              const upd = await api.updateFeedback(p.id, f.id, !f.resolved);
+              Object.assign(f, upd);
+              renderFeedbackCard(); rerenderDocument();
+            } catch (err) { ui.notifyError(err); }
+          }));
+          document.querySelectorAll('[data-fb-del]').forEach((b) => b.addEventListener('click', async () => {
+            if (!confirm('Remove this note?')) return;
+            try {
+              await api.deleteFeedback(p.id, b.dataset.fbDel);
+              p.feedback = all.filter((x) => x.id !== b.dataset.fbDel);
+              renderFeedbackCard(); rerenderDocument();
+            } catch (err) { ui.notifyError(err); }
+          }));
+          // Clicking a note jumps to its highlighted part of the document.
+          document.querySelectorAll('.fb-item[data-fb-n]').forEach((li) => li.addEventListener('click', (e) => {
+            if (e.target.closest('button') || !li.dataset.fbN) return;
+            const mark = Array.from(document.querySelectorAll('#pdf-generated .oo-fb-n')).find((x) => x.textContent.trim() === li.dataset.fbN);
+            if (mark) { mark.closest('.oo-fb-part, .oo-fb').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+          }));
+          if (window.lucide) lucide.createIcons();
+        }
+        document.getElementById('fb-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const text = document.getElementById('fb-text').value.trim();
+          if (!text) { ui.notify('Feedback Required', 'Write the feedback first.'); return; }
+          try {
+            const f = await api.addFeedback(p.id, { part: document.getElementById('fb-part').value, text });
+            p.feedback = (p.feedback || []).concat(f);
+            document.getElementById('fb-text').value = '';
+            renderFeedbackCard(); rerenderDocument();
+            ui.notify('Feedback Added', 'It is now highlighted in the document. Use Request Revision on the review page to send it back to the faculty member.');
+          } catch (err) { ui.notifyError(err); }
+        });
+        renderFeedbackCard();
 
         if (resolvedTemplate && window.__OBTLP_TEMPLATE_RENDERER__) {
           generatedEl.innerHTML = window.__OBTLP_TEMPLATE_RENDERER__.renderSectionsHtml(resolvedTemplate, model);
@@ -407,6 +505,7 @@
           if (p.review && p.review.notes) {
             document.getElementById('revision-notice').style.display = '';
             document.getElementById('revision-notice-text').textContent = p.review.notes;
+            if (p.review.requestedByRole) document.getElementById('revision-notice-title').textContent = `Revision Requested by the ${window.OBTLP_ROLES.label(p.review.requestedByRole)}`;
           }
           if (window.lucide) lucide.createIcons();
         }

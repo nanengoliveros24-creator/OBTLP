@@ -215,6 +215,11 @@
     archiveTerm: (body) => req('/api/archive/term', { method: 'POST', body: JSON.stringify(body) }),
     duplicatePortfolio: (id, body) => req(`/api/portfolios/${encodeURIComponent(id)}/duplicate`, { method: 'POST', body: JSON.stringify(body || {}) }),
     getVersions: (id) => req(`/api/portfolios/${encodeURIComponent(id)}/versions`),
+    addFeedback: (id, body) => req(`/api/portfolios/${encodeURIComponent(id)}/feedback`, { method: 'POST', body: JSON.stringify(body) }),
+    updateFeedback: (id, fid, resolved) => req(`/api/portfolios/${encodeURIComponent(id)}/feedback/${encodeURIComponent(fid)}`, { method: 'PUT', body: JSON.stringify({ resolved: !!resolved }) }),
+    deleteFeedback: (id, fid) => req(`/api/portfolios/${encodeURIComponent(id)}/feedback/${encodeURIComponent(fid)}`, { method: 'DELETE' }),
+    saveCurriculum: (programId, curriculum) => req(`/api/programs/${encodeURIComponent(programId)}/curriculum`, { method: 'PUT', body: JSON.stringify({ curriculum }) }),
+    getCurriculumCoverage: (qs) => req(`/api/curriculum/coverage?${qs}`),
 
     // ---- documents ----
     uploadDocument: (portfolioId, { name, dataBase64 }) =>
@@ -253,6 +258,11 @@
   const ROLE_LABEL = { faculty: 'Faculty', chair: 'Department Chair', admin: 'Dean', vpaa: 'VPAA', it: 'IT Administrator' };
   const ROLE_HOME = { faculty: 'dashboard.html', chair: 'admin.html', admin: 'admin.html', vpaa: 'admin.html', it: 'it-admin.html' };
   const STAGE_WAITING = { chair: 'Dept. Chair Review', admin: 'Dean Approval', vpaa: 'VPAA Approval' };
+  // Parts of the OBTLP a reviewer can leave feedback on.
+  window.OBTLP_FEEDBACK_PARTS = {
+    general: 'General', courseInfo: 'Course Information', outcomes: 'Learning Outcomes (CILO)', soMap: 'Student Outcomes Map',
+    plan: 'Teaching and Learning Plan', references: 'References', grading: 'Grading / Course Requirements', policies: 'Course Policies'
+  };
   window.OBTLP_ROLES = {
     LABEL: ROLE_LABEL,
     REVIEWERS: ['chair', 'admin', 'vpaa'],

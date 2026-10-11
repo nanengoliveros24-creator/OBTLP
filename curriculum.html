@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Curriculum &amp; Plan of Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <a href="index.html" class="brand">
+          <img src="assets/pnc-logo.png" alt="University of Cabuyao seal" class="brand-logo" />
+          <div><p class="brand-title">OBTLP</p><p class="brand-sub">Generator System</p></div>
+        </a>
+      </div>
+      <nav class="nav" data-auto-nav></nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="avatar">–</div>
+          <div><p class="user-name">–</p><p class="user-role">–</p></div>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle-row">
+          <i data-lucide="moon" class="svg-icon theme-icon-moon"></i>
+          <i data-lucide="sun" class="svg-icon theme-icon-sun" style="display:none;"></i>
+          <span>Dark Mode</span>
+        </button>
+        <a href="#" data-action="sign-out" class="signout"><i data-lucide="log-out" class="svg-icon"></i> Sign out</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Curriculum &amp; Plan of Study</h1>
+          <p class="page-subtitle">Each program's courses per year level and semester. Every course in the plan should have an OBTLP for the term it is offered.</p>
+        </div>
+      </header>
+
+      <section class="card card-pad cur-top">
+        <div class="field"><label class="field-label" for="c-program">Program</label><select class="input select" id="c-program"></select></div>
+        <div class="filter-tabs" id="c-tabs">
+          <button class="active" data-view="plan">Plan of Study</button>
+          <button data-view="coverage">OBTLP Coverage</button>
+        </div>
+      </section>
+
+      <!-- Plan of study -->
+      <section id="view-plan">
+        <div class="cur-actions" id="plan-actions">
+          <button class="btn btn-outline btn-sm" id="btn-fill"><i data-lucide="list-plus" class="svg-icon"></i> Add this program's courses</button>
+          <span class="t-muted" id="plan-meta"></span>
+          <button class="btn btn-primary" id="btn-save" disabled><i data-lucide="save" class="svg-icon"></i> Save Plan of Study</button>
+        </div>
+        <form class="card card-pad cur-add" id="add-form">
+          <div class="field"><label class="field-label" for="a-year">Year level</label><select class="input select" id="a-year"></select></div>
+          <div class="field"><label class="field-label" for="a-sem">Semester</label><select class="input select" id="a-sem"><option>1st Semester</option><option>2nd Semester</option><option>Summer</option></select></div>
+          <div class="field"><label class="field-label" for="a-course">Course</label>
+            <input class="input" id="a-course" list="course-options" placeholder="Code — Title (pick or type)" autocomplete="off" />
+            <datalist id="course-options"></datalist></div>
+          <div class="field"><label class="field-label" for="a-units">Units</label><input class="input" id="a-units" placeholder="3" /></div>
+          <div class="field"><label class="field-label" for="a-type">Type</label><select class="input select" id="a-type"><option value="specialized">Specialized / Professional</option><option value="gened">General Education</option></select></div>
+          <div class="field" style="align-self:end;"><button type="submit" class="btn btn-outline"><i data-lucide="plus" class="svg-icon"></i> Add</button></div>
+        </form>
+        <div id="plan-body"><p class="t-muted">Loading…</p></div>
+      </section>
+
+      <!-- Coverage -->
+      <section id="view-coverage" style="display:none;">
+        <form class="card card-pad cur-add" id="cov-form">
+          <div class="field"><label class="field-label" for="v-ay">Academic Year</label><input class="input" id="v-ay" placeholder="2026-2027" /></div>
+          <div class="field"><label class="field-label" for="v-sem">Semester</label><select class="input select" id="v-sem"><option>1st Semester</option><option>2nd Semester</option><option>Summer</option></select></div>
+          <div class="field" style="align-self:end;"><button type="submit" class="btn btn-primary"><i data-lucide="search" class="svg-icon"></i> Check Coverage</button></div>
+          <div class="field" style="align-self:end;"><button type="button" class="btn btn-outline" id="btn-cov-csv"><i data-lucide="download" class="svg-icon"></i> Export CSV</button></div>
+        </form>
+        <div class="cmp-summary" id="cov-summary"></div>
+        <section class="card" style="overflow:hidden;">
+          <div class="table-wrap"><table class="data">
+            <thead><tr><th>Year</th><th>Course</th><th>Type</th><th>OBTLP</th><th>Faculty</th><th class="right"></th></tr></thead>
+            <tbody id="cov-rows"><tr><td colspan="6" class="t-muted" style="padding:1.5rem;">Choose a term and check coverage.</td></tr></tbody>
+          </table></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="theme.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="db.js"></script>
+  <script src="app-actions.js"></script>
+  <script>
+    const api = window.__OBTLP_API__;
+    const ui = () => window.__OBTLP_UI__;
+    const R = window.OBTLP_ROLES;
+    const session = api.getSession();
+    if (!session) window.location.href = 'index.html';
+    else if (session.role === 'faculty') window.location.href = 'dashboard.html';
+    const role = session ? session.role : '';
+    const SEMS = ['1st Semester', '2nd Semester', 'Summer'];
+    const TYPE = { gened: 'Gen Ed', specialized: 'Specialized' };
+    const ORD = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'];
+
+    let me = {};
+    let programs = [];
+    let courseTemplates = [];
+    let program = null;
+    let plan = [];
+    let dirty = false;
+    let coverage = null;
+
+    function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function canEdit() {
+      if (!program) return false;
+      if (role === 'it') return true;
+      if (role === 'admin') return !me.departmentId || me.departmentId === program.departmentId;
+      if (role === 'chair') return (!me.departmentId || me.departmentId === program.departmentId) && (!me.programId || me.programId === program.id);
+      return false;
+    }
+    function setDirty(v) { dirty = v; document.getElementById('btn-save').disabled = !v || !canEdit(); }
+    function maxYear() { return Math.max(4, ...plan.map((r) => r.yearLevel)); }
+
+    function renderPlan() {
+      const body = document.getElementById('plan-body');
+      const editable = canEdit();
+      document.getElementById('add-form').style.display = editable ? '' : 'none';
+      document.getElementById('btn-fill').style.display = editable ? '' : 'none';
+      document.getElementById('btn-save').style.display = editable ? '' : 'none';
+      document.getElementById('plan-meta').textContent = program && program.curriculumUpdatedAt
+        ? `${plan.length} courses · last saved ${new Date(program.curriculumUpdatedAt).toLocaleDateString()}${program.curriculumUpdatedBy ? ` by ${program.curriculumUpdatedBy}` : ''}`
+        : `${plan.length} courses${editable ? '' : ' · view only'}`;
+      document.getElementById('a-year').innerHTML = Array.from({ length: Math.min(6, maxYear() + 1) }, (_, i) => `<option value="${i + 1}">${ORD[i + 1]} Year</option>`).join('');
+      if (!plan.length) {
+        body.innerHTML = `<div class="card card-pad empty-state"><p>No plan of study for ${esc(program ? program.code : 'this program')} yet.</p>${editable ? '<p class="section-sub">Add courses above, or use "Add this program\'s courses" to start from the course templates and then set each one\'s year and semester.</p>' : ''}</div>`;
+        return;
+      }
+      let html = '';
+      for (let y = 1; y <= maxYear(); y++) {
+        const yr = plan.filter((r) => r.yearLevel === y);
+        if (!yr.length) continue;
+        html += `<section class="card cur-year"><h2 class="card-title">${ORD[y]} Year</h2><div class="cur-sems">`;
+        SEMS.forEach((sem) => {
+          const rows = yr.filter((r) => r.semester === sem);
+          if (!rows.length && sem === 'Summer') return;
+          const units = rows.reduce((a, r) => a + (parseFloat(r.units) || 0), 0);
+          html += `<div class="cur-sem"><p class="cur-sem-title">${sem} <span class="t-muted">· ${rows.length} course${rows.length === 1 ? '' : 's'}${units ? ` · ${units} units` : ''}</span></p>
+            <table class="data cur-table"><tbody>${rows.map((r) => `<tr>
+              <td class="cell-strong" style="white-space:nowrap;">${esc(r.courseCode)}</td>
+              <td>${esc(r.courseTitle)}</td>
+              <td class="t-muted">${esc(r.units)}</td>
+              <td><span class="badge ${r.courseCategory === 'gened' ? 'badge-accent' : 'badge-review'}">${TYPE[r.courseCategory] || 'Specialized'}</span></td>
+              <td class="right">${editable ? `<div class="row-actions">
+                <select class="input select input-sm" data-move="${esc(r.id)}" title="Move to">${Array.from({ length: 6 }, (_, i) => SEMS.map((s) => `<option value="${i + 1}|${s}" ${r.yearLevel === i + 1 && r.semester === s ? 'selected' : ''}>${ORD[i + 1]} Yr · ${s.replace(' Semester', ' Sem')}</option>`).join('')).join('')}</select>
+                <button class="icon-btn" title="Remove" data-del="${esc(r.id)}"><i data-lucide="x" class="svg-icon"></i></button></div>` : ''}</td>
+            </tr>`).join('') || '<tr><td class="t-muted">No courses.</td></tr>'}</tbody></table></div>`;
+        });
+        html += '</div></section>';
+      }
+      body.innerHTML = html;
+      if (window.lucide) lucide.createIcons();
+      body.querySelectorAll('[data-move]').forEach((s) => s.addEventListener('change', () => {
+        const r = plan.find((x) => x.id === s.dataset.move);
+        const [y, sem] = s.value.split('|');
+        r.yearLevel = Number(y); r.semester = sem;
+        setDirty(true); renderPlan();
+      }));
+      body.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => {
+        plan = plan.filter((x) => x.id !== b.dataset.del);
+        setDirty(true); renderPlan();
+      }));
+    }
+
+    function courseOptions() {
+      const list = courseTemplates.filter((t) => !program || !t.programId || t.programId === program.id);
+      document.getElementById('course-options').innerHTML = list.map((t) => `<option value="${esc(t.courseCode)} — ${esc(t.courseTitle)}"></option>`).join('');
+    }
+
+    function selectProgram(id) {
+      if (dirty && !confirm('You have unsaved changes to this plan of study. Discard them?')) {
+        document.getElementById('c-program').value = program.id;
+        return;
+      }
+      program = programs.find((p) => p.id === id) || null;
+      plan = JSON.parse(JSON.stringify((program && program.curriculum) || [])).map((r) => Object.assign({ id: r.id || `new_${Math.random().toString(36).slice(2)}` }, r));
+      setDirty(false);
+      courseOptions();
+      renderPlan();
+      if (document.getElementById('view-coverage').style.display !== 'none') loadCoverage();
+    }
+
+    document.getElementById('add-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const raw = document.getElementById('a-course').value.trim();
+      if (!raw) return;
+      const [code, ...rest] = raw.split(' — ');
+      const tpl = courseTemplates.find((t) => t.courseCode.toLowerCase() === code.trim().toLowerCase() && (!t.programId || !program || t.programId === program.id));
+      const row = {
+        id: `new_${Math.random().toString(36).slice(2)}`,
+        yearLevel: Number(document.getElementById('a-year').value) || 1,
+        semester: document.getElementById('a-sem').value,
+        courseCode: code.trim(),
+        courseTitle: rest.join(' — ').trim() || (tpl ? tpl.courseTitle : ''),
+        units: document.getElementById('a-units').value.trim() || (tpl && tpl.officialMeta && tpl.officialMeta.creditUnits ? String(tpl.officialMeta.creditUnits).replace(/[^0-9.]/g, '').slice(0, 4) : ''),
+        courseCategory: tpl && tpl.courseCategory ? tpl.courseCategory : document.getElementById('a-type').value
+      };
+      if (plan.some((r) => r.yearLevel === row.yearLevel && r.semester === row.semester && r.courseCode.toLowerCase() === row.courseCode.toLowerCase())) {
+        ui().notify('Already There', `${row.courseCode} is already in that semester.`);
+        return;
+      }
+      plan.push(row);
+      document.getElementById('a-course').value = '';
+      document.getElementById('a-units').value = '';
+      setDirty(true); renderPlan();
+    });
+
+    document.getElementById('btn-fill').addEventListener('click', () => {
+      const have = new Set(plan.map((r) => r.courseCode.toLowerCase()));
+      const add = courseTemplates.filter((t) => program && t.programId === program.id && !have.has(t.courseCode.toLowerCase()));
+      if (!add.length) { ui().notify('Nothing to Add', 'Every course template of this program is already in the plan.'); return; }
+      add.forEach((t) => plan.push({ id: `new_${Math.random().toString(36).slice(2)}`, yearLevel: 1, semester: '1st Semester', courseCode: t.courseCode, courseTitle: t.courseTitle, units: '', courseCategory: t.courseCategory || 'specialized' }));
+      setDirty(true); renderPlan();
+      ui().notify('Courses Added', `${add.length} course${add.length === 1 ? '' : 's'} added under 1st Year · 1st Semester. Use each row's "Move to" to put it in the right year and semester, then save.`);
+    });
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      try {
+        const saved = await api.saveCurriculum(program.id, plan.map((r) => Object.assign({}, r, { id: String(r.id).startsWith('new_') ? '' : r.id })));
+        Object.assign(program, saved);
+        plan = JSON.parse(JSON.stringify(saved.curriculum || []));
+        setDirty(false); renderPlan();
+        ui().notify('Plan of Study Saved', `${saved.code}: ${plan.length} courses.`);
+      } catch (err) { ui().notifyError(err); }
+    });
+    window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+    // ---- coverage ----
+    async function loadCoverage() {
+      if (!program) return;
+      const ay = document.getElementById('v-ay').value.trim();
+      const sem = document.getElementById('v-sem').value;
+      try {
+        coverage = await api.getCurriculumCoverage(new URLSearchParams({ programId: program.id, academicYear: ay, semester: sem }).toString());
+      } catch (err) { ui().notifyError(err); return; }
+      const s = coverage.summary;
+      document.getElementById('cov-summary').innerHTML = `<span class="cmp-chip">${s.courses} course${s.courses === 1 ? '' : 's'} in ${esc(sem)}</span>
+        <span class="cmp-chip added">${s.approved} approved</span><span class="cmp-chip changed">${s.inProgress} in progress</span><span class="cmp-chip removed">${s.missing} without an OBTLP</span>`;
+      const badge = (r) => r.status === 'Approved' ? 'badge-approved' : r.status === 'No OBTLP' ? 'badge-revision' : r.status === 'Draft' ? 'badge-draft' : r.status === 'Revision Required' ? 'badge-revision' : 'badge-pending';
+      document.getElementById('cov-rows').innerHTML = coverage.rows.length ? coverage.rows
+        .sort((a, b) => a.yearLevel - b.yearLevel || a.courseCode.localeCompare(b.courseCode))
+        .map((r) => `<tr>
+          <td class="t-muted">${ORD[r.yearLevel]} Year</td>
+          <td><p class="cell-strong">${esc(r.courseCode)}</p><p class="cell-sub">${esc(r.courseTitle)}</p></td>
+          <td><span class="badge ${r.courseCategory === 'gened' ? 'badge-accent' : 'badge-review'}">${TYPE[r.courseCategory] || 'Specialized'}</span></td>
+          <td><span class="badge ${badge(r)}">${esc(r.stage ? `Pending – ${R.label(r.stage)}` : r.status)}</span>${r.obtlps > 1 ? ` <span class="t-muted">(${r.obtlps})</span>` : ''}</td>
+          <td class="t-muted">${esc(r.faculty || '—')}</td>
+          <td class="right">${r.portfolioId ? `<a class="icon-btn" title="View OBTLP" href="portfolio-preview.html?id=${encodeURIComponent(r.portfolioId)}"><i data-lucide="eye" class="svg-icon"></i></a>` : ''}</td>
+        </tr>`).join('')
+        : `<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No courses in the ${esc(program.code)} plan of study for ${esc(sem)} yet.</td></tr>`;
+      if (window.lucide) lucide.createIcons();
+    }
+    document.getElementById('cov-form').addEventListener('submit', (e) => { e.preventDefault(); loadCoverage(); });
+    document.getElementById('btn-cov-csv').addEventListener('click', () => {
+      if (!coverage) return;
+      const rows = [['Year', 'Course Code', 'Course Title', 'Type', 'OBTLP Status', 'Faculty']].concat(coverage.rows.map((r) => [`${r.yearLevel}`, r.courseCode, r.courseTitle, TYPE[r.courseCategory] || 'Specialized', r.stage ? `Pending - ${R.label(r.stage)}` : r.status, r.faculty]));
+      const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+      a.download = `OBTLP_coverage_${program.code}_${coverage.term.academicYear || 'all'}_${coverage.term.semester.replace(/\s+/g, '')}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    document.querySelectorAll('#c-tabs button').forEach((b) => b.addEventListener('click', () => {
+      document.querySelectorAll('#c-tabs button').forEach((x) => x.classList.toggle('active', x === b));
+      document.getElementById('view-plan').style.display = b.dataset.view === 'plan' ? '' : 'none';
+      document.getElementById('view-coverage').style.display = b.dataset.view === 'coverage' ? '' : 'none';
+      if (b.dataset.view === 'coverage') loadCoverage();
+    }));
+    document.getElementById('c-program').addEventListener('change', (e) => selectProgram(e.target.value));
+
+    (async function init() {
+      if (!session || role === 'faculty') return;
+      try {
+        const [state, progs, cts, depts] = await Promise.all([api.getState(), api.getPrograms(), api.getCourseTemplates(), api.getDepartments().catch(() => [])]);
+        me = (state.users || []).find((u) => u.id === session.userId) || {};
+        courseTemplates = cts || [];
+        const own = ['chair', 'admin'].includes(role) && me.departmentId;
+        programs = (progs || []).filter((p) => !own || p.departmentId === me.departmentId).sort((a, b) => a.code.localeCompare(b.code));
+        const deptCode = (id) => ((depts || []).find((d) => d.id === id) || {}).code || '';
+        document.getElementById('c-program').innerHTML = programs.map((p) => `<option value="${esc(p.id)}">${esc(deptCode(p.departmentId))} · ${esc(p.code)} — ${esc(p.name)}</option>`).join('');
+        const term = (state.deadlines || []).slice().sort((a, b) => String(b.dueDate).localeCompare(String(a.dueDate)))[0];
+        document.getElementById('v-ay').value = term ? term.academicYear : '';
+        if (term) document.getElementById('v-sem').value = term.semester;
+        const first = (role === 'chair' && me.programId && programs.find((p) => p.id === me.programId)) || programs[0];
+        if (!first) { document.getElementById('plan-body').innerHTML = '<p class="t-muted">No programs yet. The IT Administrator adds programs under Departments &amp; OBTLP Templates.</p>'; return; }
+        document.getElementById('c-program').value = first.id;
+        selectProgram(first.id);
+      } catch (err) { ui().notifyError(err); }
+    })();
+  </script>
+</body>
+</html>

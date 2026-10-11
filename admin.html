@@ -98,6 +98,7 @@
             </div>
 
             <div id="approval-trail" class="approval-trail" style="display:none;"></div>
+            <div id="feedback-summary" class="fb-summary" style="display:none;"></div>
             <div id="review-history" class="review-history" style="display:none;"></div>
 
             <div id="review-actions">
@@ -430,6 +431,16 @@
       document.getElementById('review-buttons').style.gridTemplateColumns = canApprove ? '1fr 1fr' : '1fr';
       document.getElementById('btn-request-revision').disabled = !canReturn;
       renderTrail(p);
+      const openNotes = (p.feedback || []).filter((f) => !f.resolved).length;
+      const fbBox = document.getElementById('feedback-summary');
+      if (stage || openNotes) {
+        fbBox.innerHTML = `<i data-lucide="message-square-text" class="svg-icon"></i><div><b>${openNotes ? `${openNotes} open note${openNotes === 1 ? '' : 's'} in the document` : 'No notes in the document yet'}</b><br>
+          <a class="link-primary" href="portfolio-preview.html?id=${encodeURIComponent(p.id)}">${stage ? 'Open the document to add feedback on a specific part' : 'Open the document'}</a></div>`;
+        fbBox.style.display = '';
+        if (window.lucide) lucide.createIcons();
+      } else fbBox.style.display = 'none';
+      const commentBox = document.getElementById('review-comments');
+      if (!keepComment && openNotes && canReturn) commentBox.value = `Please address the ${openNotes} highlighted note${openNotes === 1 ? '' : 's'} in the document.`;
 
       const history = document.getElementById('review-history');
       const r = p.review || {};
@@ -582,6 +593,7 @@
       document.getElementById('review-actions').style.display = '';
       document.getElementById('review-history').style.display = 'none';
       document.getElementById('approval-trail').style.display = 'none';
+      document.getElementById('feedback-summary').style.display = 'none';
       document.getElementById('btn-approve').style.display = '';
       document.getElementById('btn-delete').style.display = 'none';
       document.getElementById('view-portfolio-link').style.display = 'none';

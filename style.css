@@ -1009,3 +1009,47 @@ table.data th.center, table.data td.center { text-align: center; }
 .oe-sum { font-size: 0.75rem; margin: 0.15rem 0 0.35rem; }
 @media (max-width: 1100px) { .oe-week-body { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 760px) { .oe-head, .oe-grid2 { grid-template-columns: 1fr; } .oe-week-body { grid-template-columns: 1fr; } .oe-so-row { grid-template-columns: 4.5rem 1fr repeat(3, 2.2rem) 2rem; } .oe-comp-head, .oe-item { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- Reviewer feedback inside the document ---------- */
+.oo-fb-part { position: relative; outline: 3px solid #f5c400; outline-offset: 3px; border-radius: 2px; margin: 0.75rem 0; background: color-mix(in oklch, #ffd600 7%, transparent); }
+.oo-fb { display: grid; gap: 0.35rem; margin: 0 0 0.5rem; }
+.oo-fb-note { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.45rem 0.6rem; border-radius: 6px; background: #fff6c2; border: 1px solid #f0d24a; color: #3b2f00; font-size: 0.78rem; line-height: 1.35; text-align: left; }
+.oo-fb-note p { margin: 0; }
+.oo-fb-meta { font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; color: #7a5d00; }
+.oo-fb-n { flex: none; display: inline-grid; place-items: center; min-width: 1.35rem; height: 1.35rem; padding: 0 0.3rem; border-radius: 999px; background: #f5c400; color: #3b2f00; font-weight: 700; font-size: 0.72rem; }
+@media print { .oo-fb-part { outline: none; background: none; } }
+.fb-card { border-color: #f0d24a; }
+.fb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; max-height: 26rem; overflow: auto; }
+.fb-item { display: flex; gap: 0.55rem; padding: 0.55rem 0.6rem; border-radius: 0.5rem; background: color-mix(in oklch, #ffd600 10%, transparent); border: 1px solid color-mix(in oklch, #f0d24a 60%, transparent); cursor: pointer; font-size: 0.8125rem; }
+.fb-item.is-resolved { background: transparent; border-color: var(--border); opacity: 0.75; cursor: default; }
+.fb-item.is-resolved .oo-fb-n { background: var(--success); color: #fff; }
+.fb-meta { font-size: 0.6875rem; color: var(--muted-foreground); margin: 0 0 0.15rem; }
+.fb-text { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.fb-actions { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.fb-actions:empty { display: none; }
+.wiz-fb { margin-bottom: 0.9rem; }
+.wiz-fb .oo-fb-note { font-size: 0.8125rem; }
+.wiz-fb button { margin-left: auto; }
+html[data-theme="dark"] .oo-fb-note { background: #4a3f05; border-color: #8a7300; color: #fff4c2; }
+html[data-theme="dark"] .oo-fb-meta { color: #ffe27a; }
+.fb-summary { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.65rem 0.8rem; margin-bottom: 1rem; border-radius: var(--radius); border: 1px solid #f0d24a; background: color-mix(in oklch, #ffd600 10%, transparent); font-size: 0.8125rem; }
+.fb-summary .svg-icon { color: #b38f00; flex: none; margin-top: 0.1rem; }
+
+/* ---------- Curriculum & Plan of Study ---------- */
+.cur-top { display: flex; align-items: end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.cur-top .field { margin: 0; min-width: 18rem; }
+.cur-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.cur-actions #btn-save { margin-left: auto; }
+.cur-add { display: grid; grid-template-columns: 7.5rem 9.5rem minmax(9rem, 1fr) 4.5rem 10.5rem auto; gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
+#cov-form.cur-add { grid-template-columns: 12rem 12rem auto auto 1fr; }
+.cur-add .field { margin: 0; }
+.cur-year { margin-bottom: 1rem; overflow: hidden; }
+.cur-year > .card-title { padding: 1rem 1.25rem 0.25rem; }
+.cur-sems { display: grid; grid-template-columns: 1fr; gap: 0.25rem; padding: 0 0.5rem 0.75rem; }
+.cur-sem-title { font-size: 0.8125rem; font-weight: 600; padding: 0.5rem 0.75rem; margin: 0; }
+.cur-table td { padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+.cur-table .input.input-sm { max-width: 11rem; min-width: 9.5rem; }
+.cur-table td:first-child { width: 7rem; }
+.cur-table td:nth-child(3) { width: 3rem; }
+@media (max-width: 1100px) { .cur-add, #cov-form.cur-add { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .cur-add, #cov-form.cur-add { grid-template-columns: 1fr 1fr; } }

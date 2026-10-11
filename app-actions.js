@@ -633,6 +633,7 @@
       { href: 'admin.html', icon: 'clipboard-list', label: 'Review Queue' },
       { href: 'admin.html?view=faculty', icon: 'users', label: 'Faculty' },
       { href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
+      { href: 'curriculum.html', icon: 'library', label: 'Curriculum' },
       { href: 'archive.html', icon: 'archive', label: 'Archive' },
       { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
       { action: 'notifications', icon: 'bell', label: 'Notifications' }
@@ -640,6 +641,7 @@
     it: [
       { href: 'it-admin.html', icon: 'shield-check', label: 'System Overview' },
       { href: 'reports.html', icon: 'bar-chart-3', label: 'Reports' },
+      { href: 'curriculum.html', icon: 'library', label: 'Curriculum' },
       { href: 'archive.html', icon: 'archive', label: 'Archive' },
       { href: 'profile.html', icon: 'user-cog', label: 'Profile' },
       { action: 'notifications', icon: 'bell', label: 'Notifications' }
@@ -666,7 +668,7 @@
       const brand = document.querySelector('.sidebar-head .brand');
       if (brand && window.OBTLP_ROLES) brand.setAttribute('href', window.OBTLP_ROLES.home(s.role));
     } else {
-      ['reports.html', 'archive.html'].forEach((href) => {
+      ['reports.html', 'curriculum.html', 'archive.html'].forEach((href) => {
         const it = items.find((x) => x.href === href);
         if (!it || nav.querySelector(`a[href="${href}"]`)) return;
         const before = nav.querySelector('a[href="profile.html"]') || nav.querySelector('[data-action="notifications"]');
