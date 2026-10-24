@@ -86,7 +86,7 @@
             <p class="section-sub" style="margin-bottom:1rem;" id="active-review-label">Select a submission to review</p>
 
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-              <a href="#" id="view-portfolio-link" class="btn btn-outline btn-sm" style="display:none;"><i data-lucide="eye" class="svg-icon"></i> View Full Portfolio</a>
+              <a href="#" id="view-portfolio-link" class="btn btn-outline btn-sm" style="display:none;"><i data-lucide="eye" class="svg-icon"></i> View Full OBTLP</a>
               <a href="#" id="compare-link" class="btn btn-outline btn-sm" style="display:none;"><i data-lucide="git-compare" class="svg-icon"></i> Compare Versions</a>
             </div>
 
@@ -120,7 +120,7 @@
         <header class="page-header">
           <div>
             <h1 class="page-title">Faculty</h1>
-            <p class="page-subtitle" id="faculty-subtitle">Who is active, and where each faculty member's portfolios stand.</p>
+            <p class="page-subtitle" id="faculty-subtitle">Who is active, and where each faculty member's OBTLPs stand.</p>
           </div>
         </header>
         <section class="card" style="overflow:hidden;">
@@ -262,7 +262,7 @@
       const chip = document.getElementById('dept-chip');
       if (dept) {
         chip.textContent = `${dept.code} · ${dept.name}`;
-        chip.title = 'You only see and review portfolios from this department.';
+        chip.title = 'You only see and review OBTLPs from this department.';
         chip.style.display = '';
         document.getElementById('dept-notice').style.display = 'none';
       } else {
@@ -270,8 +270,8 @@
         document.getElementById('dept-notice').style.display = '';
       }
       document.getElementById('faculty-subtitle').textContent = dept
-        ? `${dept.name} faculty: who is active, and where their portfolios stand.`
-        : 'Who is active, and where each faculty member\'s portfolios stand.';
+        ? `${dept.name} faculty: who is active, and where their OBTLPs stand.`
+        : 'Who is active, and where each faculty member\'s OBTLPs stand.';
       chain = state.approvalChain || chain;
       const roleName = R.label(myRole);
       document.getElementById('user-role').textContent = dept ? `${roleName} · ${dept.code}` : roleName;
@@ -327,7 +327,7 @@
           Progress: 'Nothing is being reviewed at another level.',
           Revision: 'Nothing has been sent back for revision.',
           Approved: 'No OBTLP has received final approval yet.',
-          All: 'No submissions yet. When faculty submit a portfolio, it will appear here.'
+          All: 'No submissions yet. When faculty submit an OBTLP, it will appear here.'
         }[activeFilter];
         list.innerHTML = `<li class="empty-state">${empty}</li>`;
         return;

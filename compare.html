@@ -245,7 +245,7 @@
     }
 
     (async function init() {
-      if (!id) { document.getElementById('cmp-body').innerHTML = '<p class="t-muted">Open Compare from an OBTLP (My Portfolios, the review page or the Archive).</p>'; return; }
+      if (!id) { document.getElementById('cmp-body').innerHTML = '<p class="t-muted">Open Compare from an OBTLP (My OBTLPs, the review page or the Archive).</p>'; return; }
       try {
         const [main, state] = await Promise.all([api.getVersions(id), api.getState()]);
         cache.set(`data:${id}`, main);

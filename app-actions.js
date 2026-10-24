@@ -49,7 +49,7 @@
   function buildPdfFilename(courseCode, academicYear) {
     const code = String(courseCode || '').replace(/[^a-zA-Z0-9]+/g, '') || 'Course';
     const year = String(academicYear || '').replace(/[^0-9-]+/g, '') || String(new Date().getFullYear());
-    return `Portfolio_${code}_${year}.pdf`;
+    return `OBTLP_${code}_${year}.pdf`;
   }
 
   // Preloads the university seal once (as a data URL) so jsPDF's addImage
@@ -317,13 +317,13 @@
 
     if (typeof window.__OBTLP_PDF_DATA__ !== 'function') {
       console.warn('[Download PDF] no __OBTLP_PDF_DATA__ hook on this page');
-      notify('Nothing to Download', 'Open a portfolio first.');
+      notify('Nothing to Download', 'Open an OBTLP first.');
       return;
     }
     const data = window.__OBTLP_PDF_DATA__();
     if (!data) {
       console.warn('[Download PDF] __OBTLP_PDF_DATA__ returned nothing');
-      notify('Nothing to Download', 'Open a portfolio first.');
+      notify('Nothing to Download', 'Open an OBTLP first.');
       return;
     }
     if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -364,7 +364,7 @@
     if (!api) return;
     const portfolioId = (el && el.dataset.portfolioId) || null;
     if (!portfolioId) {
-      notify('No Portfolio', 'Select a portfolio to submit for review.');
+      notify('No OBTLP', 'Select an OBTLP to submit for review.');
       return;
     }
     const notesEl = document.getElementById('f-notes') || document.querySelector('.textarea');
@@ -377,7 +377,7 @@
         if (edits) await api.updatePortfolio(portfolioId, edits);
       }
       await api.submitForReview(portfolioId, comment);
-      notify('Submitted for Review', 'Your portfolio was queued for administrative review.');
+      notify('Submitted for Review', 'Your OBTLP was queued for administrative review.');
       if (typeof window.__OBTLP_AFTER_SUBMIT__ === 'function') window.__OBTLP_AFTER_SUBMIT__();
     } catch (err) {
       if (err.status === 409 || err.status === 400) {
@@ -422,7 +422,7 @@
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       const c = (result.backup && result.backup.counts) || {};
-      notify('Backup Downloaded', `${result.filename} (${c.users || 0} users, ${c.portfolios || 0} portfolios) was saved to your Downloads. Keep it somewhere private.`);
+      notify('Backup Downloaded', `${result.filename} (${c.users || 0} users, ${c.portfolios || 0} OBTLPs) was saved to your Downloads. Keep it somewhere private.`);
     } catch (err) {
       notifyError(err);
     }
@@ -624,9 +624,9 @@
   const NAV = {
     faculty: [
       { section: 'My OBTLPs', href: 'dashboard.html', icon: 'layout-dashboard', label: 'Dashboard' },
-      { href: 'portfolio-new.html', icon: 'file-plus-2', label: 'Create New Portfolio' },
-      { href: 'my-portfolios.html', icon: 'folder-open', label: 'My Portfolios' },
-      { href: 'my-portfolios.html?filter=submitted', icon: 'send', label: 'Submitted Portfolios' },
+      { href: 'portfolio-new.html', icon: 'file-plus-2', label: 'Create New OBTLP' },
+      { href: 'my-portfolios.html', icon: 'folder-open', label: 'My OBTLPs' },
+      { href: 'my-portfolios.html?filter=submitted', icon: 'send', label: 'Submitted OBTLPs' },
       { section: 'Records', href: 'archive.html', icon: 'archive', label: 'Archive' },
       { section: 'Account', href: 'profile.html', icon: 'user-cog', label: 'Profile' },
       { action: 'notifications', icon: 'bell', label: 'Notifications' }

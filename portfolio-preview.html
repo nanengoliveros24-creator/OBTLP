@@ -21,9 +21,9 @@
       </div>
       <nav class="nav">
         <a href="dashboard.html" class="nav-link"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
-        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
-        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
-        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My OBTLPs</a>
+        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New OBTLP</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted OBTLPs</a>
         <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
         <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
       </nav>
@@ -58,7 +58,7 @@
 
       <div id="picker" class="card card-pad empty-state">
         <i data-lucide="folder-open" class="svg-icon"></i>
-        <p>No portfolio selected.</p>
+        <p>No OBTLP selected.</p>
         <a href="dashboard.html" class="btn btn-outline btn-sm">Go to Dashboard</a>
       </div>
 
@@ -257,7 +257,7 @@
         ]);
         const p = (state.portfolios || []).find((x) => x.id === portfolioId);
         if (!p) {
-          document.getElementById('picker').innerHTML = '<p>Portfolio not found, or you do not have access to it.</p>';
+          document.getElementById('picker').innerHTML = '<p>OBTLP not found, or you do not have access to it.</p>';
           return;
         }
 
@@ -269,8 +269,8 @@
         if (!isOwner) {
           document.getElementById('edit-link').style.display = 'none';
           document.getElementById('submit-btn').style.display = 'none';
-          document.getElementById('page-title').textContent = 'Portfolio Preview';
-          document.getElementById('page-subtitle').textContent = `${p.courseCode || 'Portfolio'} · submitted by ${ownerName}`;
+          document.getElementById('page-title').textContent = 'OBTLP Preview';
+          document.getElementById('page-subtitle').textContent = `${p.courseCode || 'OBTLP'} · submitted by ${ownerName}`;
           if (R.isReviewer(session.role)) {
             const back = document.getElementById('back-link');
             const tab = { 'Revision Required': 'Revision', Approved: 'Approved' }[p.status] || 'Pending';
@@ -296,7 +296,7 @@
         const resolvedTemplate = p.templateId ? (obtlpTemplates.find((t) => t.id === p.templateId && t.active) || null) : null;
         const resolvedProgram = p.programId ? (programs.find((pr) => pr.id === p.programId) || null) : null;
 
-        document.title = `Preview ${p.courseCode || 'Portfolio'} · OBTLP`;
+        document.title = `Preview ${p.courseCode || 'OBTLP'} · OBTLP`;
         document.getElementById('pdf-school').textContent = settings.schoolName || 'Your Institution';
         document.getElementById('pdf-college').textContent = p.facultyDepartment || 'College / Department';
         document.getElementById('pdf-doc-id').textContent = `OBTLP-${p.id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`;
@@ -497,7 +497,7 @@
         const editable = (p.status === 'Draft' || p.status === 'Revision Required') && p.facultyId === session.userId;
         if (!editable) {
           submitBtn.disabled = true;
-          submitBtn.title = p.facultyId !== session.userId ? 'Only the owning faculty member can submit this portfolio.' : `Already ${p.status}`;
+          submitBtn.title = p.facultyId !== session.userId ? 'Only the owning faculty member can submit this OBTLP.' : `Already ${p.status}`;
           document.getElementById('f-notes').disabled = true;
         }
         if (p.status === 'Revision Required') {
@@ -523,7 +523,7 @@
         }
       } catch (err) {
         document.getElementById('picker').style.display = 'block';
-        document.getElementById('picker').innerHTML = '<p>Could not load this portfolio.</p>';
+        document.getElementById('picker').innerHTML = '<p>Could not load this OBTLP.</p>';
         ui.notifyError(err);
       }
     })();

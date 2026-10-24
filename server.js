@@ -427,14 +427,14 @@ function requireRole(ctx, roles) {
 
 function ownedPortfolio(db, id, ctx) {
   const p = (db.portfolios || []).find((x) => x.id === id);
-  if (!p) throw { status: 404, message: 'Portfolio not found.' };
+  if (!p) throw { status: 404, message: 'OBTLP not found.' };
   if (p.facultyId !== ctx.user.id && !isReviewer(ctx.user) && ctx.user.role !== 'it') {
-    throw { status: 403, message: 'You do not have access to this portfolio.' };
+    throw { status: 403, message: 'You do not have access to this OBTLP.' };
   }
   // A College Administrator only handles their own department's portfolios;
   // another department's look exactly like ones that don't exist.
   if (p.facultyId !== ctx.user.id && !inAdminScope(db, ctx.user, p)) {
-    throw { status: 404, message: 'Portfolio not found.' };
+    throw { status: 404, message: 'OBTLP not found.' };
   }
   return p;
 }
@@ -1832,7 +1832,7 @@ const routes = {
       });
       if (!db.portfolios) db.portfolios = [];
       db.portfolios.push(portfolio);
-      pushAudit(db, { actor: ctx.user.id, action: 'create', portfolioId: id, detail: 'Created a new draft portfolio' });
+      pushAudit(db, { actor: ctx.user.id, action: 'create', portfolioId: id, detail: 'Created a new draft OBTLP' });
       return { status: 201, data: portfolio };
     }
   },
@@ -1842,10 +1842,10 @@ const routes = {
     handler: (db, ctx, query, body, params) => {
       const p = ownedPortfolio(db, params.id, ctx);
       if (p.facultyId !== ctx.user.id) {
-        throw { status: 403, message: 'Only the owning faculty member can edit this portfolio.' };
+        throw { status: 403, message: 'Only the owning faculty member can edit this OBTLP.' };
       }
       if (!EDITABLE_STATUSES.includes(p.status)) {
-        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and can no longer be edited.` };
+        throw { status: 409, message: `This OBTLP is ${p.status.toLowerCase()} and can no longer be edited.` };
       }
       if (body.departmentId !== undefined || body.programId !== undefined) {
         assertDeptProgramLink(db, body.departmentId !== undefined ? body.departmentId : p.departmentId, body.programId !== undefined ? body.programId : p.programId);
@@ -1873,7 +1873,7 @@ const routes = {
       if (body.signatories !== undefined) p.signatories = sanitizeSignatories(body.signatories);
       if (body.officialMeta !== undefined) p.officialMeta = sanitizeOfficialMeta(body.officialMeta);
       p.updatedAt = store.nowIso();
-      pushAudit(db, { actor: p.facultyId, action: 'edit', portfolioId: p.id, detail: `Edited ${p.courseCode || 'portfolio'}` });
+      pushAudit(db, { actor: p.facultyId, action: 'edit', portfolioId: p.id, detail: `Edited ${p.courseCode || 'OBTLP'}` });
       return { status: 200, data: p };
     }
   },
@@ -1908,23 +1908,23 @@ const routes = {
         pushNotification(db, {
           userId: p.facultyId,
           title: 'Submission Removed',
-          message: `Your ${p.courseCode} portfolio was removed by ${ctx.user.name}.${reason ? ` Reason: ${reason}` : ''}`,
+          message: `Your ${p.courseCode} OBTLP was removed by ${ctx.user.name}.${reason ? ` Reason: ${reason}` : ''}`,
           portfolioId: null
         });
         return { status: 200, data: { ok: true } };
       }
       if (p.facultyId !== ctx.user.id) {
-        throw { status: 403, message: 'Only the owning faculty member can delete this portfolio.' };
+        throw { status: 403, message: 'Only the owning faculty member can delete this OBTLP.' };
       }
       if (!EDITABLE_STATUSES.includes(p.status)) {
-        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and can no longer be deleted.` };
+        throw { status: 409, message: `This OBTLP is ${p.status.toLowerCase()} and can no longer be deleted.` };
       }
       (p.documents || []).forEach((d) => {
         const filePath = path.join(UPLOADS_DIR, d.storedName);
         fs.existsSync(filePath) && fs.unlinkSync(filePath);
       });
       db.portfolios = (db.portfolios || []).filter((x) => x.id !== p.id);
-      pushAudit(db, { actor: ctx.user.id, action: 'delete', portfolioId: p.id, detail: `Deleted draft ${p.courseCode || 'portfolio'}` });
+      pushAudit(db, { actor: ctx.user.id, action: 'delete', portfolioId: p.id, detail: `Deleted draft ${p.courseCode || 'OBTLP'}` });
       return { status: 200, data: { ok: true } };
     }
   },
@@ -1933,17 +1933,17 @@ const routes = {
     auth: true,
     handler: (db, ctx, query, body, params) => {
       const p = (db.portfolios || []).find((x) => x.id === params.id);
-      if (!p) throw { status: 404, message: 'Portfolio not found.' };
+      if (!p) throw { status: 404, message: 'OBTLP not found.' };
       if (p.facultyId !== ctx.user.id && !inAdminScope(db, ctx.user, p)) {
-        throw { status: 404, message: 'Portfolio not found.' };
+        throw { status: 404, message: 'OBTLP not found.' };
       }
       const action = body.action;
       const comment = String(body.comment || '').trim();
 
       if (action === 'submit') {
-        if (p.facultyId !== ctx.user.id) throw { status: 403, message: 'Only the owning faculty member can submit this portfolio.' };
+        if (p.facultyId !== ctx.user.id) throw { status: 403, message: 'Only the owning faculty member can submit this OBTLP.' };
         if (BLOCKS_RESUBMIT.includes(p.status)) {
-          throw { status: 409, message: `This portfolio is already ${p.status.toLowerCase()} and cannot be submitted again.` };
+          throw { status: 409, message: `This OBTLP is already ${p.status.toLowerCase()} and cannot be submitted again.` };
         }
         if (!p.courseCode || !p.courseTitle) {
           throw { status: 400, message: 'Please complete the course code and course title before submitting.' };
@@ -1986,7 +1986,7 @@ const routes = {
       if (action === 'approve') {
         if (!isReviewer(ctx.user)) throw { status: 403, message: 'You do not have permission to perform this action.' };
         const stage = currentStage(p);
-        if (!stage) throw { status: 409, message: `This portfolio is ${String(p.status || '').toLowerCase()} and is not waiting for approval.` };
+        if (!stage) throw { status: 409, message: `This OBTLP is ${String(p.status || '').toLowerCase()} and is not waiting for approval.` };
         if (stage !== ctx.user.role) {
           throw { status: 403, message: `This OBTLP is waiting for the ${ROLE_LABEL[stage] || stage}, not for you.` };
         }
@@ -2036,7 +2036,7 @@ const routes = {
       if (action === 'request-revision') {
         if (!isReviewer(ctx.user)) throw { status: 403, message: 'You do not have permission to perform this action.' };
         const stage = currentStage(p);
-        if (!stage) throw { status: 409, message: `This portfolio is ${String(p.status || '').toLowerCase()} and is not waiting for review.` };
+        if (!stage) throw { status: 409, message: `This OBTLP is ${String(p.status || '').toLowerCase()} and is not waiting for review.` };
         // The reviewer at the current step, or anyone above it, can send it back.
         const chain = approvalChain(db).concat(['vpaa']);
         if (chain.indexOf(ctx.user.role) < chain.indexOf(stage)) {
@@ -2071,7 +2071,7 @@ const routes = {
       const p = ownedPortfolio(db, params.id, ctx);
       if (p.facultyId !== ctx.user.id) throw { status: 403, message: 'Only the owning faculty member can upload documents.' };
       if (!EDITABLE_STATUSES.includes(p.status)) {
-        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and no longer accepts new documents.` };
+        throw { status: 409, message: `This OBTLP is ${p.status.toLowerCase()} and no longer accepts new documents.` };
       }
       const name = String(body.name || '').trim();
       const dataBase64 = body.dataBase64;
@@ -2098,7 +2098,7 @@ const routes = {
       p.documents.push(doc);
       p.documentCount = p.documents.length;
       p.updatedAt = store.nowIso();
-      pushAudit(db, { actor: ctx.user.id, action: 'edit', portfolioId: p.id, detail: `Uploaded ${name} to ${p.courseCode || 'portfolio'}` });
+      pushAudit(db, { actor: ctx.user.id, action: 'edit', portfolioId: p.id, detail: `Uploaded ${name} to ${p.courseCode || 'OBTLP'}` });
       return { status: 201, data: p };
     }
   },
@@ -2109,7 +2109,7 @@ const routes = {
       const p = ownedPortfolio(db, params.id, ctx);
       if (p.facultyId !== ctx.user.id) throw { status: 403, message: 'Only the owning faculty member can remove documents.' };
       if (!EDITABLE_STATUSES.includes(p.status)) {
-        throw { status: 409, message: `This portfolio is ${p.status.toLowerCase()} and its documents can no longer be changed.` };
+        throw { status: 409, message: `This OBTLP is ${p.status.toLowerCase()} and its documents can no longer be changed.` };
       }
       const idx = (p.documents || []).findIndex((d) => d.id === params.docId);
       if (idx === -1) throw { status: 404, message: 'Document not found.' };
@@ -2118,7 +2118,7 @@ const routes = {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       p.documentCount = p.documents.length;
       p.updatedAt = store.nowIso();
-      pushAudit(db, { actor: ctx.user.id, action: 'edit', portfolioId: p.id, detail: `Removed ${removed.name} from ${p.courseCode || 'portfolio'}` });
+      pushAudit(db, { actor: ctx.user.id, action: 'edit', portfolioId: p.id, detail: `Removed ${removed.name} from ${p.courseCode || 'OBTLP'}` });
       return { status: 200, data: p };
     }
   },
@@ -2310,7 +2310,7 @@ const routes = {
         actor: ctx.user.id,
         action: 'user-delete',
         portfolioId: null,
-        detail: `Removed user ${removed.username} (${removed.role})${kept ? ` — ${kept} portfolio${kept === 1 ? '' : 's'} kept for records` : ''}`
+        detail: `Removed user ${removed.username} (${removed.role})${kept ? ` — ${kept} OBTLP${kept === 1 ? '' : 's'} kept for records` : ''}`
       });
       return {
         status: 200,
@@ -2771,12 +2771,12 @@ async function handleDocumentDownload(req, res, pathname) {
     const db = await store.readDb();
     const ctx = requireAuth(db, req);
     const p = (db.portfolios || []).find((x) => x.id === portfolioId);
-    if (!p) return sendJson(res, 404, { error: 'Portfolio not found.' });
+    if (!p) return sendJson(res, 404, { error: 'OBTLP not found.' });
     if (p.facultyId !== ctx.user.id && !isReviewer(ctx.user) && ctx.user.role !== 'it') {
       return sendJson(res, 403, { error: 'You do not have access to this document.' });
     }
     if (p.facultyId !== ctx.user.id && !inAdminScope(db, ctx.user, p)) {
-      return sendJson(res, 404, { error: 'Portfolio not found.' });
+      return sendJson(res, 404, { error: 'OBTLP not found.' });
     }
     const doc = (p.documents || []).find((d) => d.id === docId);
     if (!doc) return sendJson(res, 404, { error: 'Document not found.' });

@@ -118,9 +118,9 @@
     const NAV_BY_ROLE = {
       faculty: [
         { href: 'dashboard.html', icon: 'layout-dashboard', label: 'Dashboard' },
-        { href: 'my-portfolios.html', icon: 'folder-open', label: 'My Portfolios' },
-        { href: 'portfolio-new.html', icon: 'file-plus-2', label: 'Create New Portfolio' },
-        { href: 'my-portfolios.html?filter=submitted', icon: 'send', label: 'Submitted Portfolios' },
+        { href: 'my-portfolios.html', icon: 'folder-open', label: 'My OBTLPs' },
+        { href: 'portfolio-new.html', icon: 'file-plus-2', label: 'Create New OBTLP' },
+        { href: 'my-portfolios.html?filter=submitted', icon: 'send', label: 'Submitted OBTLPs' },
         { href: 'profile.html', icon: 'user-cog', label: 'Profile', active: true },
         { action: 'notifications', icon: 'bell', label: 'Notifications' }
       ],
@@ -179,7 +179,7 @@
           sel.value = me.departmentId || '';
           if (session.role !== 'faculty') {
             sel.disabled = true;
-            document.getElementById('p-department-hint').textContent = 'Assigned by the IT Administrator. You review portfolios from this college only.';
+            document.getElementById('p-department-hint').textContent = 'Assigned by the IT Administrator. You review OBTLPs from this college only.';
           }
           document.getElementById('p-department-field').style.display = '';
         }

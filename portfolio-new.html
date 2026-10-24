@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Portfolio · OBTLP</title>
+  <title>Create OBTLP · OBTLP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -21,9 +21,9 @@
       </div>
       <nav class="nav">
         <a href="dashboard.html" class="nav-link"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
-        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
-        <a href="portfolio-new.html" class="nav-link active"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
-        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My OBTLPs</a>
+        <a href="portfolio-new.html" class="nav-link active"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New OBTLP</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted OBTLPs</a>
         <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
         <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
       </nav>
@@ -44,7 +44,7 @@
     <main class="main">
       <header class="page-header">
         <div>
-          <h1 class="page-title" id="page-title">Create Portfolio</h1>
+          <h1 class="page-title" id="page-title">Create OBTLP</h1>
           <p class="page-subtitle" id="page-subtitle">Complete each step, then submit for administrative review.</p>
         </div>
         <div class="header-actions" id="wizard-header-actions">
@@ -53,17 +53,17 @@
         </div>
       </header>
 
-      <div id="loading-state" class="empty-state"><span class="spinner"></span><span>Loading portfolio…</span></div>
+      <div id="loading-state" class="empty-state"><span class="spinner"></span><span>Loading OBTLP…</span></div>
 
-      <!-- Shown by "Create New Portfolio" when the faculty member already has
+      <!-- Shown by "Create New OBTLP" when the faculty member already has
            unfinished work, so they can pick it up instead of starting over. -->
       <section id="draft-chooser" class="card card-pad draft-chooser" style="display:none;">
         <h2 class="card-title" style="margin-bottom:0.25rem;">Continue where you left off?</h2>
-        <p class="section-sub" style="margin-bottom:1rem;">You have unfinished portfolios. Open one to keep editing, or start a new one.</p>
+        <p class="section-sub" style="margin-bottom:1rem;">You have unfinished OBTLPs. Open one to keep editing, or start a new one.</p>
         <ul class="draft-list" id="draft-list"></ul>
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <a href="portfolio-new.html?new=1" class="btn btn-primary" id="start-new-btn"><i data-lucide="file-plus-2" class="svg-icon"></i> Start a New Portfolio</a>
-          <a href="my-portfolios.html" class="btn btn-outline"><i data-lucide="folder-open" class="svg-icon"></i> See All My Portfolios</a>
+          <a href="portfolio-new.html?new=1" class="btn btn-primary" id="start-new-btn"><i data-lucide="file-plus-2" class="svg-icon"></i> Start a New OBTLP</a>
+          <a href="my-portfolios.html" class="btn btn-outline"><i data-lucide="folder-open" class="svg-icon"></i> See All My OBTLPs</a>
         </div>
       </section>
 
@@ -1214,7 +1214,7 @@
         if (step === 2 || step === 3) renderPreview();
       };
 
-      // ---------- "Create New Portfolio": offer unfinished drafts first ----------
+      // ---------- "Create New OBTLP": offer unfinished drafts first ----------
       // Opening this page without an id used to create a brand-new draft
       // every time, leaving a trail of empty drafts. Now it lists the
       // faculty member's unfinished portfolios to continue; "Start a New
@@ -1263,8 +1263,8 @@
                     <i data-lucide="chevron-right" class="svg-icon t-muted"></i>
                   </a>
                 </li>`).join('');
-              document.getElementById('page-title').textContent = 'Create New Portfolio';
-              document.getElementById('page-subtitle').textContent = 'Pick up an unfinished portfolio, or start a new one.';
+              document.getElementById('page-title').textContent = 'Create New OBTLP';
+              document.getElementById('page-subtitle').textContent = 'Pick up an unfinished OBTLP, or start a new one.';
               document.getElementById('wizard-header-actions').style.display = 'none';
               document.getElementById('loading-state').style.display = 'none';
               document.getElementById('draft-chooser').style.display = 'block';
@@ -1319,14 +1319,14 @@
           const state = await api.getState();
           current = (state.portfolios || []).find((x) => x.id === portfolioId);
           if (!current) {
-            document.getElementById('loading-state').innerHTML = '<p>Portfolio not found.</p>';
+            document.getElementById('loading-state').innerHTML = '<p>OBTLP not found.</p>';
             return;
           }
         }
 
         editable = current.status === 'Draft' || current.status === 'Revision Required';
-        document.title = `${editable ? 'Edit' : 'View'} ${current.courseCode || 'Portfolio'} · OBTLP`;
-        document.getElementById('page-title').textContent = editable ? (portfolioId ? `Edit ${current.courseCode || 'Portfolio'}` : 'Create Portfolio') : `${current.courseCode} — ${current.status}`;
+        document.title = `${editable ? 'Edit' : 'View'} ${current.courseCode || 'OBTLP'} · OBTLP`;
+        document.getElementById('page-title').textContent = editable ? (portfolioId ? `Edit ${current.courseCode || 'OBTLP'}` : 'Create OBTLP') : `${current.courseCode} — ${current.status}`;
 
         if (current.status === 'Revision Required' && current.review && current.review.notes) {
           const banner = document.getElementById('revision-banner');
@@ -1336,7 +1336,7 @@
         }
         if (!editable) {
           const banner = document.getElementById('locked-banner');
-          banner.textContent = `This portfolio is ${current.status} and can no longer be edited. You can still preview and download it.`;
+          banner.textContent = `This OBTLP is ${current.status} and can no longer be edited. You can still preview and download it.`;
           banner.style.display = 'block';
           document.getElementById('save-draft-btn').style.display = 'none';
           document.querySelectorAll('.add-row-btn, #reload-template-btn').forEach((el) => el.style.display = 'none');
@@ -1363,7 +1363,7 @@
         goToStep(1);
         if (window.lucide) lucide.createIcons();
       } catch (err) {
-        document.getElementById('loading-state').innerHTML = '<p>Could not load this portfolio.</p>';
+        document.getElementById('loading-state').innerHTML = '<p>Could not load this OBTLP.</p>';
         ui.notifyError(err);
       }
     })();

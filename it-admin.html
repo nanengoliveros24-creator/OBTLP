@@ -60,7 +60,7 @@
         </header>
 
         <section class="stats-grid">
-          <div class="stat"><div class="stat-top"><p class="stat-label">Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-portfolios">–</p></div>
+          <div class="stat"><div class="stat-top"><p class="stat-label">OBTLPs</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-portfolios">–</p></div>
           <div class="stat"><div class="stat-top"><p class="stat-label">Active Users</p><i data-lucide="user-cog" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-active-users">–</p></div>
           <div class="stat"><div class="stat-top"><p class="stat-label">Audit Logs</p><i data-lucide="clipboard-list" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-logs">–</p></div>
           <div class="stat"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-warning"></i></div><p class="stat-value" id="stat-pending">–</p></div>
@@ -81,7 +81,7 @@
             <div class="promo">
               <div class="glow"></div>
               <h3>RBAC Active</h3>
-              <p style="margin-bottom:0;" id="rbac-summary">Role-based access enforcement is protecting portfolios, documents, and settings across 5 user roles: Faculty, Department Chair, Dean, VPAA and IT Administrator.</p>
+              <p style="margin-bottom:0;" id="rbac-summary">Role-based access enforcement is protecting OBTLPs, documents, and settings across 5 user roles: Faculty, Department Chair, Dean, VPAA and IT Administrator.</p>
             </div>
           </section>
         </div>
@@ -114,7 +114,7 @@
         <header class="page-header">
           <div>
             <h1 class="page-title">System Settings</h1>
-            <p class="page-subtitle">Institutional information shown on generated portfolio documents.</p>
+            <p class="page-subtitle">Institutional information shown on generated OBTLP documents.</p>
           </div>
         </header>
 
@@ -182,7 +182,7 @@
         <header class="page-header">
           <div>
             <h1 class="page-title">Course Templates</h1>
-            <p class="page-subtitle">Official per-course content. When faculty select a Course Code in a new portfolio, the matching template here auto-populates it.</p>
+            <p class="page-subtitle">Official per-course content. When faculty select a Course Code in a new OBTLP, the matching template here auto-populates it.</p>
           </div>
           <div class="header-actions">
             <button class="btn btn-primary" id="btn-new-template"><i data-lucide="book-plus" class="svg-icon"></i> New Template</button>
@@ -319,7 +319,7 @@
           <ul>
             <li>They will be signed out right away and can no longer sign in.</li>
             <li>This cannot be undone. To give access again you must create a new account.</li>
-            <li id="del-portfolios-line">Their portfolios stay in the system for records.</li>
+            <li id="del-portfolios-line">Their OBTLPs stay in the system for records.</li>
             <li>They will receive an email saying their account was removed.</li>
           </ul>
         </div>
@@ -364,7 +364,7 @@
         <div class="field">
           <label class="field-label">OBTLP Template</label>
           <select class="input select" id="t-obtlpTemplateId"><option value="">— No template (legacy layout) —</option></select>
-          <p class="field-hint">Which data-driven OBTLP layout this course's portfolios generate against. Leave as "No template" for courses that don't have an official OBTLP template yet — they keep working exactly as before.</p>
+          <p class="field-hint">Which data-driven OBTLP layout this course's OBTLPs generate against. Leave as "No template" for courses that don't have an official OBTLP template yet — they keep working exactly as before.</p>
         </div>
         <div class="field"><label class="field-label">Course Description</label><textarea class="textarea" id="t-description" rows="3" placeholder="Leave blank if not provided by the official template yet."></textarea></div>
         <div class="field">
@@ -792,13 +792,13 @@
         delSubmit.disabled = true;
         document.getElementById('del-form-error').style.display = 'none';
         const line = document.getElementById('del-portfolios-line');
-        line.textContent = 'Their portfolios stay in the system for records.';
+        line.textContent = 'Their OBTLPs stay in the system for records.';
         try {
           const state = await api.getState();
           const n = (state.allPortfolios || []).filter((p) => p.facultyId === id).length;
           line.textContent = n
-            ? `They have ${n} portfolio${n === 1 ? '' : 's'}. ${n === 1 ? 'It stays' : 'These stay'} in the system for records.`
-            : 'They have no portfolios.';
+            ? `They have ${n} OBTLP${n === 1 ? '' : 's'}. ${n === 1 ? 'It stays' : 'These stay'} in the system for records.`
+            : 'They have no OBTLPs.';
         } catch (e) { /* keep the generic line */ }
         delModal.style.display = 'flex';
         delConfirm.focus();
@@ -1294,7 +1294,7 @@
         templatesCache = await api.getCourseTemplates();
         const rows = document.getElementById('template-rows');
         if (!templatesCache.length) {
-          rows.innerHTML = '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No course templates yet. Create one so new portfolios can auto-populate.</td></tr>';
+          rows.innerHTML = '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No course templates yet. Create one so new OBTLPs can auto-populate.</td></tr>';
           return;
         }
         rows.innerHTML = templatesCache.map((t) => `
@@ -1317,7 +1317,7 @@
         });
         rows.querySelectorAll('[data-delete-template]').forEach((btn) => {
           btn.addEventListener('click', async () => {
-            if (!confirm(`Delete the template for ${btn.dataset.code}? Portfolios already created from it are not affected.`)) return;
+            if (!confirm(`Delete the template for ${btn.dataset.code}? OBTLPs already created from it are not affected.`)) return;
             try {
               await api.deleteCourseTemplate(btn.dataset.deleteTemplate);
               ui.notify('Template Deleted', `The template for ${btn.dataset.code} has been removed.`);

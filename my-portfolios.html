@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <script>(function(){try{if(localStorage.getItem('obtlp-theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Portfolios · OBTLP</title>
+  <title>My OBTLPs · OBTLP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -21,9 +21,9 @@
       </div>
       <nav class="nav">
         <a href="dashboard.html" class="nav-link"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
-        <a href="my-portfolios.html" class="nav-link active"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
-        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
-        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="my-portfolios.html" class="nav-link active"><i data-lucide="folder-open" class="svg-icon"></i> My OBTLPs</a>
+        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New OBTLP</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted OBTLPs</a>
         <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
         <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
       </nav>
@@ -44,11 +44,11 @@
     <main class="main">
       <header class="page-header">
         <div>
-          <h1 class="page-title">My Portfolios</h1>
-          <p class="page-subtitle">Every course portfolio you've created, in every stage.</p>
+          <h1 class="page-title">My OBTLPs</h1>
+          <p class="page-subtitle">Every OBTLP you've created, in every stage.</p>
         </div>
         <div class="header-actions">
-          <a href="portfolio-new.html" class="btn btn-primary"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+          <a href="portfolio-new.html" class="btn btn-primary"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New OBTLP</a>
         </div>
       </header>
 
@@ -63,7 +63,7 @@
             <button data-filter="revision">Returned for Revision</button>
             <button data-filter="archived">Archived</button>
           </div>
-          <input class="input input-search" id="portfolio-search" placeholder="Search portfolios…" />
+          <input class="input input-search" id="portfolio-search" placeholder="Search OBTLPs…" />
         </div>
         <div class="table-wrap">
           <table class="data">
@@ -146,7 +146,7 @@
         ? `<a href="portfolio-new.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="${p.status === 'Draft' ? 'Continue Editing' : 'Edit'}"><i data-lucide="pencil" class="svg-icon"></i></a>`
         : '';
       const deleteBtn = canEdit
-        ? `<button type="button" class="icon-btn" data-delete="${p.id}" data-label="${p.courseCode || 'this portfolio'}" title="Delete"><i data-lucide="trash-2" class="svg-icon"></i></button>`
+        ? `<button type="button" class="icon-btn" data-delete="${p.id}" data-label="${p.courseCode || 'this OBTLP'}" title="Delete"><i data-lucide="trash-2" class="svg-icon"></i></button>`
         : '';
       const compareLink = p.status !== 'Draft'
         ? `<a href="compare.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="Compare old and new"><i data-lucide="git-compare" class="svg-icon"></i></a>`
@@ -177,8 +177,8 @@
 
       if (!rows.length) {
         const msg = allPortfolios.length
-          ? 'No portfolios match this filter.'
-          : 'No portfolios yet. Create your first portfolio to get started.';
+          ? 'No OBTLPs match this filter.'
+          : 'No OBTLPs yet. Create your first OBTLP to get started.';
         tbody.innerHTML = `<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">${msg}</td></tr>`;
         return;
       }
@@ -225,7 +225,7 @@
           try {
             await api.deletePortfolio(btn.dataset.delete);
             allPortfolios = allPortfolios.filter((p) => p.id !== btn.dataset.delete);
-            ui.notify('Portfolio Deleted', 'The draft has been removed.');
+            ui.notify('OBTLP Deleted', 'The draft has been removed.');
             renderRows(searchInput ? searchInput.value : '');
           } catch (err) {
             ui.notifyError(err);

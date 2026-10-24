@@ -25,9 +25,9 @@
       </div>
       <nav class="nav">
         <a href="dashboard.html" class="nav-link active"><i data-lucide="layout-dashboard" class="svg-icon"></i> Dashboard</a>
-        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My Portfolios</a>
-        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
-        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted Portfolios</a>
+        <a href="my-portfolios.html" class="nav-link"><i data-lucide="folder-open" class="svg-icon"></i> My OBTLPs</a>
+        <a href="portfolio-new.html" class="nav-link"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New OBTLP</a>
+        <a href="my-portfolios.html?filter=submitted" class="nav-link"><i data-lucide="send" class="svg-icon"></i> Submitted OBTLPs</a>
         <a href="profile.html" class="nav-link"><i data-lucide="user-cog" class="svg-icon"></i> Profile</a>
         <span class="nav-link" data-action="notifications"><i data-lucide="bell" class="svg-icon"></i> Notifications</span>
       </nav>
@@ -55,7 +55,7 @@
           <p class="page-subtitle">Here's the status of your OBTLP reports for this academic year.</p>
         </div>
         <div class="header-actions">
-          <a href="portfolio-new.html" class="btn btn-primary"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New Portfolio</a>
+          <a href="portfolio-new.html" class="btn btn-primary"><i data-lucide="file-plus-2" class="svg-icon"></i> Create New OBTLP</a>
         </div>
       </header>
 
@@ -67,21 +67,21 @@
 
       <!-- Stats -->
       <section class="stats-grid">
-        <div class="stat stat-link active" data-status-filter="All" role="button" tabindex="0" title="Show all portfolios"><div class="stat-top"><p class="stat-label">Total Portfolios</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-total">0</p></div>
-        <div class="stat stat-link" data-status-filter="Approved" role="button" tabindex="0" title="Show approved portfolios"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="check-circle-2" class="svg-icon t-success"></i></div><p class="stat-value" id="stat-approved">0</p></div>
-        <div class="stat stat-link" data-status-filter="Pending" role="button" tabindex="0" title="Show portfolios waiting for review"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-pending">0</p></div>
-        <div class="stat stat-link" data-status-filter="Revision" role="button" tabindex="0" title="Show portfolios that need revision"><div class="stat-top"><p class="stat-label">Needs Revision</p><i data-lucide="alert-triangle" class="svg-icon t-destructive"></i></div><p class="stat-value" id="stat-revision">0</p></div>
+        <div class="stat stat-link active" data-status-filter="All" role="button" tabindex="0" title="Show all OBTLPs"><div class="stat-top"><p class="stat-label">Total OBTLPs</p><i data-lucide="file-plus-2" class="svg-icon t-primary"></i></div><p class="stat-value" id="stat-total">0</p></div>
+        <div class="stat stat-link" data-status-filter="Approved" role="button" tabindex="0" title="Show approved OBTLPs"><div class="stat-top"><p class="stat-label">Approved</p><i data-lucide="check-circle-2" class="svg-icon t-success"></i></div><p class="stat-value" id="stat-approved">0</p></div>
+        <div class="stat stat-link" data-status-filter="Pending" role="button" tabindex="0" title="Show OBTLPs waiting for review"><div class="stat-top"><p class="stat-label">Pending Review</p><i data-lucide="clock" class="svg-icon t-accent"></i></div><p class="stat-value" id="stat-pending">0</p></div>
+        <div class="stat stat-link" data-status-filter="Revision" role="button" tabindex="0" title="Show OBTLPs that need revision"><div class="stat-top"><p class="stat-label">Needs Revision</p><i data-lucide="alert-triangle" class="svg-icon t-destructive"></i></div><p class="stat-value" id="stat-revision">0</p></div>
       </section>
 
       <!-- Portfolio table -->
       <section class="card mb-8" style="overflow:hidden;" id="portfolio-card">
         <div class="section-head">
           <div>
-            <h2 class="card-title" style="font-size:1.125rem;" id="table-title">My Portfolios</h2>
+            <h2 class="card-title" style="font-size:1.125rem;" id="table-title">My OBTLPs</h2>
             <p class="section-sub" id="table-sub">Your saved OBTLP report records</p>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
-            <input class="input input-search" id="portfolio-search" placeholder="Search portfolios…" />
+            <input class="input input-search" id="portfolio-search" placeholder="Search OBTLPs…" />
             <button type="button" class="btn btn-outline btn-sm" id="clear-filter" style="display:none;">Show All</button>
             <a href="my-portfolios.html" class="btn btn-outline btn-sm">View All</a>
           </div>
@@ -115,8 +115,8 @@
         <div class="promo">
           <div class="glow"></div>
           <h3>OBE-Aligned Templates</h3>
-          <p>All generated portfolios use the official institutional template, ensuring compliance and consistency.</p>
-          <a href="portfolio-new.html" class="btn btn-accent btn-sm">Start a new portfolio</a>
+          <p>All generated OBTLPs use the official institutional template, ensuring compliance and consistency.</p>
+          <a href="portfolio-new.html" class="btn btn-accent btn-sm">Start a new OBTLP</a>
         </div>
       </section>
     </main>
@@ -170,7 +170,7 @@
       const canEdit = DELETABLE_STATUSES.includes(p.status);
       const editLink = `<a href="portfolio-new.html?id=${encodeURIComponent(p.id)}" class="icon-btn" title="${p.status === 'Draft' ? 'Continue Editing' : 'Edit'}"><i data-lucide="pencil" class="svg-icon"></i></a>`;
       const deleteBtn = canEdit
-        ? `<button type="button" class="icon-btn" data-delete="${p.id}" data-label="${p.courseCode || 'this portfolio'}" title="Delete"><i data-lucide="trash-2" class="svg-icon"></i></button>`
+        ? `<button type="button" class="icon-btn" data-delete="${p.id}" data-label="${p.courseCode || 'this OBTLP'}" title="Delete"><i data-lucide="trash-2" class="svg-icon"></i></button>`
         : '';
       return `
         <div class="row-actions">
@@ -190,8 +190,8 @@
     // review queue).
     let statusFilter = 'All';
     const FILTERS = {
-      All: { test: () => true, title: 'My Portfolios', sub: 'Your saved OBTLP report records', empty: 'No portfolios yet. Create one to get started.' },
-      Approved: { test: (p) => p.status === 'Approved', title: 'Approved', sub: 'OBTLPs that received final approval', empty: 'No approved portfolios yet.' },
+      All: { test: () => true, title: 'My OBTLPs', sub: 'Your saved OBTLP report records', empty: 'No OBTLPs yet. Create one to get started.' },
+      Approved: { test: (p) => p.status === 'Approved', title: 'Approved', sub: 'OBTLPs that received final approval', empty: 'No approved OBTLPs yet.' },
       Pending: { test: (p) => p.status === 'Pending Review' || p.status === 'In Review', title: 'Pending Review', sub: 'Submitted and moving through Dept. Chair → Dean approval', empty: 'Nothing is waiting for review.' },
       Revision: { test: (p) => p.status === 'Revision Required', title: 'Needs Revision', sub: 'Returned with comments — edit and resubmit', empty: 'Nothing needs revision. 🎉' }
     };
@@ -214,7 +214,7 @@
         !term || String(p.courseCode || '').toLowerCase().includes(term) || String(p.courseTitle || '').toLowerCase().includes(term)
       ));
       if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="t-muted" style="padding:1.5rem;">${term ? 'No portfolios match your search.' : f.empty}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="t-muted" style="padding:1.5rem;">${term ? 'No OBTLPs match your search.' : f.empty}</td></tr>`;
         return;
       }
       tbody.innerHTML = rows.map((p) => {
@@ -240,7 +240,7 @@
           try {
             await api.deletePortfolio(btn.dataset.delete);
             allPortfolios = allPortfolios.filter((p) => p.id !== btn.dataset.delete);
-            window.__OBTLP_UI__.notify('Portfolio Deleted', 'The draft has been removed.');
+            window.__OBTLP_UI__.notify('OBTLP Deleted', 'The draft has been removed.');
             updateStats();
             renderRows(searchInput ? searchInput.value : '');
           } catch (err) {
@@ -322,7 +322,7 @@
       box.innerHTML = `<i data-lucide="${done ? 'calendar-check' : 'calendar-clock'}" class="svg-icon"></i>
         <div><p><b>OBTLP deadline · ${esc(upcoming.semester)} ${esc(upcoming.academicYear)}</b> ${when}</p>
         <p class="t-muted">${esc(todo)}${upcoming.note ? ` · ${esc(upcoming.note)}` : ''}</p></div>
-        ${done ? '' : `<a class="btn btn-sm ${overdue || days <= 3 ? 'btn-primary' : 'btn-outline'}" href="${drafts.length || revision.length ? 'my-portfolios.html' : 'portfolio-new.html'}">${drafts.length || revision.length ? 'Open My Portfolios' : 'Create OBTLP'}</a>`}`;
+        ${done ? '' : `<a class="btn btn-sm ${overdue || days <= 3 ? 'btn-primary' : 'btn-outline'}" href="${drafts.length || revision.length ? 'my-portfolios.html' : 'portfolio-new.html'}">${drafts.length || revision.length ? 'Open My OBTLPs' : 'Create OBTLP'}</a>`}`;
       box.style.display = '';
       if (window.lucide) lucide.createIcons();
     }
