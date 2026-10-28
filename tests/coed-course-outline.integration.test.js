@@ -85,3 +85,20 @@ test('the faculty "Department" list includes every official department', async (
   assert.ok(cat.departments.includes('College of Education'));
   assert.ok(cat.departments.includes('College of Computing Studies'));
 });
+
+test('an existing "COED" program is renamed to BSED in place', () => {
+  const { applyCoedTemplates } = require('../seed-coed');
+  const data = require('../data/coed-course-outlines-2026-2027.json');
+  let n = 0;
+  const store = { nowIso: () => '2026-10-28T00:00:00.000Z', nextId: (p) => `${p}_${++n}` };
+  const db = {
+    departments: [{ id: 'dept_coed', code: 'COED', name: 'College of Education' }],
+    programs: [{ id: 'prog_old', departmentId: 'dept_coed', code: 'COED', name: 'College of Education – Course Outlines' }]
+  };
+  applyCoedTemplates(db, data, store);
+  assert.equal(db.programs.length, 1, 'no second program is created');
+  assert.equal(db.programs[0].id, 'prog_old');
+  assert.equal(db.programs[0].code, 'BSED');
+  assert.equal(db.programs[0].name, 'Bachelor of Secondary Education');
+  assert.ok(db.courseTemplates.length > 0 && db.courseTemplates.every((t) => t.programId === 'prog_old'));
+});

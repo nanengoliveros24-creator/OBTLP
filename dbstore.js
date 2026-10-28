@@ -107,13 +107,13 @@ let mongoClientPromise = null;
 // Connects once and reuses the same client for every request (the driver
 // manages its own internal connection pool), rather than reconnecting
 // per call.
-function getMongoCollection() {
+function getMongoCollection(name) {
   if (!mongoClientPromise) {
     const { MongoClient } = require('mongodb');
     const client = new MongoClient(MONGODB_URI);
     mongoClientPromise = client.connect().then(() => client);
   }
-  return mongoClientPromise.then((client) => client.db(MONGO_DB_NAME).collection(MONGO_COLLECTION));
+  return mongoClientPromise.then((client) => client.db(MONGO_DB_NAME).collection(name || MONGO_COLLECTION));
 }
 
 async function mongoInitDbIfMissing() {
@@ -192,6 +192,56 @@ function transact(mutator) {
   return resultPromise;
 }
 
+// ---------------------------------------------------------------------
+// Stored files (e.g. an OBTLP template's own document), kept out of the
+// main document. In Mongo mode each file is its own document in
+// "obtlp_files", so it survives redeploys like the rest of the data
+// (Render's disk does not); in file mode it sits in the uploads folder.
+// ---------------------------------------------------------------------
+const MONGO_FILES_COLLECTION = 'obtlp_files';
+const FILES_DIR = process.env.OBTLP_UPLOADS_DIR
+  ? path.resolve(process.env.OBTLP_UPLOADS_DIR)
+  : path.join(__dirname, 'uploads');
+const storedFilePath = (id) => path.join(FILES_DIR, `file__${String(id).replace(/[^\w-]/g, '')}`);
+
+async function putFile(id, buffer) {
+  if (USING_MONGO) {
+    const col = await getMongoCollection(MONGO_FILES_COLLECTION);
+    await col.replaceOne({ _id: id }, { _id: id, data: buffer, size: buffer.length }, { upsert: true });
+    return;
+  }
+  await fs.promises.mkdir(FILES_DIR, { recursive: true });
+  await fs.promises.writeFile(storedFilePath(id), buffer);
+}
+
+// Resolves to a Buffer, or null when there is no such file.
+async function getFile(id) {
+  if (USING_MONGO) {
+    const col = await getMongoCollection(MONGO_FILES_COLLECTION);
+    const doc = await col.findOne({ _id: id });
+    return doc ? Buffer.from(doc.data.buffer.subarray(0, doc.data.position)) : null;
+  }
+  try {
+    return await fs.promises.readFile(storedFilePath(id));
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+async function deleteFile(id) {
+  if (USING_MONGO) {
+    const col = await getMongoCollection(MONGO_FILES_COLLECTION);
+    await col.deleteOne({ _id: id });
+    return;
+  }
+  try {
+    await fs.promises.unlink(storedFilePath(id));
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -202,4 +252,4 @@ function nextId(prefix) {
   return `${prefix}_${idCounter}`;
 }
 
-module.exports = { readDb, writeDb, transact, nowIso, nextId, initDbIfMissing };
+module.exports = { readDb, writeDb, transact, nowIso, nextId, initDbIfMissing, putFile, getFile, deleteFile };

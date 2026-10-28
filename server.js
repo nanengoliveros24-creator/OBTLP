@@ -57,6 +57,9 @@ const DOC_MIME = {
 };
 const ALLOWED_DOC_EXT = Object.keys(DOC_MIME);
 const MAX_DOC_BYTES = 15 * 1024 * 1024; // 15MB per file
+// An OBTLP template's own file is one MongoDB document in production,
+// which caps at 16MB.
+const MAX_TEMPLATE_FILE_BYTES = 10 * 1024 * 1024;
 
 // ---------- helpers ----------
 
@@ -1642,6 +1645,7 @@ const routes = {
         duplicatedFrom: src.id
       });
       delete copy.madeDepartmentWide;
+      delete copy.file; // the new template gets its own file
       db.obtlpTemplates.push(copy);
       pushAudit(db, { actor: ctx.user.id, action: 'obtlp-template-create', portfolioId: null, detail: `Generated OBTLP template ${code} from ${src.code}` });
       return { status: 201, data: copy };
@@ -1659,7 +1663,13 @@ const routes = {
       }
       db.obtlpTemplates = db.obtlpTemplates.filter((t) => t.id !== tpl.id);
       pushAudit(db, { actor: ctx.user.id, action: 'obtlp-template-delete', portfolioId: null, detail: `Deleted OBTLP template ${tpl.code}` });
-      return { status: 200, data: { ok: true } };
+      return {
+        status: 200,
+        data: { ok: true },
+        afterCommit: tpl.file
+          ? () => store.deleteFile(tpl.file.id).catch((err) => console.error('[template file] could not delete', tpl.file.id, err.message))
+          : undefined
+      };
     }
   },
 
@@ -2676,7 +2686,7 @@ const routes = {
         version: 1,
         createdAt: store.nowIso(),
         createdBy: ctx.user.username,
-        note: 'Uploaded document files (PDF/DOCX/PPTX) are not included; everything else in the database is.',
+        note: 'Uploaded files (OBTLP documents and OBTLP template files) are not included; everything else in the database is.',
         counts: {
           users: (copy.users || []).length,
           portfolios: (copy.portfolios || []).length,
@@ -2796,6 +2806,89 @@ async function handleDocumentDownload(req, res, pathname) {
   }
 }
 
+// ---------- OBTLP template file (binary, async storage) ----------
+// The department's own copy of its OBTLP form (PDF/DOCX/PPTX). The file is
+// stored before the template records it, so these run outside the routes
+// table (whose handlers are synchronous).
+
+// "Content-Disposition" must be Latin-1; keep an ASCII name plus the UTF-8 one.
+function contentDisposition(type, name) {
+  const ascii = String(name).replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
+  return `${type}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
+// PUT /api/obtlp-templates/:id/file  { name, dataBase64 } — IT only; replaces any earlier file.
+async function handleTemplateFileUpload(req, res, templateId) {
+  let body;
+  try {
+    body = await readBody(req, 20 * 1024 * 1024);
+  } catch (e) {
+    return sendJson(res, 400, { error: e.message });
+  }
+  let fileId = null;
+  try {
+    const db = await store.readDb();
+    const ctx = requireAuth(db, req);
+    requireRole(ctx, ['it']);
+    if (!(db.obtlpTemplates || []).some((t) => t.id === templateId)) throw { status: 404, message: 'OBTLP template not found.' };
+    const name = String(body.name || '').trim();
+    if (!name || !body.dataBase64) throw { status: 400, message: 'A file name and file contents are required.' };
+    const ext = docExtOf(name);
+    if (!ALLOWED_DOC_EXT.includes(ext)) throw { status: 400, message: 'Only PDF, DOCX, and PPTX files are supported.' };
+    const buffer = Buffer.from(String(body.dataBase64), 'base64');
+    if (!buffer.length) throw { status: 400, message: 'The uploaded file is empty.' };
+    if (buffer.length > MAX_TEMPLATE_FILE_BYTES) throw { status: 400, message: 'Template files must be 10MB or smaller.' };
+
+    fileId = store.nextId('tplfile');
+    await store.putFile(fileId, buffer);
+    const { result } = await store.transact((d) => {
+      const tpl = (d.obtlpTemplates || []).find((t) => t.id === templateId);
+      if (!tpl) throw { status: 404, message: 'OBTLP template not found.' };
+      const previous = tpl.file || null;
+      tpl.file = { id: fileId, name, type: ext.slice(1).toUpperCase(), size: buffer.length, uploadedAt: store.nowIso(), uploadedBy: ctx.user.id };
+      tpl.updatedAt = store.nowIso();
+      pushAudit(d, { actor: ctx.user.id, action: 'obtlp-template-update', portfolioId: null, detail: `Inserted file ${name} into OBTLP template ${tpl.code}` });
+      return { tpl, previous };
+    });
+    fileId = null; // the template owns it now
+    if (result.previous) {
+      await store.deleteFile(result.previous.id).catch((err) => console.error('[template file] could not delete', result.previous.id, err.message));
+    }
+    sendJson(res, 200, result.tpl);
+  } catch (err) {
+    if (fileId) store.deleteFile(fileId).catch(() => {});
+    if (err && err.status) return sendJson(res, err.status, { error: err.message });
+    console.error(err);
+    sendJson(res, 500, { error: 'Something went wrong. Please try again.' });
+  }
+}
+
+// GET /api/obtlp-templates/:id/file — anyone who can see the template.
+async function handleTemplateFileDownload(req, res, templateId) {
+  try {
+    const db = await store.readDb();
+    const ctx = requireAuth(db, req);
+    const isStaff = isReviewer(ctx.user) || ctx.user.role === 'it';
+    const tpl = (db.obtlpTemplates || []).find((t) => t.id === templateId && (isStaff || t.active));
+    if (!tpl) return sendJson(res, 404, { error: 'OBTLP template not found.' });
+    if (!tpl.file) return sendJson(res, 404, { error: 'No file has been inserted into this template yet.' });
+    const buffer = await store.getFile(tpl.file.id);
+    if (!buffer) return sendJson(res, 404, { error: 'File is missing from storage.' });
+    const ext = docExtOf(tpl.file.name);
+    res.writeHead(200, {
+      'Content-Type': DOC_MIME[ext] || 'application/octet-stream',
+      'Content-Length': buffer.length,
+      'Content-Disposition': contentDisposition(ext === '.pdf' ? 'inline' : 'attachment', tpl.file.name),
+      'Cache-Control': 'no-store'
+    });
+    res.end(buffer);
+  } catch (err) {
+    if (err && err.status) return sendJson(res, err.status, { error: err.message });
+    console.error(err);
+    sendJson(res, 500, { error: 'Something went wrong. Please try again.' });
+  }
+}
+
 // ---------- static file serving ----------
 
 function serveStatic(req, res, urlPath) {
@@ -2834,6 +2927,9 @@ const server = http.createServer((req, res) => {
     if (req.method === 'GET' && /^\/api\/portfolios\/[^/]+\/documents\/[^/]+\/download$/.test(pathname)) {
       return handleDocumentDownload(req, res, pathname);
     }
+    const templateFile = /^\/api\/obtlp-templates\/([^/]+)\/file$/.exec(pathname);
+    if (templateFile && req.method === 'PUT') return handleTemplateFileUpload(req, res, templateFile[1]);
+    if (templateFile && req.method === 'GET') return handleTemplateFileDownload(req, res, templateFile[1]);
 
     if (pathname.startsWith('/api/')) {
       return handleApi(req, res, pathname, fullUrl.searchParams);

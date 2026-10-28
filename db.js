@@ -134,6 +134,21 @@
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
+  // An OBTLP template's own file, as a Blob (same bearer-token auth).
+  async function getObtlpTemplateFile(id) {
+    const session = getSession();
+    const headers = {};
+    if (session && session.token) headers['Authorization'] = `Bearer ${session.token}`;
+    const res = await fetch(`/api/obtlp-templates/${encodeURIComponent(id)}/file`, { headers });
+    if (!res.ok) {
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* ignore */ }
+      if (res.status === 401) forceSignOut();
+      throw new Error((data && data.error) || 'Could not open the file.');
+    }
+    return res.blob();
+  }
+
   const api = {
     // ---- session ----
     getSession,
@@ -189,6 +204,8 @@
     updateObtlpTemplate: (id, body) => req(`/api/obtlp-templates/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }),
     deleteObtlpTemplate: (id) => req(`/api/obtlp-templates/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     duplicateObtlpTemplate: (id, body) => req(`/api/obtlp-templates/${encodeURIComponent(id)}/duplicate`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    uploadObtlpTemplateFile: (id, body) => req(`/api/obtlp-templates/${encodeURIComponent(id)}/file`, { method: 'PUT', body: JSON.stringify(body) }),
+    getObtlpTemplateFile,
 
     // ---- org profile (Vision/Mission/Core Values/Graduate Attributes, etc.) ----
     getOrgProfile: () => req('/api/org-profile'),

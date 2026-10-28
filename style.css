@@ -219,6 +219,44 @@ table.data tbody tr:hover { background: color-mix(in oklch, var(--secondary) 40%
 .cell-sub { font-size: 0.75rem; color: var(--muted-foreground); }
 .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; }
 
+/* Departments & OBTLP Templates: one table grouped by department and program */
+table.dpt-table th, table.dpt-table td { padding: 0.75rem 1rem; }
+table.dpt-table td { vertical-align: middle; }
+table.dpt-table td.dpt-group { vertical-align: top; border-right: 1px solid var(--border); background: color-mix(in oklch, var(--secondary) 25%, transparent); }
+table.dpt-table tbody tr.dpt-first td { border-top: 2px solid var(--border); }
+table.dpt-table tbody tr:hover { background: transparent; }
+
+/* Row action dropdown: the panel uses position: fixed (set in JS) so a
+   scrolling table cannot clip it */
+.action-menu { display: inline-block; }
+.action-menu-trigger { gap: 0.25rem; white-space: nowrap; }
+.action-menu-trigger .svg-icon { transition: transform .15s ease; }
+.action-menu-trigger[aria-expanded="true"] .svg-icon { transform: rotate(180deg); }
+.action-menu-panel {
+  display: none; position: fixed; z-index: 80; min-width: 14rem; padding: 0.25rem;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(20,40,30,.16);
+}
+.action-menu-panel.open { display: block; }
+.action-menu-item {
+  display: flex; align-items: center; gap: 0.5rem; width: 100%;
+  padding: 0.5rem 0.625rem; border: none; border-radius: calc(var(--radius) - 2px);
+  background: transparent; color: var(--foreground); font: inherit; font-size: 0.8125rem;
+  text-align: left; white-space: nowrap; cursor: pointer;
+}
+.action-menu-item:hover, .action-menu-item:focus-visible { background: var(--secondary); outline: none; }
+.action-menu-item .svg-icon { width: 1rem; height: 1rem; color: var(--muted-foreground); }
+.action-menu-item.danger, .action-menu-item.danger .svg-icon { color: var(--destructive); }
+.action-menu-item:disabled { opacity: 0.5; cursor: not-allowed; background: transparent; }
+.tpl-file-link {
+  display: inline-flex; align-items: center; gap: 0.375rem; max-width: 100%; margin-top: 0.375rem; padding: 0;
+  border: none; background: none; color: var(--primary); font: inherit; font-size: 0.8125rem; cursor: pointer;
+}
+.tpl-file-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tpl-file-link .svg-icon { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
+.tpl-file-link:hover span, .tpl-file-link:focus-visible span { text-decoration: underline; }
+.action-menu-sep { height: 1px; margin: 0.25rem 0; background: var(--border); }
+
 /* ---------- Inputs ---------- */
 .input, .textarea, .select {
   width: 100%; padding: 0.625rem 0.75rem; border-radius: var(--radius);
@@ -1112,6 +1150,14 @@ h1, h2, h3, .card-title, .page-title, .stat-value, .brand-title { font-family: v
 .nav-link.active { background: rgba(255, 255, 255, .12); color: #fff; font-weight: 600; border-left: 0; box-shadow: inset 3px 0 0 var(--accent); }
 .nav-link.active .svg-icon { color: var(--accent); opacity: 1; }
 .nav-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Sticky sidebar (desktop): stays in view while the page scrolls; the menu
+   list scrolls on its own if it is taller than the window. Phones keep the
+   slide-in menu below. */
+@media (min-width: 769px) {
+  .sidebar { position: sticky; top: 0; height: 100vh; align-self: flex-start; flex-shrink: 0; }
+  .sidebar .nav { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .25) transparent; }
+}
 
 /* Buttons: one height, clear hierarchy, visible focus */
 .btn { min-height: 2.5rem; padding: 0.55rem 1.05rem; font-weight: 600; border-radius: var(--radius); line-height: 1.2; transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .05s ease, color .15s ease; }

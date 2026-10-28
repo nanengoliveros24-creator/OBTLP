@@ -208,47 +208,46 @@
           </div>
         </header>
 
-        <div class="grid-3" style="gap:1.5rem;">
-          <section class="card" style="overflow:hidden;">
-            <div class="section-head">
-              <h2 class="card-title" style="font-size:1rem;">Departments</h2>
-              <button class="btn btn-outline btn-sm" id="btn-new-department"><i data-lucide="plus" class="svg-icon"></i> New</button>
+        <!-- Table 1: each department and its programs. -->
+        <section class="card" style="overflow:hidden;margin-bottom:1.5rem;">
+          <div class="section-head" style="flex-wrap:wrap;gap:0.75rem;">
+            <div>
+              <h2 class="card-title" style="font-size:1rem;">Departments &amp; Programs</h2>
+              <p class="section-sub">Each college and its programs.</p>
             </div>
-            <div class="table-wrap">
-              <table class="data">
-                <thead><tr><th>Code</th><th>Name</th><th class="right">Actions</th></tr></thead>
-                <tbody id="department-rows"><tr><td colspan="3" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
-              </table>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <button class="btn btn-outline btn-sm" id="btn-new-department"><i data-lucide="plus" class="svg-icon"></i> Department</button>
+              <button class="btn btn-outline btn-sm" id="btn-new-program"><i data-lucide="plus" class="svg-icon"></i> Program</button>
             </div>
-          </section>
+          </div>
+          <div class="table-wrap">
+            <table class="data dpt-table">
+              <thead><tr><th style="width:35%;">Department</th><th>Program</th></tr></thead>
+              <tbody id="dept-prog-rows"><tr><td colspan="2" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
 
-          <section class="card" style="overflow:hidden;">
-            <div class="section-head">
-              <h2 class="card-title" style="font-size:1rem;">Programs</h2>
-              <button class="btn btn-outline btn-sm" id="btn-new-program"><i data-lucide="plus" class="svg-icon"></i> New</button>
-            </div>
-            <div class="table-wrap">
-              <table class="data">
-                <thead><tr><th>Code</th><th>Name</th><th>Department</th><th class="right">Actions</th></tr></thead>
-                <tbody id="program-rows"><tr><td colspan="4" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="card" style="overflow:hidden;">
-            <div class="section-head">
+        <!-- Table 2: each department's OBTLP templates (rows carry the
+             template actions). -->
+        <section class="card" style="overflow:hidden;">
+          <div class="section-head" style="flex-wrap:wrap;gap:0.75rem;">
+            <div>
               <h2 class="card-title" style="font-size:1rem;">OBTLP Templates</h2>
-              <button class="btn btn-outline btn-sm" id="btn-new-obtlp-template"><i data-lucide="plus" class="svg-icon"></i> New</button>
+              <p class="section-sub">The official OBTLP form each college uses, with its version.</p>
             </div>
-            <div class="table-wrap">
-              <table class="data">
-                <thead><tr><th>Code</th><th>Name</th><th>For</th><th>Program</th><th>Version</th><th>Status</th><th class="right">Actions</th></tr></thead>
-                <tbody id="obtlp-template-rows"><tr><td colspan="7" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
-              </table>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <button class="btn btn-outline btn-sm" id="btn-new-obtlp-template"><i data-lucide="plus" class="svg-icon"></i> OBTLP Template</button>
             </div>
-            <p class="section-sub" style="padding:0.75rem 1rem;">The official PnC OBTLP form layout. One template can be shared by many courses and programs — each course's content is in Course Templates. Use "Manage Sections" to control what the generated OBTLP contains and in what order. Templates are marked <b>General Education</b> or <b>Specialized / Professional</b>. Use <b>Generate from this template</b> (copy icon) to make a new template for another college or course type, then adjust it with "Manage Sections".</p>
-          </section>
-        </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data dpt-table">
+              <thead><tr><th>Department</th><th>OBTLP Template</th><th>For</th><th>Version</th><th>Status</th><th class="right">Actions</th></tr></thead>
+              <tbody id="obtlp-tpl-rows"><tr><td colspan="6" class="t-muted" style="padding:1.5rem;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <input type="file" id="tpl-file-input" accept=".pdf,.docx,.pptx" hidden>
+        </section>
       </section>
     </main>
   </div>
@@ -1447,6 +1446,81 @@
         }
       });
 
+      // ---------- row action menus (dropdown) ----------
+      // The panel is placed with position: fixed next to its button, so the
+      // table's horizontal scroll area cannot clip it.
+      function closeActionMenus() {
+        document.querySelectorAll('.action-menu-panel.open').forEach((p) => p.classList.remove('open'));
+        document.querySelectorAll('[data-menu-toggle][aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+      }
+      document.addEventListener('click', (e) => { if (!e.target.closest('.action-menu')) closeActionMenus(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeActionMenus(); });
+      document.addEventListener('scroll', closeActionMenus, true);
+      window.addEventListener('resize', closeActionMenus);
+      function bindActionMenus(root) {
+        root.querySelectorAll('[data-menu-toggle]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const panel = btn.nextElementSibling;
+            const wasOpen = panel.classList.contains('open');
+            closeActionMenus();
+            if (wasOpen) return;
+            panel.classList.add('open');
+            btn.setAttribute('aria-expanded', 'true');
+            const r = btn.getBoundingClientRect();
+            const pw = panel.offsetWidth, ph = panel.offsetHeight;
+            panel.style.left = `${Math.max(8, Math.min(r.right - pw, window.innerWidth - pw - 8))}px`;
+            panel.style.top = `${r.bottom + 4 + ph <= window.innerHeight ? r.bottom + 4 : Math.max(8, r.top - ph - 4)}px`;
+          });
+        });
+        root.querySelectorAll('.action-menu-item').forEach((item) => item.addEventListener('click', closeActionMenus));
+      }
+
+      // An OBTLP template's own file (the college's copy of its form). PDFs
+      // open in a new tab; DOCX/PPTX download so they open in Word/PowerPoint.
+      const TEMPLATE_FILE_MAX_BYTES = 10 * 1024 * 1024;
+      const tplFileInput = document.getElementById('tpl-file-input');
+      tplFileInput.addEventListener('change', async () => {
+        const file = tplFileInput.files[0];
+        const tpl = obtlpTemplatesCache.find((t) => t.id === tplFileInput.dataset.templateId);
+        if (!file || !tpl) return;
+        if (!/\.(pdf|docx|pptx)$/i.test(file.name)) return ui.notifyError(new Error('Only PDF, DOCX, and PPTX files are supported.'));
+        if (file.size > TEMPLATE_FILE_MAX_BYTES) return ui.notifyError(new Error('Template files must be 10MB or smaller.'));
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('The file could not be read.'));
+            reader.readAsDataURL(file);
+          });
+          await api.uploadObtlpTemplateFile(tpl.id, { name: file.name, dataBase64: String(dataUrl).split(',')[1] || '' });
+          ui.notify('File Inserted', `${file.name} is now the file of ${tpl.code}.`);
+          loadDepartmentsProgramsTemplates();
+        } catch (err) { ui.notifyError(err); }
+      });
+
+      async function openTemplateFile(tpl) {
+        if (!tpl || !tpl.file) return;
+        // Open the tab during the click, so it isn't blocked as a pop-up.
+        const win = /\.pdf$/i.test(tpl.file.name) ? window.open('', '_blank') : null;
+        try {
+          const url = URL.createObjectURL(await api.getObtlpTemplateFile(tpl.id));
+          if (win) {
+            win.location.href = url;
+          } else {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = tpl.file.name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+          }
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch (err) {
+          if (win) win.close();
+          ui.notifyError(err);
+        }
+      }
+
       // ---------- departments / programs / OBTLP templates ----------
       const FAILED_TO_LOAD_ROW = (colspan) =>
         `<tr><td colspan="${colspan}" class="t-destructive" style="padding:1.5rem;">Failed to load — try refreshing.</td></tr>`;
@@ -1470,66 +1544,73 @@
         programsCache = progsFailed ? [] : progsResult.value;
         obtlpTemplatesCache = tplsFailed ? [] : tplsResult.value;
 
-        const deptRows = document.getElementById('department-rows');
-        deptRows.innerHTML = deptsFailed
-          ? FAILED_TO_LOAD_ROW(3)
-          : (departmentsCache.length
-            ? departmentsCache.map((d) => `
-              <tr>
-                <td class="cell-strong">${d.code}</td><td class="t-muted">${d.name}</td>
-                <td><div class="row-actions"><button class="icon-btn" title="Edit" data-edit-dept="${d.id}"><i data-lucide="pencil" class="svg-icon"></i></button></div></td>
-              </tr>`).join('')
-            : '<tr><td colspan="3" class="t-muted" style="padding:1.5rem;">No departments yet.</td></tr>');
-        deptRows.querySelectorAll('[data-edit-dept]').forEach((btn) => {
-          btn.addEventListener('click', () => openDepartmentModal(departmentsCache.find((d) => d.id === btn.dataset.editDept)));
-        });
+        const deptCell = (d, span) => `<td rowspan="${span}" class="dpt-group"><div class="cell-strong">${esc(d.code)}</div><div class="cell-sub">${esc(d.name)}</div></td>`;
 
-        const progRows = document.getElementById('program-rows');
-        progRows.innerHTML = progsFailed
-          ? FAILED_TO_LOAD_ROW(4)
-          : (programsCache.length
-            ? programsCache.map((p) => {
-              const dept = departmentsCache.find((d) => d.id === p.departmentId);
-              return `
-                <tr>
-                  <td class="cell-strong">${p.code}</td><td class="t-muted">${p.name}</td><td class="t-muted">${dept ? dept.code : '—'}</td>
-                  <td><div class="row-actions"><button class="icon-btn" title="Edit" data-edit-prog="${p.id}"><i data-lucide="pencil" class="svg-icon"></i></button></div></td>
-                </tr>`;
-            }).join('')
-            : '<tr><td colspan="4" class="t-muted" style="padding:1.5rem;">No programs yet.</td></tr>');
-        progRows.querySelectorAll('[data-edit-prog]').forEach((btn) => {
-          btn.addEventListener('click', () => openProgramModal(programsCache.find((p) => p.id === btn.dataset.editProg)));
-        });
+        // Table 1: Department → Program.
+        const progRows = document.getElementById('dept-prog-rows');
+        if (deptsFailed || progsFailed) {
+          progRows.innerHTML = FAILED_TO_LOAD_ROW(2);
+        } else {
+          progRows.innerHTML = departmentsCache.map((d) => {
+            const progs = programsCache.filter((p) => p.departmentId === d.id);
+            if (!progs.length) return `<tr class="dpt-first">${deptCell(d, 1)}<td class="t-muted">No programs yet</td></tr>`;
+            return progs.map((p, i) => `<tr class="${i === 0 ? 'dpt-first' : ''}">${i === 0 ? deptCell(d, progs.length) : ''}<td><div class="cell-strong">${esc(p.code)}</div><div class="cell-sub">${esc(p.name)}</div></td></tr>`).join('');
+          }).join('') || '<tr><td colspan="2" class="t-muted" style="padding:1.5rem;">No departments yet.</td></tr>';
+        }
 
-        const tplRows = document.getElementById('obtlp-template-rows');
-        tplRows.innerHTML = tplsFailed
-          ? FAILED_TO_LOAD_ROW(6)
-          : (obtlpTemplatesCache.length
-            ? obtlpTemplatesCache.map((t) => {
-              const prog = programsCache.find((p) => p.id === t.programId);
-              const cat = { gened: '<span class="badge badge-accent">Gen Ed</span>', specialized: '<span class="badge badge-review">Specialized</span>' }[t.courseCategory] || '<span class="t-muted">Any</span>';
-              return `
-                <tr>
-                  <td class="cell-strong">${esc(t.code)}</td>
-                  <td class="t-muted">${esc(t.name)}</td>
-                  <td>${cat}</td>
-                  <td class="t-muted">${prog ? prog.code : (t.departmentId ? 'All programs' : '—')}</td>
-                  <td class="t-muted">${t.version || '—'}</td>
-                  <td><button type="button" class="badge ${t.active ? 'badge-approved' : 'badge-draft'}" data-toggle-template="${t.id}" style="cursor:pointer;border:none;">${t.active ? 'Active' : 'Inactive'}</button></td>
-                  <td>
-                    <div class="row-actions">
-                      <button class="icon-btn" title="Edit" data-edit-obtlp="${t.id}"><i data-lucide="pencil" class="svg-icon"></i></button>
-                      <button class="icon-btn" title="Generate a new template from this one" data-dup-obtlp="${t.id}"><i data-lucide="copy-plus" class="svg-icon"></i></button>
-                      <button class="icon-btn" title="Manage Sections" data-manage-sections="${t.id}"><i data-lucide="layers" class="svg-icon"></i></button>
-                      <button class="icon-btn" title="Assign Courses" data-manage-courses="${t.id}"><i data-lucide="book-open-check" class="svg-icon"></i></button>
-                      <button class="icon-btn" title="Delete" data-delete-obtlp="${t.id}" data-code="${t.code}"><i data-lucide="trash-2" class="svg-icon"></i></button>
-                    </div>
-                  </td>
-                </tr>
-              `;
-            }).join('')
-            : '<tr><td colspan="7" class="t-muted" style="padding:1.5rem;">No OBTLP templates yet.</td></tr>');
+        // Table 2: Department → OBTLP Template. A program's own template goes
+        // under that program's department. Templates not tied to a listed
+        // college are not shown here.
+        const tplRows = document.getElementById('obtlp-tpl-rows');
+        if (deptsFailed || tplsFailed) {
+          tplRows.innerHTML = FAILED_TO_LOAD_ROW(6);
+          return;
+        }
+        const progById = new Map(programsCache.map((p) => [p.id, p]));
+        const deptOf = (t) => (progById.get(t.programId) || t).departmentId;
+        const groups = departmentsCache
+          .map((d) => ({
+            dept: d,
+            // College-wide templates first, then program-specific ones.
+            tpls: obtlpTemplatesCache.filter((t) => deptOf(t) === d.id).sort((a, b) => !!progById.get(a.programId) - !!progById.get(b.programId))
+          }))
+          .filter((g) => g.tpls.length);
+
+        const icon = (name) => `<i data-lucide="${name}" class="svg-icon"></i>`;
+        const tplCells = (t) => {
+          const cat = { gened: '<span class="badge badge-accent">Gen Ed</span>', specialized: '<span class="badge badge-review">Specialized</span>' }[t.courseCategory] || '<span class="t-muted">Any</span>';
+          const prog = progById.get(t.programId);
+          const fileLink = t.file
+            ? `<button type="button" class="tpl-file-link" data-open-tpl-file="${t.id}" title="Open ${esc(t.file.name)}">${icon('paperclip')}<span>${esc(t.file.name)}</span></button>`
+            : '';
+          return `
+            <td><div class="cell-strong">${esc(t.code)}</div><div class="cell-sub">${esc(t.name)}</div>${prog ? `<div class="cell-sub">${esc(prog.code)} only</div>` : ''}${fileLink}</td>
+            <td>${cat}</td>
+            <td class="t-muted">${esc(t.version || '—')}</td>
+            <td><button type="button" class="badge ${t.active ? 'badge-approved' : 'badge-draft'}" data-toggle-template="${t.id}" style="cursor:pointer;border:none;">${t.active ? 'Active' : 'Inactive'}</button></td>
+            <td class="right">
+              <div class="action-menu">
+                <button type="button" class="btn btn-outline btn-sm action-menu-trigger" data-menu-toggle aria-haspopup="menu" aria-expanded="false">Actions ${icon('chevron-down')}</button>
+                <div class="action-menu-panel" role="menu">
+                  <button type="button" role="menuitem" class="action-menu-item" data-open-tpl-file="${t.id}" ${t.file ? '' : 'disabled title="No file inserted yet"'}>${icon('file-text')} Open file</button>
+                  <button type="button" role="menuitem" class="action-menu-item" data-insert-tpl-file="${t.id}">${icon('file-up')} ${t.file ? 'Replace file' : 'Insert file'}</button>
+                  <div class="action-menu-sep" role="separator"></div>
+                  <button type="button" role="menuitem" class="action-menu-item" data-edit-obtlp="${t.id}">${icon('pencil')} Edit template</button>
+                  <button type="button" role="menuitem" class="action-menu-item" data-dup-obtlp="${t.id}">${icon('copy-plus')} Generate from this template</button>
+                  <button type="button" role="menuitem" class="action-menu-item" data-manage-sections="${t.id}">${icon('layers')} Manage sections</button>
+                  <button type="button" role="menuitem" class="action-menu-item" data-manage-courses="${t.id}">${icon('book-open-check')} Assign courses</button>
+                  <div class="action-menu-sep" role="separator"></div>
+                  <button type="button" role="menuitem" class="action-menu-item danger" data-delete-obtlp="${t.id}" data-code="${esc(t.code)}">${icon('trash-2')} Delete</button>
+                </div>
+              </div>
+            </td>`;
+        };
+        tplRows.innerHTML = groups.map((g) => g.tpls.map((t, i) =>
+          `<tr class="${i === 0 ? 'dpt-first' : ''}">${i === 0 ? deptCell(g.dept, g.tpls.length) : ''}${tplCells(t)}</tr>`
+        ).join('')).join('') || '<tr><td colspan="6" class="t-muted" style="padding:1.5rem;">No OBTLP templates yet.</td></tr>';
         if (window.lucide) lucide.createIcons();
+        bindActionMenus(tplRows);
+
         tplRows.querySelectorAll('[data-toggle-template]').forEach((btn) => {
           btn.addEventListener('click', async () => {
             const tpl = obtlpTemplatesCache.find((t) => t.id === btn.dataset.toggleTemplate);
@@ -1551,6 +1632,16 @@
               await loadDepartmentsProgramsTemplates();
               openObtlpTemplateModal(obtlpTemplatesCache.find((t) => t.id === copy.id));
             } catch (err) { ui.notifyError(err); }
+          });
+        });
+        tplRows.querySelectorAll('[data-open-tpl-file]').forEach((btn) => {
+          btn.addEventListener('click', () => openTemplateFile(obtlpTemplatesCache.find((t) => t.id === btn.dataset.openTplFile)));
+        });
+        tplRows.querySelectorAll('[data-insert-tpl-file]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            tplFileInput.dataset.templateId = btn.dataset.insertTplFile;
+            tplFileInput.value = '';
+            tplFileInput.click();
           });
         });
         tplRows.querySelectorAll('[data-edit-obtlp]').forEach((btn) => {

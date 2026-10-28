@@ -24,6 +24,8 @@ const path = require('path');
 const SOURCE = 'coed-course-outline-2026-2027';
 const DATA_FILE = path.join(__dirname, 'data', 'coed-course-outlines-2026-2027.json');
 const TEMPLATE_CODE = 'COED-CO-V1';
+// Earlier codes of the COED program; an existing one is renamed in place.
+const LEGACY_PROGRAM_CODES = ['COED'];
 const FORM_CODE = 'PNC:AA-FO-44 rev.0 06182026';
 
 // The order of the official form. Generic section types, so the wizard's
@@ -79,6 +81,15 @@ function applyCoedTemplates(db, data, store) {
   // --- program ---------------------------------------------------------------
   const progDef = data.program;
   let prog = db.programs.find((p) => String(p.code || '').toUpperCase() === progDef.code && p.departmentId === dept.id);
+  if (!prog) {
+    // Keep the same program record (its id links course templates, OBTLPs
+    // and the plan of study); only its code and name change.
+    prog = db.programs.find((p) => LEGACY_PROGRAM_CODES.includes(String(p.code || '').toUpperCase()) && p.departmentId === dept.id);
+    if (prog) {
+      log(`program ${prog.code} renamed to ${progDef.code}`);
+      prog.code = progDef.code; prog.name = progDef.name; prog.updatedAt = now; changed = true;
+    }
+  }
   if (!prog) {
     prog = {
       id: store.nextId('prog'), departmentId: dept.id, code: progDef.code, name: progDef.name,
